@@ -35,6 +35,67 @@ def test_correspondence_is_durable_deduplicated_and_includes_files(tmp_path):
     assert reopened[0]['files']==[{'id':'file1','name':'proof.txt'}]
     assert reopened[1]['text']=='Answer'
 
+def test_restart_prefers_local_chat_link_over_last_browser_tab(tmp_path):
+    import json,asyncio
+    from types import SimpleNamespace
+    from hub.bridge_controller import BridgeController
+    from hub.conversations import Conversations
+    store=Store(tmp_path/'db.sqlite3');chats=Conversations(store)
+    chat=chats.create(chats.project(str(tmp_path))['id']);url='https://chatgpt.com/c/original'
+    BridgeTranscript(store).link(chat['id'],url)
+    state={'chat_id':chat['id'],'enabled':True,'continuous':True,'phase':'waiting_reply',
+           'seen':['already-handled'],'latest_user_id':'original-user','action_ids':['executed']}
+    store.path.with_name('chatgpt-handoff.json').write_text(json.dumps(state))
+    bridge=SimpleNamespace(preferred_url='https://chatgpt.com/c/unrelated')
+    controller=BridgeController(SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=bridge),lock=asyncio.Lock()))
+    assert bridge.preferred_url==url and controller.transcript.remote(chat['id'])==url
+    assert controller.state['seen']==['already-handled'] and controller.state['action_ids']==['executed']
+    assert controller.state['connection']=='reconnecting'
+
+def test_resume_same_play_chat_preserves_cursor_and_does_not_bootstrap(tmp_path):
+    import asyncio
+    from types import SimpleNamespace
+    from hub.bridge_controller import BridgeController
+    from hub.conversations import Conversations
+    async def run():
+        store=Store(tmp_path/'db.sqlite3');chats=Conversations(store)
+        project=chats.project(str(tmp_path));chat=chats.create(project['id']);url='https://chatgpt.com/c/resume'
+        class Bridge:
+            async def connect(self):return {'ready':True}
+            async def read(self):return {'url':url,'composer':True,'users':['Already handled']}
+            async def send(self,*args,**kwargs):raise AssertionError('Resume must not send a bootstrap')
+        controller=BridgeController(SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=Bridge()),lock=asyncio.Lock()))
+        controller.transcript.link(chat['id'],url)
+        controller.state.update(chat_id=chat['id'],enabled=True,continuous=True,phase='waiting_reply',play_bootstrap='sent_not_yet_verified_by_remote_reply',seen=['reply1'],latest_user_id='user1',action_ids=['action1'],objective='Original request')
+        controller.stop()
+        result=await controller.listen(project['id'],8,chat_id=chat['id'])
+        assert result['enabled'] and result['phase']=='waiting_reply'
+        assert result['seen']==['reply1'] and result['latest_user_id']=='user1'
+        assert result['action_ids']==['action1'] and result['objective']=='Original request'
+    asyncio.run(run())
+
+def test_new_play_homepage_links_only_after_verified_send(tmp_path):
+    import asyncio
+    from types import SimpleNamespace
+    from hub.bridge_controller import BridgeController
+    from hub.conversations import Conversations
+    async def run():
+        store=Store(tmp_path/'db.sqlite3');chats=Conversations(store)
+        project=chats.project(str(tmp_path));chat=chats.create(project['id'])
+        class Bridge:
+            bound_url=None;pending=None
+            async def connect(self):return {'ready':True}
+            async def read(self):return {'url':'https://chatgpt.com/','composer':True,'users':[],'user_messages':[]}
+            async def send(self,text):
+                assert controller.transcript.remote(chat['id']) is None
+                self.bound_url='https://chatgpt.com/c/new-real-id'
+                self.pending={'users':0,'user_id':'bootstrap'}
+                controller.record_delivery({'sent':True})
+        controller=BridgeController(SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=Bridge()),lock=asyncio.Lock()))
+        await controller.listen(project['id'],8,chat_id=chat['id'])
+        assert controller.transcript.remote(chat['id'])=='https://chatgpt.com/c/new-real-id'
+    asyncio.run(run())
+
 
 def test_last_presentation_is_global_not_per_chat(tmp_path):
     assert load_presentation(tmp_path)=='split'
@@ -72,9 +133,12 @@ def test_each_local_chat_keeps_its_remote_binding(tmp_path):
         bridge=Bridge();controller=BridgeController(SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=bridge),lock=asyncio.Lock()))
         await controller.select_context(first['id']);controller.record_outbound('First question');controller.record_delivery({'sent':True,'files':[]});controller.record_answer({'text':'First answer','fingerprint':'answer1'})
         first_url=bridge.bound_url
+        controller.state.update(seen=['first-reply'],latest_user_id='first-user',objective='First objective',action_ids=['first-action'])
         await controller.select_context(second['id']);controller.record_outbound('Second question');controller.record_delivery({'sent':True,'files':[]})
         assert bridge.bound_url!=first_url
         await controller.select_context(first['id']);assert bridge.opened[-1]==first_url
+        assert controller.state['seen']==['first-reply'] and controller.state['latest_user_id']=='first-user'
+        assert controller.state['objective']=='First objective' and controller.state['action_ids']==['first-action']
         assert [m['text'] for m in controller.transcript.list(first['id'])]==['First question','First answer']
         assert [m['text'] for m in controller.transcript.list(second['id'])]==['Second question']
     asyncio.run(run())

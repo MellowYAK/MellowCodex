@@ -2,7 +2,7 @@
 
 PLAY reply tracking distinguishes consecutive status and result messages even when ChatGPT groups them under one turn. The isolated browser acceptance verified automatic result delivery, ingestion of the remote answer and return to listening. This does not establish automatic correctness of memory feedback or complete production acceptance.
 
-**גרסת קוד: 0.14.0 · עדכון תיעוד: 6 בנובמבר 2026.** [היסטוריית גרסאות ותיקונים](CHANGELOG.md) · [תוצאות בדיקות](VALIDATION.md).
+**גרסת קוד: 0.14.1 · עדכון תיעוד: 7 בנובמבר 2026.** [היסטוריית גרסאות ותיקונים](CHANGELOG.md) · [תוצאות בדיקות](VALIDATION.md).
 
 סוכן מקומי ל־Windows, מותקן בכונן E. זו גרסת פיילוט עובדת, ולא תחליף מלא ומאומת לכל יכולות Codex.
 
@@ -436,3 +436,10 @@ The models tool group exposes read-only model_memory_status for resident models,
 Development checkpoint (2026-11-07, unreleased): a real ChatGPT Web PLAY director/Qwen2.5-Coder repair round trip now has recorded passing tests and director review. Code integration is separate from deployment. Diff compaction preserves changed-file counts/path summaries when patch details are omitted; full evidence remains in task history. See VALIDATION.md for measured results and remaining public MCP/upgrade limitations.
 
 Source repository: https://github.com/MellowYAK/MellowCodex (main). The first development baseline was uploaded through the local agent with a reviewed staged-file set and matching local/remote Git commit. Git publication does not activate a production release. See AGENTS.md for the validated-change publication workflow.
+
+### PLAY recovery and conversation continuity (0.14.1)
+Recovery uses the exact remote URL associated with the local chat after a restart or a closed tab. Selecting an unrelated browser tab does not transfer the listener. Listener cursors, objectives, executed action IDs and pending messages are persisted per local chat; selecting a linked chat restores its saved session. Re-enabling an initialized listener continues from its saved cursor without duplicate bootstrap instructions. A new conversation remains an explicit separate action. Existing drafts and uncertain sends are preserved. Missing tabs and known conversation-load errors have bounded retries; inaccessible/login-required conversations remain visibly blocked instead of silently switching chats.
+
+The director can specify PLAY `mode: "code"` for source investigation/implementation, or `inspect`, `browser`, `desktop`; omission preserves desktop behavior. The local model receives the current step separately from the overall human authorization, and returns its evidence before the director issues the next step. A status notice does not wait behind an ongoing model inference lock.
+
+Real two-step Web PLAY acceptance, service restart and UI stop/resume passed in the isolated app (18984), using the original linked ChatGPT conversation and Qwen3.5:4b. No human approval was inferred from ChatGPT review. These shared controller/adapter changes are independent of the local model, but this test is not proof of all future tasks. Public MCP deployment and the separate Ember semantic/indexing acceptance remain unverified by this test. No additional APC code was copied.

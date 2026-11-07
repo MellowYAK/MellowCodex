@@ -24,7 +24,8 @@ STATE_JS=r'''() => {
  const generating=[...document.querySelectorAll('[data-testid="stop-button"],button[aria-label="Stop generating"],button[aria-label="Stop response"]')].some(visible);
  const overlay=[...document.querySelectorAll('[role="dialog"],[role="menu"],[aria-modal="true"]')].some(visible);
  const login_required=[...document.querySelectorAll('button,a')].filter(visible).some(e=>/^(log in|sign in|התחבר|התחברות)$/i.test((e.innerText||e.getAttribute('aria-label')||'').trim()));
- return {url:location.href,title:document.title,replies,users,user_messages,composer:!!composer,login_required,draft:composer?.innerText||composer?.value||'',generating,overlay,send:!!document.querySelector('[data-testid="send-button"]')};
+ const conversation_load_error=!composer && [...document.querySelectorAll('p,div,span')].filter(visible).some(e=>e.children.length===0 && !e.closest('[data-message-author-role],[data-user-message-bubble],[data-markdown-text-style="assistant-message"]') && /^Could not load this ChatGPT conversation\.?$/i.test(e.innerText.trim()));
+ return {url:location.href,title:document.title,replies,users,user_messages,composer:!!composer,login_required,conversation_load_error,draft:composer?.innerText||composer?.value||'',generating,overlay,send:!!document.querySelector('[data-testid="send-button"]')};
 }'''
 
 COMPOSER='#prompt-textarea:visible,[data-composer-markdown][contenteditable="true"]:visible'
@@ -52,7 +53,8 @@ def action_from_reply(text):
     action=value.get('local_agent_action') if isinstance(value,dict) else None
     if not isinstance(action,dict) or not isinstance(action.get('id'),str) or not isinstance(action.get('task'),str):return None
     if not 1<=len(action['id'])<=120 or not 1<=len(action['task'])<=12000:return None
-    return {'id':action['id'],'task':action['task']}
+    if 'mode' in action and action['mode'] not in ('inspect','code','desktop','browser'):return None
+    return {'id':action['id'],'task':action['task'],**({'mode':action['mode']} if 'mode' in action else {})}
 
 def image_delivery_ready(message,paths):
     """Verify loaded images and actual file cards on the new sent message.
@@ -85,6 +87,8 @@ class ChatGPTBridge:
     def __init__(self,binding_path=None):
         self.browser=Browser();self.tab_id=None;self.pending=None;self.bound_url=None
         self._sync_signature=None;self._sync_activity=time.monotonic();self._sync_checked=time.monotonic()
+        self._load_recovery={}
+        self._restore_attempts={}
         self.binding_path=Path(binding_path or STATE/'chatgpt-tab.json');self.preferred_url=None
         try:
             saved=json.loads(self.binding_path.read_text(encoding='utf-8'))['url']
@@ -98,6 +102,22 @@ class ChatGPTBridge:
     async def connect(self,tab_id=None,create=False):
         inventory=await self.browser.tabs()
         candidates=[t for t in inventory['tabs'] if urlsplit(t['url']).hostname=='chatgpt.com']
+        # A reconnect is to the persisted conversation, never whichever tab is
+        # currently active (or a homepage left behind by a navigation failure).
+        target=self.bound_url or self.preferred_url
+        if not tab_id and target and urlsplit(target).path.startswith('/c/'):
+            matching=[t for t in candidates if t['url']==target]
+            if matching:
+                self._restore_attempts.pop(target,None)
+                tab_id=next((t['id'] for t in matching if t['id']==self.tab_id),matching[0]['id'])
+            else:
+                now=time.monotonic();count,last=self._restore_attempts.get(target,(0,None))
+                if count<2 and (last is None or now-last>=30):
+                    self._restore_attempts[target]=(count+1,now)
+                    await self.browser.new_tab(target)
+                return {'connected':False,'tabs':candidates,'url':target,'reason':
+                        'Restoring the original linked ChatGPT conversation; task and message history are preserved.' if count<2 else
+                        'The original linked ChatGPT conversation is unavailable after two restore attempts. Its link and pending work are preserved; no other chat will be used.'}
         if not candidates and create:
             await self.browser.new_tab('https://chatgpt.com/')
             for _ in range(20):
@@ -121,6 +141,12 @@ class ChatGPTBridge:
         await self.browser.select_tab(self.tab_id)
         self.save_binding(candidate['url'])
         state=await self.read()
+        if state.get('conversation_load_error'):
+            retried=await self.recover_load_error(state)
+            return {'connected':True,'tab_id':self.tab_id,'url':state['url'],'ready':False,'reason':
+                    'ChatGPT could not load this conversation. Retrying the same saved page; no message was sent.' if retried else
+                    'ChatGPT could not load this conversation. Automatic recovery is limited to two reloads per connection session; check access to this exact conversation. No task was replayed.'}
+        if state.get('composer'):self._load_recovery.pop(state.get('url'),None)
         login_required=bool(state.get('login_required'))
         ready=bool(state['composer']) and not login_required
         reason=('ChatGPT shows a Log in control in the agent browser. Sign in in that tab before starting PLAY; no instructions were sent.' if login_required
@@ -161,11 +187,23 @@ class ChatGPTBridge:
         if active['url']==(self.bound_url or self.preferred_url):return None
         page=self.browser.tab_refs[active['id']]
         if await self.adopt_final_url(page,active['id']):return None
-        state=await asyncio.wait_for(page.evaluate(STATE_JS),8)
-        if not state['composer'] or state['generating'] or state['draft'].strip():return None
-        self.pending=None;self.tab_id=None;self.bound_url=None
-        await self.connect(active['id'])
-        return state
+        # Selecting a tab is not authorization to move a persistent handoff.
+        # Explicit connect/select_context remains available for changing chats.
+        return None
+
+    async def recover_load_error(self,state):
+        """Bounded recovery of a known error page, never authentication or sends."""
+        page=self.browser.page
+        if not self.bound_url or page.url!=self.bound_url:return False
+        if not state.get('conversation_load_error') or any(state.get(k) for k in ('composer','generating','overlay','login_required')) or state.get('draft','').strip() or self.pending:return False
+        now=time.monotonic()
+        count,last=self._load_recovery.get(self.bound_url,(0,None))
+        if count>=2 or (last is not None and now-last<30):return False
+        fresh=await page.evaluate(STATE_JS)
+        if not fresh.get('conversation_load_error') or any(fresh.get(k) for k in ('composer','generating','overlay','login_required')) or fresh.get('draft','').strip():return False
+        self._load_recovery[self.bound_url]=(count+1,now)
+        await page.reload(wait_until='domcontentloaded',timeout=15000)
+        return True
 
     async def sync_if_idle(self,state,interval=30):
         """Refresh only the linked idle page to receive updates from other devices.
@@ -174,6 +212,7 @@ class ChatGPTBridge:
         Normal reads continue every half second; reload is a bounded fallback for
         ChatGPT pages whose cross-device updates have stopped arriving.
         """
+        if state.get('conversation_load_error'):return await self.recover_load_error(state)
         now=time.monotonic()
         signature=tuple((m.get('id'),m.get('text')) for m in state.get('user_messages',[]))+tuple((m.get('id'),m.get('text')) for m in state.get('replies',[]))
         if signature!=self._sync_signature:

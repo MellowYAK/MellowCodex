@@ -1,3 +1,14 @@
+# 0.14.1 — 2026-11-07
+
+PLAY conversation recovery and directed execution:
+
+- Restore the exact remote conversation linked to the local chat after a missing tab, load failure or service restart. A different visible browser tab cannot silently move the listener.
+- Persist each chat's message cursor, objective, action IDs and pending-send state. Stop/resume continues the same session without duplicate connection instructions; a new chat is linked after its first observed send creates a conversation URL.
+- Execute the director's current step within the overall human authorization, returning observed evidence before accepting the next step. PLAY supports an explicit execution mode, including code.
+- Avoid blocking a feedback status notification behind an active model inference lock. Known conversation-load failures have bounded retries and preserve uncertain sends.
+- Validation: 64 focused bridge/transcript/protocol tests passed. Real Web PLAY with Qwen3.5:4b completed two separately directed read_file steps; ChatGPT received both tool results, issued the second step and reviewed the matching versions. Restart and UI stop/resume preserved the original chat and action/message cursors. The earlier overbroad execution trial failed and is retained in the audit.
+- Scope: verified in the isolated running app on port 18984. This is not public MCP deployment, autonomous Ember semantic acceptance or a guarantee for every website/model. These changes are native Hub code; no additional APC source was copied.
+
 # 0.14.0 — 2026-11-07
 
 Shared native-editor workflow: observed New-tab control, asynchronous tab-creation verification, blank-document guard, paced Unicode typing, real newline keys, exact UIA readback and fresh screenshot. Exact-name controls and selected-tab context preservation reduce wrong-target actions. Repeated unchanged physical input is blocked. Region capture and background-window fallback are included; arbitrary locked desktop GUI operation is NOT verified.

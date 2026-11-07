@@ -2,6 +2,14 @@ import asyncio
 import pytest
 from types import SimpleNamespace
 from hub.chatgpt_bridge import action_from_reply,ChatGPTBridge
+
+def test_play_preserves_explicit_execution_mode_and_rejects_unknown_modes():
+ import json
+ for mode in ('code','inspect','browser','desktop'):
+  action=action_from_reply(json.dumps({'local_agent_action':{'id':'mode-test','task':'Read existing source','mode':mode}}))
+  assert action['mode']==mode
+ assert action_from_reply('{"local_agent_action":{"id":"bad","task":"Read","mode":"admin"}}') is None
+ assert 'mode' not in action_from_reply('{"local_agent_action":{"id":"legacy","task":"Read"}}')
 from hub.bridge_controller import BridgeController
 from hub.conversations import Conversations
 from hub.store import Store
@@ -108,6 +116,8 @@ def test_handoff_feedback_and_no_duplicate_execution(tmp_path):
   bridge.current={'fingerprint':'first','text':'{"local_agent_action":{"id":"one","task":"Read the document"}}'}
   await controller.tick();await controller.tick()
   assert len(queued)==1
+  assert store.get(queued[0])['goal'].startswith('CURRENT STEP')
+  assert 'Do not advance to later steps' in store.get(queued[0])['goal']
   store.update(queued[0],state='waiting_review',result='Document inspected')
   await controller.tick()
   assert 'Document inspected' in bridge.sent[-1]
@@ -178,9 +188,54 @@ def test_saved_binding_restores_only_same_conversation(tmp_path):
   binding=tmp_path/'binding.json';first=ChatGPTBridge(binding);first.save_binding('https://chatgpt.com/c/chosen')
   second=ChatGPTBridge(binding)
   async def tabs():return {'tabs':[{'id':'different','url':'https://chatgpt.com/c/unrelated','title':'Other'}]}
-  second.browser=SimpleNamespace(tabs=tabs)
+  opened=[]
+  async def new_tab(url):opened.append(url)
+  second.browser=SimpleNamespace(tabs=tabs,new_tab=new_tab)
   result=await second.connect()
   assert not result['connected'] and not second.tab_id
+  assert opened==['https://chatgpt.com/c/chosen']
+  await second.connect()
+  assert len(opened)==1  # polling must not create a tab storm
+ asyncio.run(run())
+
+def test_recovery_does_not_bind_redirected_tab_or_discard_pending(tmp_path):
+ async def run():
+  bridge=ChatGPTBridge(tmp_path/'binding.json');url='https://chatgpt.com/c/original'
+  bridge.save_binding(url);bridge.bound_url=url;bridge.tab_id='old';bridge.pending={'text':'Uncertain send'}
+  inventory=[{'id':'old','url':'https://chatgpt.com/'}];opened=[]
+  async def tabs():return {'tabs':inventory}
+  async def new_tab(target):opened.append(target)
+  async def select(ident):return None
+  async def read():return {'url':url,'composer':True}
+  bridge.browser=SimpleNamespace(tabs=tabs,new_tab=new_tab,select_tab=select);bridge.read=read
+  assert not (await bridge.connect())['connected']
+  assert opened==[url] and bridge.preferred_url==url
+  inventory.append({'id':'restored','url':url})
+  assert (await bridge.connect())['ready'] and bridge.tab_id=='restored'
+  assert bridge.pending=={'text':'Uncertain send'}
+ asyncio.run(run())
+
+def test_active_tab_switch_never_moves_listener(tmp_path):
+ async def run():
+  bridge=ChatGPTBridge(tmp_path/'binding.json');url='https://chatgpt.com/c/original'
+  bridge.save_binding(url);bridge.bound_url=url;bridge.tab_id='original';bridge.pending={'text':'Result'}
+  async def active():return {'id':'other','url':'https://chatgpt.com/c/other'}
+  bridge.browser=SimpleNamespace(native_active_tab=active,tab_refs={'other':SimpleNamespace(url='https://chatgpt.com/c/other')})
+  assert await bridge.changed_conversation() is None
+  assert bridge.bound_url==url and bridge.tab_id=='original' and bridge.pending=={'text':'Result'}
+ asyncio.run(run())
+
+def test_status_notification_does_not_wait_behind_running_inference(tmp_path):
+ async def run():
+  store=Store(tmp_path/'db.sqlite3')
+  class Bridge:
+   async def send(self,*args):raise AssertionError('No status send while engine is busy')
+   async def read(self):raise AssertionError('No browser observation while engine is busy')
+  engine=SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=Bridge()),lock=asyncio.Lock())
+  controller=BridgeController(engine)
+  async with engine.lock:
+   await asyncio.wait_for(controller.notify_remote({'id':'busy'},'Started'),.1)
+  assert not controller.state.get('status_notices')
  asyncio.run(run())
 
 
@@ -330,7 +385,8 @@ def test_reload_rebases_turn_numbers_and_recovers_archived_unexecuted_request(tm
  asyncio.run(run())
 
 
-def test_empty_chat_bootstrap_receipt_anchors_first_request_after_restart(tmp_path):
+@pytest.mark.parametrize('missing_human',[False,True])
+def test_empty_chat_bootstrap_receipt_anchors_first_request_after_restart(tmp_path,missing_human):
  async def run():
   store=Store(tmp_path/'db.sqlite3');chats=Conversations(store);chat=chats.create(chats.project(str(tmp_path))['id'])
   class Bridge:
@@ -339,6 +395,7 @@ def test_empty_chat_bootstrap_receipt_anchors_first_request_after_restart(tmp_pa
    async def reply(self):return {'fingerprint':'answer','user_id':'human','text':'{"local_agent_action":{"id":"count","task":"Count tabs"}}'}
   queued=[];controller=BridgeController(SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=Bridge()),lock=asyncio.Lock(),enqueue=queued.append))
   controller.state.update(enabled=True,continuous=True,phase='listening',objective='',latest_user_id=None,authorized_user_id=None,own_user_ids=['bootstrap'],seen_user_ids=['bootstrap','human'],chat_id=chat['id'],max_steps=8,run_id='test')
+  if missing_human:controller.state.update(latest_user_id='virtualized-feedback',authorized_user_id='virtualized-human')
   await controller.tick();await controller.tick()
   assert len(queued)==1 and controller.state['authorized_user_id']=='human'
   assert controller.state['phase']=='waiting_task'
@@ -531,4 +588,43 @@ def test_director_receives_failure_and_can_correct_same_objective(tmp_path,failu
   assert 'corrected next step' in b.sent and 'Source line must start at 1' in b.sent
   assert 'do not issue actions' not in b.sent
   assert 'missing-command is not recognized' in b.sent and '"exit_code": 1' in b.sent
+ asyncio.run(run())
+
+
+@pytest.mark.parametrize('blocker',['draft','generating','overlay','login_required','pending','changed_url'])
+def test_load_error_recovery_preserves_user_state(tmp_path,blocker):
+ async def run():
+  bridge=ChatGPTBridge(tmp_path/'binding.json');bridge.bound_url='https://chatgpt.com/c/test'
+  state={'conversation_load_error':True,'composer':False,'draft':''}
+  if blocker=='pending':bridge.pending={'text':'uncertain submission'}
+  elif blocker!='changed_url':state[blocker]='human draft' if blocker=='draft' else True
+  class Page:
+   url='https://chatgpt.com/c/other' if blocker=='changed_url' else bridge.bound_url
+   async def evaluate(self,script):return state
+   async def reload(self,**kwargs):raise AssertionError('Unsafe recovery')
+  bridge.browser=SimpleNamespace(page=Page())
+  assert not await bridge.recover_load_error(state)
+ asyncio.run(run())
+
+
+def test_load_error_recovery_is_bounded_and_rechecks_before_reload(tmp_path,monkeypatch):
+ async def run():
+  clock=[0];monkeypatch.setattr('hub.chatgpt_bridge.time.monotonic',lambda:clock[0])
+  bridge=ChatGPTBridge(tmp_path/'binding.json');bridge.bound_url='https://chatgpt.com/c/test'
+  state={'conversation_load_error':True,'composer':False,'draft':''}
+  class Page:
+   url=bridge.bound_url
+   reloads=0
+   async def evaluate(self,script):return state.copy()
+   async def reload(self,**kwargs):self.reloads+=1
+  page=Page();bridge.browser=SimpleNamespace(page=page)
+  assert await bridge.recover_load_error(state)
+  assert not await bridge.recover_load_error(state)
+  clock[0]=31;assert await bridge.recover_load_error(state)
+  clock[0]=100;assert not await bridge.recover_load_error(state)
+  assert page.reloads==2
+  bridge._load_recovery.clear()
+  async def changed(script):return {**state,'draft':'new draft'}
+  page.evaluate=changed
+  assert not await bridge.recover_load_error(state)
  asyncio.run(run())

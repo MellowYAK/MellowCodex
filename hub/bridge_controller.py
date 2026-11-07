@@ -49,12 +49,18 @@ class BridgeController:
         self.bridge.on_task_context=self.task_context
         self.bridge.on_binding_changed=lambda url:self.transcript.link(self.state['chat_id'],url)
         self.bridge.identify_owned_draft=self.transcript.owned_draft
-        if self.state.get('chat_id') and getattr(self.bridge,'preferred_url',None):
-            try:self.transcript.link(self.state['chat_id'],self.bridge.preferred_url)
+        if self.state.get('chat_id'):
+            try:
+                saved=self.transcript.remote(self.state['chat_id'])
+                if saved:self.bridge.preferred_url=saved
+                elif getattr(self.bridge,'preferred_url',None):self.transcript.link(self.state['chat_id'],self.bridge.preferred_url)
             except ValueError:pass
     def save(self):
         temporary=self.path.with_suffix('.tmp');temporary.write_text(json.dumps(self.state,ensure_ascii=False),encoding='utf-8');temporary.replace(self.path)
-    def stop(self):self.state['enabled']=False;self.state['phase']='stopped';self.save()
+        if hasattr(self,'transcript'):self.transcript.save_session(self.state)
+    def stop(self):
+        if self.state.get('phase')!='stopped':self.state['resume_phase']=self.state.get('phase','listening')
+        self.state['enabled']=False;self.state['phase']='stopped';self.save()
     def record_send_failure(self,exc):
         blocked=isinstance(exc,SubmissionBlocked)
         self.state.update(enabled=False,phase='connection_attention' if blocked else 'send_uncertain',error=str(exc))
@@ -166,12 +172,15 @@ class BridgeController:
         if self.state.get('enabled') and self.state.get('phase') not in ('listening','reconnect_required','stopped'):
             raise ValueError('Finish or stop the current handoff before switching conversations')
         remote=self.transcript.remote(chat_id)
+        self.save()
+        was_enabled=self.state.get('enabled',False)
         await self.bridge.open_conversation(remote)
-        self.state.update(chat_id=chat_id,objective='',seen=[],seen_user_ids=[],own_user_ids=[],own_texts=[],authorized_user_id=None,latest_user_id=None,latest_user_order=-1,pending_outbound_text=None,steps=0,action_ids=[],run_id=uuid.uuid4().hex,phase='listening' if self.state.get('enabled') else 'idle')
-        if self.state.get('enabled'):
-            maximum=self.state.get('max_steps',8);self.state['enabled']=False
+        previous=self.transcript.session(chat_id) if remote else None
+        maximum=self.state.get('max_steps',8);presentation=self.state.get('presentation','split')
+        self.state=previous or dict(chat_id=chat_id,objective='',seen=[],seen_user_ids=[],own_user_ids=[],own_texts=[],authorized_user_id=None,latest_user_id=None,latest_user_order=-1,pending_outbound_text=None,steps=0,action_ids=[],run_id=uuid.uuid4().hex,phase='idle',max_steps=maximum,presentation=presentation)
+        self.state.update(enabled=False,connection='connected',error='')
+        if was_enabled:
             await self.listen(chat['project_id'],maximum,chat_id=chat_id,already_locked=True)
-            await self.bridge.wait_reply(90)
         self.save();return chat
     async def listen(self,project_id,max_steps=8,initial_request=None,chat_id=None,already_locked=False):
         if self.state.get('pending_outbound_text'):
@@ -188,13 +197,25 @@ class BridgeController:
             linked=self.transcript.local(current['url']) if current.get('url') else None
             conversations=Conversations(self.engine.store)
             if linked and chat_id and linked!=chat_id:raise ValueError('The selected browser conversation belongs to another local chat; select that chat or explicitly relink an unused conversation')
+            # Re-enabling the same initialized listener resumes its cursor and
+            # objective. Do not bootstrap again or treat old turns as new work.
+            if linked and linked==self.state.get('chat_id') and self.state.get('continuous') and (self.state.get('latest_user_id') or self.state.get('own_user_ids')) and self.state.get('play_bootstrap','').startswith(('sent','verified')):
+                phase=self.state.get('phase')
+                if phase=='stopped':phase=self.state.get('resume_phase','listening')
+                if phase not in ('listening','waiting_reply','waiting_task'):phase='listening'
+                self.state.update(enabled=True,phase=phase,connection='connected',error='',max_steps=max_steps)
+                self.save();return self.state
             if linked:chat=conversations.get(linked)
             elif chat_id:chat=conversations.get(chat_id)
             else:chat=conversations.create(project_id,'ChatGPT · '+current.get('title','התכתבות'))
             if self.transcript.connection(chat['id'])['transport']!='play':raise ValueError('Select and save PLAY for this conversation before starting browser listening')
             if chat['title'].startswith(('User-authorized objective:','ChatGPT · Always listening')):
                 chat=conversations.update(chat['id'],'ChatGPT · '+current.get('title','התכתבות'),chat['pinned'],chat['archived'])
-            if current.get('url'):self.transcript.link(chat['id'],current['url'])
+            # A new conversation has no /c/ URL until the first send is accepted.
+            # record_delivery links the resulting URL to this same local chat.
+            from urllib.parse import urlsplit
+            if urlsplit(current.get('url','')).path.startswith('/c/'):
+                self.transcript.link(chat['id'],current['url'])
             presentation=self.state.get('presentation','split')
             self.state={'enabled':True,'continuous':True,'phase':'sending','steps':0,'seen':[],'chat_id':chat['id'],'objective':'','max_steps':max_steps,'action_ids':[],'run_id':uuid.uuid4().hex,'user_cursor':len(current['users']),'own_user_indices':[],'connection':'connected','presentation':presentation}
             if 'user_messages' in current:
@@ -347,6 +368,9 @@ class BridgeController:
         async with self.engine.lock:
             if self.state.get('continuous'):
                 current=await self.bridge.read()
+                if current.get('conversation_load_error'):
+                    self.state.update(connection='reconnecting',error='ChatGPT could not load this conversation; preserving the current task and message cursor.')
+                    self.save();return
                 if 'user_messages' in current:
                     # DOM virtualization removes old turns. Stable IDs/order, never DOM counts, own authority.
                     if 'seen_user_ids' not in self.state:
@@ -362,7 +386,10 @@ class BridgeController:
                     # A newly bootstrapped empty chat has no human cursor yet.
                     # Its confirmed outbound receipt is a safe baseline, including
                     # recovery of sessions created before this cursor was saved.
-                    if not any(cursors):cursors.extend(reversed(self.state.get('own_user_ids',[])))
+                    # A long conversation may also virtualize BOTH saved human
+                    # cursors. A confirmed outbound receipt remains an observed
+                    # stable anchor; never substitute a numeric DOM position.
+                    cursors.extend(reversed(self.state.get('own_user_ids',[])))
                     for cursor in cursors:
                         if cursor:
                             anchor=next((i for i,m in enumerate(current['user_messages']) if m['id']==cursor),-1)
@@ -448,9 +475,11 @@ class BridgeController:
             self.end_request(reply,'duplicate_action','ChatGPT repeated an action id; nothing was executed again.');return
         if self.state['steps']>=self.state['max_steps']:
             self.end_request(reply,'step_limit','The step limit for this request was reached; no further action was executed.');return
-        goal='User-authorized objective: '+self.state['objective']+'\nProposed next step from the linked ChatGPT assistant: '+action['task']+'\nPerform it only if it advances that objective and stays within the user authorization. Otherwise explain the conflict. Verify the actual target application and report evidence. Return requested information in your final answer. Screenshots are sent as evidence when available; use file_share for actual files the user requested to return to this ChatGPT conversation.'
+        goal=('CURRENT STEP — execute only this step, then return its observed evidence to the director:\n'+action['task']+
+              '\n\nOVERALL HUMAN OBJECTIVE — authorization and context only, not a request to execute all remaining steps now:\n'+self.state['objective']+
+              '\n\nDo only the CURRENT STEP. Do not advance to later steps mentioned in the overall objective. The linked assistant reviews this result before issuing the next step. If the current step conflicts with the human authorization, explain the conflict instead. Verify the actual target and report evidence. Use file_share for requested files; screenshots are delivered as evidence when available.')
         try:
-            task=Conversations(self.engine.store).submit(self.state['chat_id'],goal,'desktop',self.state['run_id']+'-'+action['id'],isolated=bool(self.state.get('pending_requests')))
+            task=Conversations(self.engine.store).submit(self.state['chat_id'],goal,action.get('mode','desktop'),self.state['run_id']+'-'+action['id'],isolated=bool(self.state.get('pending_requests')))
         except Conflict as exc:
             # A busy chat must not consume the request. Retry admission, not execution.
             self.state['dispatch_wait_reason']=str(exc)
@@ -498,6 +527,9 @@ class BridgeController:
 
     async def notify_remote(self,task,text,terminal=False):
         if not hasattr(self.bridge,'send') or not getattr(self.bridge,'on_outbound',None):return
+        # Task admission schedules the engine immediately. A status notification
+        # must not wait behind inference and turn an idle tick into a timeout.
+        if self.engine.lock.locked():return
         key=task['id']+(':terminal' if terminal else ':received')
         if key in self.state.get('status_notices',[]):return
         try:
@@ -509,6 +541,7 @@ class BridgeController:
             if current.get('generating') or current.get('draft','').strip() or newer:
                 self.state['status_delivery_error']='עדכון המצב שמור מקומית; שליחה ממתינה כי קיימת תגובה, טיוטה או בקשה חדשה.'
                 self.save();return
+            if self.engine.lock.locked():return
             self.state.setdefault('status_notices',[]).append(key);self.save()
             message='LOCAL AGENT STATUS (not a new request; do not issue actions in response):\n'+text+'\nTask ID: '+task['id']
             async with self.engine.lock:await self.bridge.send(message)

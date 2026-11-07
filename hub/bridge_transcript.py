@@ -13,6 +13,17 @@ class BridgeTranscript:
                 files TEXT NOT NULL, status TEXT NOT NULL, created REAL NOT NULL)''')
             db.execute('CREATE TABLE IF NOT EXISTS bridge_chat_links(chat_id TEXT PRIMARY KEY,remote_url TEXT UNIQUE NOT NULL)')
             db.execute('CREATE TABLE IF NOT EXISTS bridge_connection_preferences(chat_id TEXT PRIMARY KEY,transport TEXT NOT NULL,favorite INTEGER NOT NULL DEFAULT 0)')
+            db.execute('CREATE TABLE IF NOT EXISTS bridge_listener_sessions(chat_id TEXT PRIMARY KEY,state TEXT NOT NULL)')
+
+    def save_session(self,state):
+        if not state.get('chat_id'):return
+        with self.store.connect() as db:
+            db.execute('INSERT OR REPLACE INTO bridge_listener_sessions VALUES(?,?)',(state['chat_id'],json.dumps(state,ensure_ascii=False)))
+
+    def session(self,chat_id):
+        with self.store.connect() as db:
+            row=db.execute('SELECT state FROM bridge_listener_sessions WHERE chat_id=?',(chat_id,)).fetchone()
+        return json.loads(row[0]) if row else None
 
     def connection(self,chat_id):
         with self.store.connect() as db:
