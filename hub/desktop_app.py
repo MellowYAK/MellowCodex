@@ -428,6 +428,13 @@ def main():
     tray.setToolTip('Local Agent — פועל ברקע')
     menu=QMenu();menu.addAction('פתיחת הסוכן',show_window)
     menu.addAction('יציאה מהדפדפן והממשק',app.quit)
+    from .i18n import t
+    def full_shutdown():
+        request=Request('POST','/lifecycle/shutdown',{})
+        request.signals.result.connect(lambda result: tray.showMessage('MellowCodex',t('lifecycle.stopping','he')))
+        request.signals.error.connect(lambda error: tray.showMessage('MellowCodex',error))
+        QThreadPool.globalInstance().start(request)
+    menu.addAction(t('lifecycle.shutdown','he'),full_shutdown)
     tray.setContextMenu(menu)
     tray.activated.connect(lambda reason: show_window() if reason==QSystemTrayIcon.DoubleClick else None)
     tray.show()

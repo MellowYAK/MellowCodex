@@ -12,6 +12,20 @@ def setup_chat(tmp_path):
     return store,chats,chat['id']
 
 
+def test_first_request_does_not_present_itself_as_prior_project_evidence(tmp_path):
+    store,chats,chat=setup_chat(tmp_path);memory=ConversationMemory(store)
+    task=chats.submit(chat,'Investigate source files','code','first')
+    assert not memory.has_prior_context(task['id'])
+    assert 'No earlier conversation decisions' in memory.packet(task['id'])
+    memory.save_note(chat,'Preserve the API',0)
+    assert memory.has_prior_context(task['id'])
+    assert 'Preserve the API' in memory.packet(task['id'])
+    store.update(task['id'],state='done',result='Observed source')
+    other=chats.submit(chat,'Continue','code','second')
+    assert memory.has_prior_context(other['id'])
+    assert 'Investigate source files' in memory.packet(other['id'])
+
+
 def test_old_turn_exact_paging_restart_and_scoping(tmp_path):
     store,chats,chat=setup_chat(tmp_path)
     original='החלטה מקורית '+('טקסט ארוך '*1200)

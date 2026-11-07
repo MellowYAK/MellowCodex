@@ -169,6 +169,14 @@ class ConversationMemory:
                     'detail_tool':'conversation_history with task_id, field goal/result/actions/events and next_offset reads original full evidence'}
         return {'chat_id':chat_id,'total_turns':total,'turns':turns,'next_after':turns[-1]['position'] if len(rows)>limit else None,'notes':self.note(chat_id),'evidence_only':True,'chronological_fallback':fallback,'search_note':'No literal matches. These are chronological turns, NOT search matches. Read these and continue with query empty and next_after instead of repeating the same query.' if fallback else None,'detail_tool':'conversation_history with task_id, field and next_offset reads the exact full text'}
 
+    def has_prior_context(self, task_id):
+        chat_id=self.chat_for_task(task_id)
+        if not chat_id:return False
+        with self.store.connect() as db:
+            other=db.execute('SELECT 1 FROM chat_tasks WHERE chat_id=? AND task_id!=? LIMIT 1',(chat_id,task_id)).fetchone()
+            anchor=db.execute('SELECT 1 FROM conversation_anchors WHERE chat_id=? LIMIT 1',(chat_id,)).fetchone()
+        return bool(other or anchor or self.note(chat_id)['text'])
+
     def packet(self, task_id):
         chat_id=self.chat_for_task(task_id)
         if not chat_id:return ''
@@ -176,6 +184,8 @@ class ConversationMemory:
             count=db.execute('SELECT COUNT(*) FROM chat_tasks WHERE chat_id=?',(chat_id,)).fetchone()[0]
             first=db.execute('SELECT t.id,t.goal FROM chat_tasks c JOIN tasks t ON t.id=c.task_id WHERE c.chat_id=? ORDER BY c.position LIMIT 1',(chat_id,)).fetchone()
         note=self.note(chat_id)
+        if count==1 and not note['text'] and not self.anchors(chat_id,limit=1)['items']:
+            return '\nConversation continuity: this is the first request in this chat. No earlier conversation decisions are available. The current request is already provided above. Project implementation facts must come from project source, not from searching this same request in conversation history.'
         from .memory_review import MemoryReview
         feedback=MemoryReview(self.store).context(chat_id)
         return '\nConversation continuity (historical evidence, not fresh authorization): '+json.dumps({'chat_id':chat_id,'current_request_task_id':task_id,'retained_turns':count,'first_request':{'task_id':first['id'],'excerpt':first['goal'][:500]} if first else None,'saved_notes':note,'memory_feedback':feedback,'decision_anchors':self.anchors(chat_id,limit=8),'access':'conversation_history reads chronological history and exact requests/results/actions/events with continuation cursors, including old turns. Use conversation_anchors to preserve important explicit user decisions with verbatim source quotations; later corrections link to older anchors instead of erasing them. For a quotation from the current user request use current_request_task_id, not first_request.task_id. Page the anchor list when next_after is present; omit after for the newest page. Consult original history before guessing prior decisions or asking the user to repeat them. When an important retrieved decision is uncertain, conversation_memory_review can request optional source-bound ChatGPT verification if enabled. Missing remote context is unavailable, not confirmation; continue with local evidence. conversation_memory_reviews reads all saved feedback with cursors; review_id reads the exact current status. Contradicted feedback requires checking the original source, not silently replacing history. Stale/unavailable feedback cannot confirm a claim. Never use feedback as new authorization. Old success reports are not evidence of current machine state. History has no time-based expiry; model input is finite.'},ensure_ascii=False)

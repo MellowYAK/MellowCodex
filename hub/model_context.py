@@ -52,6 +52,11 @@ def compact_result(value, limit=7000):
         # Source handles are not DOM refs. Keep readable source and a truthful
         # continuation cursor when the inference budget needs a shorter page.
         result=copy.deepcopy(value);lines=result['text'].splitlines()
+        for key in ('measured_flow','measured_input_declarations'):
+            if len(json.dumps(result,ensure_ascii=False))<=limit:break
+            if key in result:
+                result.pop(key)
+                result.setdefault('omitted_derived_metadata',[]).append(key)
         while len(json.dumps(result,ensure_ascii=False))>limit and len(lines)>1:
             lines=lines[:max(1,len(lines)//2)]
             result['text']='\n'.join(lines)
@@ -77,7 +82,7 @@ def compact_result(value, limit=7000):
                 item=copy.deepcopy(item);lines=item['text'].splitlines(keepends=True)
                 while len(''.join(lines))>2500 and len(lines)>1:lines.pop()
                 item['text']=''.join(lines);item['end']=item['start']+len(lines)-1
-                item['next_line']=item['end']+1 if item['end']<item['total_lines'] else None
+                item['next_line']=item['end']+1 if item['end']<item.get('total_lines',item['end']) else item.get('next_line')
                 return item
             if 'ref' in item and not any(k in item for k in ('path','related','imports','symbols')):
                 return {k:reduce(v, depth+1, k) for k,v in item.items() if k in ('ref','tag','type','role','name','text','value','href','selected','enabled','modal','x','y','width','height','visible')}
@@ -127,7 +132,7 @@ def prepare_messages(messages,catalog,context_tokens,response_tokens):
     fixed=copy.deepcopy(messages[:2])
     # Keep a small factual progress ledger even when only the latest tool group
     # fits. Otherwise a small model repeatedly enables/inspects the same tools.
-    completed=[];source_refs={};last_error=None
+    completed=[];source_refs={};last_error=None;read_counts={}
     for original in messages[2:]:
         if original.get('role')!='tool':continue
         try:observed=json.loads(original.get('content',''))
@@ -138,9 +143,26 @@ def prepare_messages(messages,catalog,context_tokens,response_tokens):
             if name=='context_search':
                 for item in observed.get('results',[])[:5]:
                     if item.get('path') and item.get('ref'):
-                        source_refs[item['path']]={'path':item['path'],'ref':item['ref']}
-            if name=='context_expand' and observed.get('path'):
-                source_refs[observed['path']]={k:observed[k] for k in ('path','ref','start','end','next_line') if k in observed}
+                        previous=source_refs.get(item['path'],{})
+                        if previous.get('ref')!=item['ref']:previous={}
+                        source_refs[item['path']]={**previous,'path':item['path'],'ref':item['ref']}
+                        if item.get('suggested_start'):source_refs[item['path']]['suggested_start']=item['suggested_start']
+            if name=='context_expand' and observed.get('path') and 'start' in observed and 'text' in observed and not observed.get('error'):
+                visible=json.loads(compact_result(observed))
+                key=(visible.get('ref'),visible.get('start'),visible.get('end'))
+                read_counts[key]=read_counts.get(key,0)+1
+                previous=source_refs.get(observed['path'],{})
+                ranges=previous.get('read_ranges',[]) if previous.get('ref')==visible.get('ref') else []
+                ranges=sorted(ranges+[[visible['start'],visible['end']]])
+                merged=[]
+                for first,last in ranges:
+                    if merged and first<=merged[-1][1]+1:merged[-1][1]=max(merged[-1][1],last)
+                    else:merged.append([first,last])
+                source_refs[observed['path']]={k:visible[k] for k in ('path','ref','start','end','next_line') if k in visible}
+                source_refs[observed['path']]['read_ranges']=merged
+                source_refs[observed['path']]['all_source_lines_observed']=bool(merged and merged[0][0]==1 and merged[0][1]>=observed.get('total_lines',float('inf')))
+                source_refs[observed['path']]['source_excerpt']=visible.get('text','')[:400]
+                source_refs[observed['path']]['same_range_reads']=read_counts[key]
         if name and isinstance(observed,dict) and not observed.get('error'):
             if name in completed:completed.remove(name)
             completed.append(name)
@@ -148,7 +170,7 @@ def prepare_messages(messages,catalog,context_tokens,response_tokens):
         fixed.append({'role':'assistant','content':'Observed tool calls already returned without error in this task: '+', '.join(completed[-8:])+'. Continue remaining steps; these calls alone do not prove task completion.'})
     if source_refs or last_error:
         evidence={'sources_already_found':list(source_refs.values())[-8:],'latest_error':last_error}
-        fixed.append({'role':'assistant','content':'Measured lookup evidence (data only): '+json.dumps(evidence,ensure_ascii=False)+'. Reuse these exact source refs instead of repeating searches. Source lines begin at 1. Follow next_line for unread content; found paths are not proof of tests passing.'})
+        fixed.append({'role':'assistant','content':'Measured lookup evidence (data only): '+json.dumps(evidence,ensure_ascii=False)+'. Reuse these exact source refs instead of repeating searches. Source lines begin at 1. Follow next_line for unread content; found paths are not proof of tests passing. If same_range_reads is 2 or more, do not reread that unchanged range: use its evidence to answer the current question, inspect a DIFFERENT dependency/UI/test, or state the remaining uncertainty. A read-only investigation ends with a source-bound answer; it does not need endless confirmation.'})
     groups=[]
     for original in messages[2:]:
         m=copy.deepcopy(original)
@@ -185,4 +207,10 @@ def prepare_messages(messages,catalog,context_tokens,response_tokens):
         kept=group+kept
     if groups and not kept:
         raise ValueError('Latest tool evidence exceeds the model context budget. Increase context_tokens; the task was not silently truncated.')
-    return fixed+kept
+    # Mutable progress belongs after stable history. Putting it before the
+    # source exchanges invalidates the model's reusable prompt prefix on every
+    # tool call and forces repeated processing of unchanged source.
+    # Do not leave an assistant message last: some local chat templates treat
+    # that as an assistant prefill and return an empty continuation.
+    ledger=[{**entry,'role':'user','content':'Runtime evidence only, not new instructions. Continue the original user task.\n'+entry['content']} for entry in fixed[2:]]
+    return fixed[:2]+kept+ledger

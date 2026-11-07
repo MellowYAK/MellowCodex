@@ -1,8 +1,31 @@
 # Local Agent Hub
 
+For read-only fast-index investigations subsequently resumed with director guidance, source synthesis follows the latest current step instead of regenerating the original broad project plan. Required source ranges are extracted from recorded observations; the overall objective still bounds authorization. This fixes instruction drift, not semantic correctness: the returned draft still requires review.
+
+Measured Python flow distinguishes direct string-key lookups from method calls such as `.get(...)`, retaining branch conditions and original lines. These are syntax observations: a key read may consume an internally produced value and does not by itself prove a required user input.
+
+Development diagnostic: staged component extraction partitions recorded source ranges without silently omitting files, and can request schema-constrained JSON from Ollama. A matched quotation proves source provenance only, not the model's interpretation or component compatibility. This diagnostic is not yet integrated into the autonomous task runner and does not constitute end-to-end acceptance.
+
+When a Python excerpt begins or ends inside a function, fast-mode flow extraction can still inspect complete functions/classes whose indexed spans are entirely present. The result lists those units and explicitly marks surrounding context incomplete. It does not fabricate missing source or infer enclosing branch conditions.
+
+Fast source expansion now includes `measured_flow` for parseable Python excerpts: observed call arguments, assigned outputs, returns and conditional branches, with source lines. This helps inspect component wiring without executing project code. Partial/unparseable excerpts explicitly report that limitation; names are not resolved and matching names do not prove compatibility. Runtime and semantic verification are still required. Derived flow metadata is expendable before source text under the inference budget.
+
+For MCP-directed corrections, `task_guide` records constraints but does not resume a task in `waiting_review`. Read the task's current revision, then call `task_request_changes(task_id, expected_revision, reason)` to queue that same task through the existing review endpoint. Lost responses require rereading the task; stale requests are rejected, and pending uncertain effects require reconciliation. This tool is implemented locally; availability in the currently connected public MCP catalog remains unverified until deployment/refresh.
+
+Task results include an `answer` envelope separate from human-readable runtime `result`: original executor text, optional parsed JSON, syntax validity and original format. PLAY feedback carries the same envelope; MCP receives it through the task endpoint. Parsing does not establish semantic correctness. Resumed/in-progress tasks do not expose a stale final answer. Existing running services need the updated code loaded before this is available.
+
+Supervised request interpretation: the shared PLAY/MCP director contract asks the external supervisor to formulate English execution instructions from the original human request and review results against that original. Literal paths, identifiers and search terms remain unchanged. Local self-translation is not external verification. This contract update alone does not prove a live feedback round-trip or activate a disabled provider.
+
+**מצב בדיקת הבנת פרויקטים — 7 בנובמבר 2026:** לאחר האבחון המשתמש אישר לחדש את היישום. תיקון ראשון נבדק, אך בדיקת ההבנה המעשית עדיין נכשלה. האינדקס והמטמון קיימים, אך הבנת קוד עצמאית וסגירת לולאת משוב מלאה עדיין לא עברו קבלה. [תוכנית התיקון המבוססת על הריצות והקוד הקיימים](docs/LOCAL_MODEL_RECOVERY_PLAN-2026-11-07.md) משמרת את התשתית ומפרידה בין כשל באיתור מקורות, העברת הקשר, הסקה וניהול צעדים. זו תוכנית עבודה ולא תכונה שהופעלה בייצור.
+
 PLAY reply tracking distinguishes consecutive status and result messages even when ChatGPT groups them under one turn. The isolated browser acceptance verified automatic result delivery, ingestion of the remote answer and return to listening. This does not establish automatic correctness of memory feedback or complete production acceptance.
 
-**גרסת קוד: 0.14.1 · עדכון תיעוד: 7 בנובמבר 2026.** [היסטוריית גרסאות ותיקונים](CHANGELOG.md) · [תוצאות בדיקות](VALIDATION.md).
+**גרסת קוד: 0.15.0 · עדכון תיעוד: 7 בנובמבר 2026.** [היסטוריית גרסאות ותיקונים](CHANGELOG.md) · [תוצאות בדיקות](VALIDATION.md).
+
+### מיפוי עם מנחה — מצב נוכחי
+בחר תיקיית פרויקט ופתח **מפת פרויקט** כדי לאנדקס, לחפש ולקרוא מקורות. במסלול המשוב GPT מקבל מפה קצרה, מבקש קבצים וטווחים לפי הצורך ומחליט מה לעשות בהמשך; הסוכן מחזיר את המקורות המקוריים וחתימות התוכן. אין צורך ב־Git או בהעלאת כל התיקייה. נבדקו בפועל מסלולי MCP ו־Web PLAY על Ember Video, כולל שיחת GPT חדשה. [ראיות והגבלות](docs/MAPPING_ACCEPTANCE-2026-11-07.md).
+
+המפה כוללת קבצי מקור ומסמכים לפי מדיניות הסינון; היא אינה כוללת מודלים, מדיה, סודות ותיקיות תלויות. זיהוי קובץ באינדקס אינו הוכחת התנהגות בזמן ריצה. במצב המשוב המנחה בודק תוצאות לפני השלב הבא; פקודות מיפוי, קריאת מקור ו־patch מדויק אינן נכתבות מחדש בידי המודל המקומי. הבנת קוד עצמאית של Qwen עדיין אינה מאומתת באותה רמה.
 
 סוכן מקומי ל־Windows, מותקן בכונן E. זו גרסת פיילוט עובדת, ולא תחליף מלא ומאומת לכל יכולות Codex.
 
@@ -437,9 +460,116 @@ Development checkpoint (2026-11-07, unreleased): a real ChatGPT Web PLAY directo
 
 Source repository: https://github.com/MellowYAK/MellowCodex (main). The first development baseline was uploaded through the local agent with a reviewed staged-file set and matching local/remote Git commit. Git publication does not activate a production release. See AGENTS.md for the validated-change publication workflow.
 
+
+## Source-first project exploration (development)
+Choose a folder, then select **Fast source exploration** in Project map, or ask the agent/ChatGPT to set the project indexing mode to `fast`. `project_index_settings(project_id, enabled, mode)` and `project_index_status` use the same saved setting in UI/local tools/MCP registration. PLAY requests use those local adapters. Existing projects retain `apc_baseline`: the partial APC-derived implementation, not full APC parity.
+
+Only one mode is selected per project. Fast uses `context-fast.sqlite3`; the baseline retains `context.sqlite3` and its APC annotations. User-authored constraints are shared intentionally. Switching modes preserves both caches, queues the selected scan and invalidates cross-mode source references. Operations serialize per project; no second background scanner is introduced.
+
+Fast mode seeds code tasks with current AGENTS/README/architecture source, paged file capsules, lexical full-file search (within explicit scan resource budgets), Python imports/reverse imports and heuristic test links. The agent must investigate source, use ordinary shell/Git searches where static links are insufficient, then implement authorized changes and validate. This is a workflow, not automatic semantic understanding of every language. Source exploration does not include private prior chats unless explicitly supplied through conversation tools. Non-Python files are searchable; the graph is not a full call graph. Source files are no longer excluded for exceeding 1 MB. Fast search inserts bounded text chunks and deduplicates matching files; source reads remain paged and hash-checked. Files above the 4 MB AST-processing threshold remain indexed as text with `streamed_text_v1`, without claiming extracted Python symbols. Existing scan time/count budgets still fail explicitly and preserve the previous index; they are not filesystem permissions. Secrets, runtime/model/data folders and Git-ignored files remain excluded. The partial APC baseline retains its original 64,000-character search-body policy; it is not the full-file fast mode. Live acceptance and public connector deployment are tracked in VALIDATION.md.
+
+Fast source tools also accept exact indexed relative paths, avoiding model transcription of long opaque handles; live hashes are still checked. Working evidence retains recorded source excerpts rather than inferred claims of absence. Before a final fast-mode coding answer, a local source review checks the draft against bounded observed excerpts and execution evidence. This is the same local model, not independent QA or proof of complete understanding.
+
+Fast multi-term search favors exact source snippets, filenames and measured definitions. Without strong filename leads, it first selects files containing all distinctive query terms, including terms in separate chunks; otherwise it retains partial matches. Additional descriptive words do not exclude matching implementation-filename leads. The APC baseline keeps its prior query behavior. Source-progress records merge delivered line ranges across pages and retain source identity through path-based calls. Mutable progress appears after stable inference history to preserve reusable prompt prefixes; actual performance depends on model/runtime.
+
+Explicit filenames and distinctive Python symbol names prioritize their indexed files/definitions. Named-function results include a definition location and open near that location, even deep in large files. Repeated broad searches trace the strongest already-read implementation's relationships before incidental matches. Relations are source-navigation evidence, not proof that the model has understood or completed a task; inspect its recorded actions and final source-bound plan.
+
+At fast-task startup the configured local model selects up to three search concepts using the user objective, the project instruction/architecture excerpts already read through tools, and measured navigation candidates. The existing runner searches them and reads a bounded initial set of observed sources, an implementation relationship and a relevant test when available. These are logged tool actions, not a model-generated project summary. The model may continue navigating after this initial packet. Fast Python extraction follows existing from-package module candidates and reverse import links; it does not execute imports or resolve arbitrary dynamic Python behavior.
+
+Before final source review, unread filenames named in a draft are resolved and read through logged tools. A frontend component can also lead to same-directory files with the same normalized stem and a different extension; these are explicitly filename heuristics, not proven API links. Source review receives an inventory of files actually observed and prioritizes both full paths and short filenames. Additional source reads prompt reconsideration of the draft. Local-model review can still be wrong and does not substitute for independent acceptance.
+
+Generic `read_file` also streams paged UTF-8 content instead of rejecting text above 300 KB. Page cursors, character counts and content hashes remain available; it does not load the entire file into RAM. Source-review packets retain complete selected source ranges rather than cutting function bodies at an arbitrary character boundary.
+
+Fast implementation-filename ranking considers the number of distinct query concepts and their rarity across indexed filenames. This improves navigation leads but is not semantic proof. Pause/cancel state is rechecked after model inference and before subsequent tool dispatch, including state set by another controller process; an already running tool may still need its own cancellation support.
+
+The index persists a SHA-256 content hash, extraction version, symbols and imports per file. Refresh hashes bytes but reuses analysis when content and parser are unchanged, including timestamp-only edits and identical-content renames. A renamed file gets its new searchable path; path-specific annotations are not silently transferred. Syntax-error analysis is cached too and retried after content/parser changes. This is an incremental source cache, not a replacement for Git history. A fresh conversation without earlier turns, saved notes or anchors does not treat its own initial request as historical evidence about project implementation.
+
+Fast source navigation supplies a compact indexed filename tree before model-selected searches. The tree is navigation evidence, not a claim about implementation. Drafting retains read-only source lookup tools and budgets both tool schemas and escaped message content; filename navigation is discarded before the last observed source excerpt when context is tight. The map UI shows indexed, cached, changed, deleted and skipped counts separately.
+
+Fast investigations now support component-first navigation: the local model selects existing paths from the filename map, then the runner records source and relationship reads for each selection. Filename relationships are navigation hints, not proof that components have compatible contracts. This does not guarantee correct model reasoning.
+
+Fast source packets additionally include AST-measured Python BaseModel field declarations, required/default expressions and source line references. This is a local deterministic aid, not an LLM conclusion; validators, inheritance and runtime consumers remain explicitly unverified by these declarations. No APC components were copied for this change.
+
+The shared fast `context_expand` response includes `measured_input_declarations`, including validator source. Local task tools, HTTP and registered MCP context operations use the same service. Availability in a running public connector requires deployment; source implementation alone is not proof that the live connector exposes it.
+
+### Directed source investigations
+PLAY actions may specify `mode: "code"` for source investigation and coding; omitting mode retains the legacy desktop behavior. MCP submit_task already accepts the same execution modes. Focused source synthesis retains revisioned director guidance alongside observed source excerpts. A received instruction or successful transport is not proof of execution: inspect recorded actions and results.
+
+PLAY detects the specific “Could not load this ChatGPT conversation” error and attempts at most two safe same-page reloads per connection session. It reports persistent failure instead of treating it as a login requirement. This does not recover a closed tab, authenticate an account, or resend an uncertain submission.
+
 ### PLAY recovery and conversation continuity (0.14.1)
 Recovery uses the exact remote URL associated with the local chat after a restart or a closed tab. Selecting an unrelated browser tab does not transfer the listener. Listener cursors, objectives, executed action IDs and pending messages are persisted per local chat; selecting a linked chat restores its saved session. Re-enabling an initialized listener continues from its saved cursor without duplicate bootstrap instructions. A new conversation remains an explicit separate action. Existing drafts and uncertain sends are preserved. Missing tabs and known conversation-load errors have bounded retries; inaccessible/login-required conversations remain visibly blocked instead of silently switching chats.
 
 The director can specify PLAY `mode: "code"` for source investigation/implementation, or `inspect`, `browser`, `desktop`; omission preserves desktop behavior. The local model receives the current step separately from the overall human authorization, and returns its evidence before the director issues the next step. A status notice does not wait behind an ongoing model inference lock.
 
 Real two-step Web PLAY acceptance, service restart and UI stop/resume passed in the isolated app (18984), using the original linked ChatGPT conversation and Qwen3.5:4b. No human approval was inferred from ChatGPT review. These shared controller/adapter changes are independent of the local model, but this test is not proof of all future tasks. Public MCP deployment and the separate Ember semantic/indexing acceptance remain unverified by this test. No additional APC code was copied.
+# Recovery implementation in progress (2026-11-07)
+
+Director source requirements are shared by development guidance (HTTP/MCP `task_guide`) and PLAY code steps. Optional `required_sources` entries contain project-relative `path`, inclusive `start`/`end`, and an optional observed `sha256`. The agent runner dispatches exact reads in chunks of up to 200 lines without asking the local model to rewrite them. Coverage is checked against successful recorded text and consistent source versions; missing evidence is pending review, not presumed completion. This does not certify semantic understanding. PLAY protocol version 3 advertises this optional field. Existing steps without it remain supported.
+
+These recovery changes are under development. Local-folder operation is the primary test path; Git is optional and is not required for either autonomous analysis or director feedback. Current code changes do not establish that the public connector or installed process has loaded them.
+
+### Director tool scope (development, not deployed)
+
+Coding task guidance accepts optional `allowed_tools` through the shared HTTP/MCP `task_guide` path; PLAY code actions accept the same field. Omission adds no constraint, `[]` permits no executor tools, and subsequent guidance can only narrow the task scope. Include `context_expand` when requiring source ranges. These tool-level constraints do not sandbox a permitted shell or script; omit such tools for source-only steps. The original human request remains the authorization boundary.
+
+Source feedback in the development version carries a bounded set of exact excerpts for independent review through PLAY and MCP get_task. Omitted ranges are identified explicitly (up to 40 manifest entries, with total counts); the full action log remains authoritative. This avoids interpreting a recent-action summary as complete source coverage.
+
+Answer-only corrections retain the task's earlier source evidence for review. Historical source versions remain labeled; retaining them does not verify that files are still unchanged. Screenshots and action-effect reports remain scoped to the current execution attempt.
+
+Directed source synthesis can join paged reads from the same version to cover a required range, honoring its optional SHA256. Missing lines or conflicting overlapping text remain explicit missing evidence; chunks from different versions are never combined.
+
+Fast indexing can also enumerate finite cases of supported straight-line Python after-validator rejection predicates. It interprets only a restricted AST grammar and never executes the project's code. These facts describe entry to that specific rejection branch, not full request validity or downstream runtime success. Unsupported expressions remain unmeasured. Explicit indexed file paths are inspected before model-invented searches; focused read-only questions retain their requested output instead of becoming broad architecture plans.
+
+Directed read-only source review separates required source collection from answer synthesis. The synthesis stage has no source tools; it returns unresolved questions to its director instead of repeatedly rereading the same evidence. This is not a semantic correctness guarantee; independent review remains necessary. Autonomous exploration retains its source tools.
+
+
+Local source review: a rejection without matching draft/source quotations cannot trigger repeated rewrites. The candidate remains explicitly unverified in waiting_review for independent review; source quotes alone are not proof that the critique is correct.
+
+Source-review evidence can use inclusive line anchors: the runtime retrieves the matching observed code rather than relying on the critic to copy it. A valid anchor only grounds the evidence; it does not certify the interpretation.
+
+Broad source synthesis prioritizes task-relevant implementation evidence over incidental recent files. Under context pressure it removes navigation listings and duplicate derived metadata before original code; omitted ranges remain in the action log and do not establish absence.
+
+Unreleased — 2026-11-07: synthesis events now distinguish all observed reads from the exact source ranges delivered to the bounded model request (path, range, ref, omitted count). This makes missing-context diagnosis observable instead of treating a read count as delivery proof. Native Hub implementation; no new APC code reused.
+
+Unreleased — 2026-11-07: the shared MCP/PLAY director contract now changes responsibility after a failed semantic correction: director owns synthesis and decisions; executor returns bounded source facts before concrete implementation steps. It explicitly checks route declarations, async readiness, field mapping and evidence for cleanup/retention. This is guidance, not a guarantee that the provider follows it or proof of automatic transport. One focused PLAY protocol test passed (0.23s). Native Hub change, no additional APC source reused.
+
+### Exact source delivery to a director
+For a code-reading step, MCP task_guide or PLAY may set `evidence_only: true` with `required_sources`. The runner returns original excerpts and version hashes without invoking the local model. Only project_context/context_refresh/context_expand are permitted for this step; required_tools must be empty. Results remain waiting_review for director assessment. Retrieval success is not semantic approval. This is implemented in source; an already-running gateway requires a normal approved reload before the new schema is available.
+
+Gateway `/health` includes `tool_catalog.count`, a SHA-256 fingerprint of public tool input schemas, and `supervised_source_tools`. Compare this running-gateway metadata when troubleshooting stale connector catalogs; code registration alone does not establish connector availability. A waiting_review result may contain an explicitly unverified executor draft alongside the local critic reason, for external review. Neither is a success claim.
+
+### Exact director patches (development, not yet activated)
+GPT owns source investigation, implementation instructions and review in supervised mode. PLAY code actions and MCP task_guide accept exact_patch: candidate_id, expected_revision and changes containing path, base_hash and full replacement content. The normal runner applies this verbatim to the isolated candidate and returns candidate_diff without asking Qwen to rewrite it. Use observed IDs/hashes; send source reads and patches as separate bounded steps in the same chat/project. The step ends waiting_review, not completed: the director must review the diff and request tests. This does not activate a release. Live transport acceptance remains pending.
+
+### Full shutdown / unload
+Use Settings → General → full shutdown, or the tray menu full-shutdown action. MCP clients can call `agent_shutdown` and inspect `agent_shutdown_status` while connected. Acceptance is not completion: the connection closes during shutdown. The existing UI-only exit remains separate. Tasks stop, Hub-managed models unload (model files remain), then desktop and owned services exit. Shared Ollama/other applications are not terminated. Explicit model load is required on the next session. Failures are retained in `state/last-shutdown.json`. This source change requires the next normal service and desktop restart; live deployment has not been verified.
+
+For services left alive by an older running UI, use `MellowCodex - Full Shutdown` on the Windows desktop. It requests administrator permission, stops this installation’s identified Hub/desktop/gateway processes and owned service children, then unloads managed models. This is a force-stop recovery path; ongoing work is interrupted. Shared Ollama remains running. Results: `E:/AI/state/last-admin-shutdown.json`.
+
+### Directed project onboarding and source delivery (in progress)
+A new director chat can call `project_brief(project_id)` for the selected index,
+original README/AGENTS excerpts, source hashes and search entry points. Use
+`context_search`, `context_related` and `context_expand` for additional evidence;
+the brief does not assert runtime capability from filenames.
+
+`request_sources(chat_id, request_id, request, sources)` installs bounded source
+instructions before enqueueing. It avoids the race between ordinary submission
+and subsequent guidance, does not run local inference, and returns evidence for
+GPT to review. Poll `get_task`; retrieve any `omitted_sources.action_id` through
+`task_source`. Recorded snapshots are not fresh filesystem observations.
+Git is optional. The same existing index service is used; no replacement APC
+index or new APC-derived implementation is introduced by these endpoints.
+
+### Mapping-only director requests
+PLAY now accepts a bounded `context_read` in a code step: operation `brief`,
+`overview`, `search` or `related`. The existing task runner executes the selected
+index read and returns its original result for director review without local
+inference. This step is separate from source ranges and code changes. A map does
+not authorize implementation; subsequent development requires a user request.
+Successful HTTP and runner context reads retain metadata receipts in the context
+database (`context_access`), without copying source bodies into the audit table.
+
+
+### 2026-11-07 direct MCP mapping acceptance
+In the connected GPT conversation, three actual MCP calls completed: project_context, context_search (project storage/versioning), context_expand (ember_video/projects.py lines 120-206). Server context_access receipts confirm all three HTTP-backed calls; GPT described save/revision/current/history behavior and explicitly separated source verification from runtime execution. No Git access, media execution or local inference was requested. Receipt evidence is stored outside the repository at E:/AI/audits/recovery-directed-20261107/mcp-map-access-receipts.json. PLAY separately completed brief -> related -> exact source -> director review automatically. All five returned PLAY source hashes independently match current files. New convenience MCP wrappers may remain absent from existing client catalogs; the existing direct context tools were the tested route. Publication and the final bootstrap cleanup deployment remain pending.

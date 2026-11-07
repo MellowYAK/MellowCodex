@@ -75,6 +75,34 @@ def test_preserved_stat_edit_refreshes_source(context):
     assert not svc.search(p,'before')['results']
     assert svc.search(p,'after')['results']
 
+
+def test_content_hash_reuses_analysis_after_touch_rename_and_syntax_error(context):
+    svc,p,root=context;good=root/'good.py';bad=root/'bad.py'
+    good.write_text('def present(): return 1');bad.write_text('def broken(')
+    calls=[];extractor=svc.extract
+    def counted(rel,text):
+        calls.append(rel);return extractor(rel,text)
+    svc.extract=counted
+    svc.refresh(p);assert len(calls)==2;calls.clear()
+    stat=good.stat();os.utime(good,ns=(stat.st_atime_ns,stat.st_mtime_ns+1_000_000))
+    result=svc.refresh(p)
+    assert result['unchanged']==2 and result['changed']==0 and calls==[]
+    good.rename(root/'renamed.py');result=svc.refresh(p)
+    assert result['changed']==1 and result['deleted']==1 and calls==[]
+    assert svc.search(p,'present')['results'][0]['path']=='renamed.py'
+    bad.write_text('def repaired(): return 2');svc.refresh(p)
+    assert calls==['bad.py']
+    assert svc.search(p,'repaired')['results'][0]['path']=='bad.py'
+    # Editors/copy tools can preserve both size and timestamps. Only the
+    # content digest establishes whether cached analysis is still current.
+    calls.clear();renamed=root/'renamed.py';stat=renamed.stat()
+    renamed.write_text('def updated(): return 1')
+    assert renamed.stat().st_size==stat.st_size
+    os.utime(renamed,ns=(stat.st_atime_ns,stat.st_mtime_ns))
+    result=svc.refresh(p)
+    assert result['changed']==1 and calls==['renamed.py']
+    assert svc.search(p,'updated')['results'][0]['path']=='renamed.py'
+
 def test_constraints_survive_optional_note_budget(context):
     svc,p,root=context;(root/'a.py').write_text('value=1')
     svc.refresh(p);svc.annotate(p,'a.py',notes='x'*6000,must_not_break=['preserve signature'])

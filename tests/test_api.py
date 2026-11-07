@@ -188,6 +188,40 @@ def test_stale_review_and_failed_evidence(client,tmp_path):
     assert client.post(path,json={'decision':'approve','reason':'checked','expected_revision':1},headers=headers).status_code==409
     assert client.post(path,json={'decision':'approve','reason':'checked','expected_revision':2},headers=headers).status_code==409
 
+def test_mcp_correction_resumes_same_task_once_and_preserves_scope(client,tmp_path):
+    import asyncio
+    from hub.development.tools import register_mcp
+    from hub.development.guidance import Guidance
+    class Registry:
+        def __init__(self):self.tools={}
+        def tool(self,**kwargs):
+            def register(fn):self.tools[fn.__name__]=fn;return fn
+            return register
+    async def local(path,body,**kwargs):
+        response=client.post(path,json=body,headers={'x-hub-key':module.TOKEN})
+        return response.status_code,response.json()
+    registry=Registry();register_mcp(registry,local,{}, {})
+    task=module.store.create('Original human objective',str(tmp_path),'code','correction-test')
+    Guidance(module.store).submit(task['id'],task['revision'],0,'','scope','Read only',allowed_tools=['read_file'])
+    task=module.store.update(task['id'],state='waiting_review',messages=[{'role':'assistant','content':'Draft'}])
+    call=registry.tools['task_request_changes']
+    status,value=asyncio.run(call(task['id'],task['revision'],'Check the source again'))
+    assert status==200 and value['state']=='queued' and value['answer'] is None
+    assert value['id']==task['id'] and value['goal']==task['goal']
+    assert Guidance(module.store).allowed_tools(task['id'])=={'read_file'}
+    assert module.store.get(task['id'])['messages'][-1]['content']=='Check the source again'
+    assert asyncio.run(call(task['id'],task['revision'],'Check the source again'))[0]==409
+    assert len(module.store.list())==1
+
+def test_correction_cannot_resume_uncertain_effect(client,tmp_path):
+    task=module.store.create('Observe',str(tmp_path),'code','uncertain-correction')
+    module.store.begin_action(task['id'],'write_file',{'path':'example'})
+    task=module.store.update(task['id'],state='waiting_review')
+    response=client.post('/api/tasks/'+task['id']+'/review',headers={'x-hub-key':module.TOKEN},
+                         json={'decision':'request_changes','expected_revision':task['revision'],'reason':'Retry'})
+    assert response.status_code==409
+    assert module.store.get(task['id'])['state']=='waiting_review'
+
 def test_artifact_cannot_escape(client,tmp_path):
     headers={'x-hub-key':module.TOKEN}
     t=module.store.create('test',str(tmp_path),'code','unique-124')
@@ -252,3 +286,22 @@ def test_worktree_creates_isolated_project(client,tmp_path,monkeypatch):
     assert copied.read_text()=='original'
     copied.write_text('isolated')
     assert (repo/'a.txt').read_text()=='original'
+
+def test_source_request_installs_guidance_before_enqueue(client,tmp_path,monkeypatch):
+    from hub.development.guidance import Guidance
+    project=module.conversations().project(str(tmp_path))
+    chat=module.conversations().create(project['id'])
+    observed=[]
+    def enqueue(task_id):
+        observed.append(Guidance(module.store).evidence_only(task_id))
+    monkeypatch.setattr(module.engine,'enqueue',enqueue)
+    headers={'x-hub-key':module.TOKEN}
+    body={'text':'Read exact source only','request_id':'source-atomic-01','sources':[{'path':'main.py','start':1,'end':10}]}
+    response=client.post('/api/chats/'+chat['id']+'/sources',json=body,headers=headers)
+    assert response.status_code==200,response.text
+    assert observed==[True]
+    retry=client.post('/api/chats/'+chat['id']+'/sources',json=body,headers=headers)
+    assert retry.status_code==200,retry.text
+    assert retry.json()['id']==response.json()['id']
+    body['sources'][0]['end']=11
+    assert client.post('/api/chats/'+chat['id']+'/sources',json=body,headers=headers).status_code==409

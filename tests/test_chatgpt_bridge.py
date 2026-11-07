@@ -1,7 +1,18 @@
 import asyncio
+import json
 import pytest
 from types import SimpleNamespace
 from hub.chatgpt_bridge import action_from_reply,ChatGPTBridge
+
+def test_play_source_requirements_survive_parse_and_reject_invalid_ranges():
+ action={'id':'source-step','task':'Read source','mode':'code','required_sources':[{'path':'src/a.py','start':2,'end':9}]}
+ parsed=action_from_reply(json.dumps({'local_agent_action':action}))
+ assert parsed['required_sources']==[{'path':'src/a.py','start':2,'end':9,'sha256':''}]
+ action['required_sources'][0]['end']=1
+ assert action_from_reply(json.dumps({'local_agent_action':action})) is None
+ action['required_sources'][0]['end']=9
+ action['mode']='desktop'
+ assert action_from_reply(json.dumps({'local_agent_action':action})) is None
 
 def test_play_preserves_explicit_execution_mode_and_rejects_unknown_modes():
  import json
@@ -101,7 +112,8 @@ def test_already_consumed_reply_retires_restored_pending_turn(tmp_path,pending):
   assert queued==[]
  asyncio.run(run())
 
-def test_handoff_feedback_and_no_duplicate_execution(tmp_path):
+@pytest.mark.parametrize('structured',[False,True])
+def test_handoff_feedback_and_no_duplicate_execution(tmp_path,structured):
  async def run():
   store=Store(tmp_path/'db.sqlite3');project=Conversations(store).project(str(tmp_path))
   class Bridge:
@@ -114,8 +126,16 @@ def test_handoff_feedback_and_no_duplicate_execution(tmp_path):
   controller=BridgeController(engine)
   await controller.enable(project['id'],'Inspect the test document',3)
   bridge.current={'fingerprint':'first','text':'{"local_agent_action":{"id":"one","task":"Read the document"}}'}
+  if structured:
+   bridge.current['text']=json.dumps({'local_agent_action':{'id':'one','task':'Read the document','mode':'code',
+       'required_sources':[{'path':'a.py','start':3,'end':7}]}})
   await controller.tick();await controller.tick()
   assert len(queued)==1
+  if structured:
+   from hub.development.guidance import Guidance
+   guide=Guidance(store)
+   assert guide.missing_evidence(queued[0],[])==['source:a.py:3-7']
+   assert guide.next_source_call(queued[0],[])['tool_calls'][0]['function']['arguments']=={'path':'a.py','start':3,'lines':5}
   assert store.get(queued[0])['goal'].startswith('CURRENT STEP')
   assert 'Do not advance to later steps' in store.get(queued[0])['goal']
   store.update(queued[0],state='waiting_review',result='Document inspected')
@@ -591,6 +611,33 @@ def test_director_receives_failure_and_can_correct_same_objective(tmp_path,failu
  asyncio.run(run())
 
 
+def test_director_receives_reused_source_after_answer_only_correction(tmp_path):
+ async def run():
+  store=Store(tmp_path/'db.sqlite3');conversations=Conversations(store)
+  project=conversations.project(str(tmp_path));chat=conversations.create(project['id'])
+  task=conversations.submit(chat['id'],'Read-only source analysis','code','source-review')
+  source=store.begin_action(task['id'],'context_expand',{'path':'source.py','start':1,'lines':1})
+  store.end_action(source,{'path':'source.py','ref':'fast/source:hash','start':1,'end':1,'text':'value = 42'})
+  old=store.begin_action(task['id'],'capture_screenshot',{})
+  store.end_action(old,{'id':'obsolete','path':'missing-old.png','share_with_chatgpt':True})
+  store.event(task['id'],'verification',{'attempt_action_ids':[]})
+  store.update(task['id'],state='waiting_review',result='Corrected source draft',messages=[{'role':'assistant','content':'source.py:1 assigns 42 to value.'}])
+  class Bridge:
+   pending=None
+   async def read(self):return {'users':[]}
+   async def send(self,text,**kwargs):
+    self.sent=text;self.kwargs=kwargs;self.pending={'users':0};return {'sent':True}
+   async def reply(self):return None
+  b=Bridge();c=BridgeController(SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=b),lock=asyncio.Lock()))
+  c.state.update(enabled=True,continuous=True,phase='waiting_task',chat_id=chat['id'],task_id=task['id'],action_id='correction',objective='Read-only source analysis')
+  await c.tick()
+  assert c.state['phase']=='waiting_reply'
+  assert 'value = 42' in b.sent and source in b.sent
+  assert 'source.py:1 assigns 42 to value.' in b.sent
+  assert 'missing-old.png' not in b.sent and not b.kwargs
+ asyncio.run(run())
+
+
 @pytest.mark.parametrize('blocker',['draft','generating','overlay','login_required','pending','changed_url'])
 def test_load_error_recovery_preserves_user_state(tmp_path,blocker):
  async def run():
@@ -627,4 +674,54 @@ def test_load_error_recovery_is_bounded_and_rechecks_before_reload(tmp_path,monk
   async def changed(script):return {**state,'draft':'new draft'}
   page.evaluate=changed
   assert not await bridge.recover_load_error(state)
+ asyncio.run(run())
+
+
+def test_exact_source_feedback_delivers_once_without_old_ranges(tmp_path):
+ async def run():
+  from hub.development.guidance import Guidance
+  store=Store(tmp_path/'db.sqlite3');task=store.create('Read sources',str(tmp_path),'code','raw-feedback')
+  old=store.begin_action(task['id'],'context_expand',{'path':'old.py'})
+  store.end_action(old,{'path':'old.py','text':'OLD_SOURCE_SENTINEL','start':1,'end':1,'sha256':'b'*64})
+  guide=Guidance(store)
+  guide.submit(task['id'],store.get(task['id'])['revision'],0,'','raw','Read a.py',required_sources=[{'path':'a.py','start':1,'end':1}],evidence_only=True)
+  source=store.begin_action(task['id'],'context_expand',{'path':'a.py','start':1,'lines':1})
+  store.end_action(source,{'path':'a.py','text':'EXACT_SOURCE_SENTINEL','start':1,'end':1,'sha256':'a'*64})
+  store.update(task['id'],state='waiting_review',result=json.dumps(guide.source_packet(task['id'],store.actions(task['id']))))
+  sent=[]
+  async def send(text,**kwargs):sent.append(text);return {'sent':True}
+  bridge=SimpleNamespace(send=send,pending=None)
+  engine=SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=bridge),lock=asyncio.Lock())
+  controller=BridgeController(engine)
+  controller.state.update(enabled=True,phase='waiting_task',task_id=task['id'])
+  await controller.tick()
+  assert len(sent)==1
+  assert sent[0].count('EXACT_SOURCE_SENTINEL')==1
+  assert 'OLD_SOURCE_SENTINEL' not in sent[0]
+  assert '"retrieval_complete": true' in sent[0]
+  assert controller.state['phase']=='waiting_reply'
+ asyncio.run(run())
+
+
+def test_start_objective_reuses_linked_chat_and_rejects_project_switch(tmp_path):
+ async def run():
+  store=Store(tmp_path/'db.sqlite3');conversations=Conversations(store)
+  project=conversations.project(str(tmp_path));chat=conversations.create(project['id'],'Saved PLAY')
+  class Bridge:
+   bound_url='https://chatgpt.com/c/test-linked-map'
+   async def connect(self):return {'ready':True}
+   async def send(self,text):
+    self.on_outbound(text)
+    assert 'PLAY OPERATING CONTRACT' in text
+  bridge=Bridge();engine=SimpleNamespace(store=store,runner=SimpleNamespace(chatgpt=bridge),lock=asyncio.Lock())
+  controller=BridgeController(engine);controller.transcript.link(chat['id'],bridge.bound_url)
+  await controller.enable(project['id'],'Map source only',3)
+  assert controller.state['chat_id']==chat['id']
+  assert controller.transcript.remote(chat['id'])==bridge.bound_url
+  controller.stop()
+  (tmp_path/'other').mkdir()
+  other=conversations.project(str(tmp_path/'other'))
+  with pytest.raises(ValueError,match='different project'):
+   await controller.enable(other['id'],'Map other project',3)
+  assert controller.state['chat_id']==chat['id']
  asyncio.run(run())

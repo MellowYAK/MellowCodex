@@ -98,3 +98,22 @@ def test_tunnel_is_loopback_pinned_and_noninteractive():
     assert 'BatchMode=yes' in args
     assert args[args.index('-R')+1]=='127.0.0.1:18897:127.0.0.1:8897'
     assert args[-1]=='local-agent-tunnel@example.test'
+
+
+def test_health_reports_running_catalog_without_private_state(monkeypatch):
+    class Reply:
+        is_success=True
+        def json(self):return {'info':{'title':'Local Agent Hub'}}
+    class Client:
+        def __init__(self,**kwargs):pass
+        async def __aenter__(self):return self
+        async def __aexit__(self,*args):pass
+        async def get(self,url):return Reply()
+    monkeypatch.setattr(gateway.httpx,'AsyncClient',Client)
+    report=asyncio.run(gateway.health())
+    tools=asyncio.run(gateway.mcp.list_tools())
+    assert report['tool_catalog']['count']==len(tools)
+    assert report['tool_catalog']['supervised_source_tools'] is True
+    assert len(report['tool_catalog']['sha256'])==64
+    assert set(report)=={'status','product','version','tool_catalog'}
+    assert report==asyncio.run(gateway.health())

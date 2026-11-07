@@ -114,7 +114,7 @@ class ToolRunner:
         browser_names|={'browser_frame','browser_pointer'}
         names={'inspect':{'list_files','read_file','files_list'},'code':{'list_files','read_file','write_file','run_shell'}|browser_names,'browser':browser_names|{'write_file'},'desktop':{x['function']['name'] for x in CATALOG}}[mode]
         names|={'image_ocr','document_read','extensions_list','agent_environment'}
-        names|={'project_context','context_search','context_expand','context_related','context_refresh','recovery_context'}
+        names|={'project_brief','project_context','context_search','context_expand','context_related','context_refresh','recovery_context'}
         if mode in ('code','desktop'):names|={'context_annotate','project_index','project_index_settings'}
         names.add('project_index_status')
         names.add('upgrade_status')
@@ -161,6 +161,10 @@ class ToolRunner:
         names.add('conversation_anchors')
         names.add('conversation_memory_review')
         names.add('conversation_memory_reviews')
+        if task_id and getattr(self,'context_store',None):
+            from .development.guidance import Guidance
+            allowed=Guidance(self.context_store).allowed_tools(task_id)
+            if allowed is not None:names&=allowed
         return [x for x in CATALOG if x['function']['name'] in names]
 
     def path(self, task, name):
@@ -181,6 +185,12 @@ class ToolRunner:
 
     async def execute(self, task, name, args):
         import jsonschema
+        if getattr(self,'context_store',None):
+            from .development.guidance import Guidance
+            allowed=Guidance(self.context_store).allowed_tools(task['id'])
+            if allowed is not None and name not in allowed:
+                return {'error':'Tool is outside the director-defined task scope. Return the requested answer or use an allowed tool.',
+                        'failure_kind':'tool_scope_denied','input_sent':False,'effect_started':False,'allowed_tools':sorted(allowed)}
         spec=next((t for t in self.catalog(task['mode']) if t['function']['name']==name),None)
         if not spec:
             raise ValueError('Tool not permitted in this task mode')
@@ -304,12 +314,12 @@ class ToolRunner:
             service,project_id=service_for_task(task,getattr(self,'context_store',None))
             queue=Indexing(service)
             if name=='project_index':return await asyncio.to_thread(queue.request,project_id)
-            if name=='project_index_settings':return await asyncio.to_thread(queue.settings,project_id,args['enabled'])
+            if name=='project_index_settings':return await asyncio.to_thread(queue.settings,project_id,args['enabled'],args.get('mode'))
             return await asyncio.to_thread(queue.status,project_id)
-        if name in {'project_context','context_search','context_expand','context_related','context_refresh','context_annotate','recovery_context'}:
+        if name in {'project_brief','project_context','context_search','context_expand','context_related','context_refresh','context_annotate','recovery_context'}:
             from .context.api import service_for_task, dispatch, ContextRequest
             service,project_id=service_for_task(task,getattr(self,'context_store',None))
-            operation={'project_context':'overview','recovery_context':'recovery'}.get(name,name.removeprefix('context_'))
+            operation={'project_brief':'brief','project_context':'overview','recovery_context':'recovery'}.get(name,name.removeprefix('context_'))
             return await asyncio.to_thread(dispatch,service,operation,ContextRequest(project_id=project_id,**args))
         if name=='window_new_document':
             from .native_document import create_document
@@ -510,10 +520,8 @@ class ToolRunner:
             path=candidate.resolve() if candidate.is_absolute() and candidate.resolve().is_relative_to(artifact_root) else self.path(task,args['path'])
             if path.suffix.lower() in ('.png','.jpg','.jpeg','.webp','.bmp'):
                 raise ObservationError('This is an image, not UTF-8 text. Use image_ocr; its text is returned directly and its text_path is readable with read_file.')
-            if path.stat().st_size > 300_000:
-                raise ValueError('File too large. Use targeted shell search in code mode.')
-            text=path.read_text(encoding='utf-8');offset=args.get('offset',0);end=min(len(text),offset+args.get('chars',1500))
-            return {'path':str(path),'content':text[offset:end],'offset':offset,'next_offset':end if end<len(text) else None,'total_characters':len(text),'sha256':hashlib.sha256(text.encode('utf-8')).hexdigest()}
+            from .text_files import read_page
+            return await asyncio.to_thread(read_page,path,args.get('offset',0),args.get('chars',1500))
         if name == 'write_file':
             path=self.path(task,args['path'])
             if len(args['content']) > 200_000:

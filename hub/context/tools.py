@@ -3,36 +3,40 @@ from ..i18n import t
 def definitions(schema):
     string={'type':'string'}
     return [
+        schema('project_brief',t('context.brief_tool'),{'query':string}),
         schema('project_index',t('context.local_index_tool'),{}),
         schema('project_index_status',t('context.local_status_tool'),{}),
-        schema('project_index_settings',t('context.local_settings_tool'),{'enabled':{'type':'boolean'}},('enabled',)),
-        schema('project_context',t('context.overview_tool'),{}),
+        schema('project_index_settings',t('context.local_settings_tool'),{'enabled':{'type':'boolean'},'mode':{'type':'string','enum':['fast','apc_baseline']}},('enabled',)),
+        schema('project_context',t('context.overview_tool'),{'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':40}}),
         schema('context_refresh',t('context.refresh_tool'),{}),
         schema('context_search',t('context.search_tool'),{'query':string,'limit':{'type':'integer','minimum':1,'maximum':40}},('query',)),
-        schema('context_expand',t('context.expand_tool'),{'ref':string,'start':{'type':'integer','minimum':1},'lines':{'type':'integer','minimum':1,'maximum':200}},('ref',)),
-        schema('context_related',t('context.related_tool'),{'ref':string},('ref',)),
+        schema('context_expand',t('context.expand_tool'),{'ref':string,'path':string,'start':{'type':'integer','minimum':1},'lines':{'type':'integer','minimum':1,'maximum':200}}),
+        schema('context_related',t('context.related_tool'),{'ref':string,'path':string}),
         schema('context_annotate',t('context.annotate_tool'),{'path':string,'aliases':{'type':'array','items':string,'maxItems':40},'tags':{'type':'array','items':string,'maxItems':40},'notes':string,'must_not_break':{'type':'array','items':string,'maxItems':40}},('path',)),
         schema('recovery_context',t('context.recovery_tool'),{})]
 
 def register_mcp(mcp,local,read,write):
+    @mcp.tool(description=t('context.brief_tool'),annotations=read)
+    async def project_brief(project_id:str,query:str=''):
+        return await local('/api/context/brief',dict(project_id=project_id,query=query))
     @mcp.tool(description=t('context.register_tool'),annotations=write)
     async def project_index(path:str,name:str|None=None):
         return await local('/api/project-index/register',dict(path=path,name=name))
     @mcp.tool(description=t('context.index_status_tool'),annotations=read)
     async def project_index_status(project_id:str):return await local('/api/project-index/'+project_id)
     @mcp.tool(description=t('context.index_settings_tool'),annotations=write)
-    async def project_index_settings(project_id:str,enabled:bool=True):
-        return await local('/api/project-index/settings',dict(project_id=project_id,enabled=enabled))
+    async def project_index_settings(project_id:str,enabled:bool=True,mode:str|None=None):
+        return await local('/api/project-index/settings',dict(project_id=project_id,enabled=enabled,mode=mode))
     @mcp.tool(description=t('context.overview_tool'),annotations=read)
-    async def project_context(project_id:str):return await local('/api/context/overview',{'project_id':project_id})
+    async def project_context(project_id:str,offset:int=0,limit:int=10):return await local('/api/context/overview',dict(project_id=project_id,offset=offset,limit=limit))
     @mcp.tool(description=t('context.search_tool'),annotations=read)
     async def context_search(project_id:str,query:str,limit:int=10,offset:int=0):
         return await local('/api/context/search',dict(project_id=project_id,query=query,limit=limit,offset=offset))
     @mcp.tool(description=t('context.expand_tool'),annotations=read)
-    async def context_expand(project_id:str,ref:str,start:int=1,lines:int=80):
-        return await local('/api/context/expand',dict(project_id=project_id,ref=ref,start=start,lines=lines))
+    async def context_expand(project_id:str,ref:str='',start:int=1,lines:int=80,path:str=''):
+        return await local('/api/context/expand',dict(project_id=project_id,ref=ref,path=path,start=start,lines=lines))
     @mcp.tool(description=t('context.related_tool'),annotations=read)
-    async def context_related(project_id:str,ref:str):return await local('/api/context/related',dict(project_id=project_id,ref=ref))
+    async def context_related(project_id:str,ref:str='',path:str=''):return await local('/api/context/related',dict(project_id=project_id,ref=ref,path=path))
     @mcp.tool(description=t('context.refresh_tool'),annotations=write)
     async def context_refresh(project_id:str):return await local('/api/context/refresh',dict(project_id=project_id),timeout=120)
     @mcp.tool(description=t('context.annotate_tool'),annotations=write)

@@ -33,3 +33,4 @@
 #health{min-width:0;white-space:normal;text-align:start;border-radius:8px} #health::after{content:" ▾"} #quick-model-dialog{width:min(480px,90vw)} #quick-model-list{display:grid;gap:8px;max-height:50vh;overflow:auto} #quick-model-list button{text-align:start;padding:12px;border:1px solid var(--border,#888);border-radius:10px}
 
 .context-dialog{width:min(900px,90vw);max-height:85vh;overflow:auto}.context-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:40vh;overflow:auto;direction:ltr;text-align:left}.context-dialog label{display:block;margin:8px 0}.context-dialog textarea,.context-dialog input{display:block;width:100%;box-sizing:border-box}
+.context-index-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 20px;padding:14px 16px;border:1px solid var(--border,#ddd);border-radius:12px}.context-index-summary dt{margin:0}.context-index-summary dd{margin:0;font-variant-numeric:tabular-nums;font-weight:600}

@@ -18,6 +18,36 @@ def store(tmp_path):
 def make(store,tmp_path,**kwargs):
     return store.create('Create tested output',str(tmp_path),'code',kwargs.get('idem','test-key-1'),kwargs.get('criteria',[]))
 
+def test_inference_profile_is_per_call_and_records_actual_options(store,monkeypatch):
+    from contextlib import asynccontextmanager
+    import httpx
+    seen=[]
+    @asynccontextmanager
+    async def lease(*args,**kwargs):yield
+    monkeypatch.setattr('hub.resources.Resources.inference',lease)
+    class Client:
+        def __init__(self,**kwargs):pass
+        async def __aenter__(self):return self
+        async def __aexit__(self,*args):pass
+        async def post(self,url,json):
+            seen.append(json)
+            return httpx.Response(200,request=httpx.Request('POST',url),json={
+                'message':{'role':'assistant','content':'Observed answer'},'done':True,'done_reason':'stop'})
+    monkeypatch.setattr('hub.engine.httpx.AsyncClient',Client)
+    engine=Engine(store)
+    messages=[{'role':'system','content':'Read evidence'},{'role':'user','content':'Question'}]
+    _,metrics=asyncio.run(engine.chat(messages,[],think=True,response_tokens=4096))
+    assert seen[-1]['think'] is True and seen[-1]['options']['num_predict']==4096
+    assert metrics['packet']['think'] is True and metrics['done_reason']=='stop'
+    asyncio.run(engine.chat(messages,[]))
+    assert seen[-1]['think'] is False and seen[-1]['options']['num_predict']==1024
+    assert 'format' not in seen[-1]
+    schema={'type':'object','properties':{'answer':{'type':'string'}}}
+    _,metrics=asyncio.run(engine.chat(messages,[],output_schema=schema))
+    assert seen[-1]['format']==schema and metrics['packet']['output_schema_sha256']
+    with pytest.raises(ValueError,match='no tool catalog'):
+        asyncio.run(engine.chat(messages,[{'type':'function'}],output_schema=schema))
+
 def test_environment_tool_remains_callable_after_development_dispatch(store,tmp_path):
     result=asyncio.run(ToolRunner().execute(make(store,tmp_path),'agent_environment',{}))
     assert isinstance(result['executor_pid'],int)
@@ -108,6 +138,155 @@ def test_failed_check_cannot_auto_complete(store,tmp_path):
     engine.chat=fake_chat
     asyncio.run(engine.run(task['id']))
     assert store.get(task['id'])['state']=='waiting_review'
+
+
+def test_unsubstantiated_source_rejection_preserves_draft_without_retry(store,tmp_path,monkeypatch):
+    task=make(store,tmp_path);engine=Engine(store);calls=[]
+    async def chat(*args):
+        calls.append(1)
+        return {'role':'assistant','content':'Candidate source answer'},{}
+    async def review(*args):
+        return {'verdict':'needs_correction','actionable':False,'reason':'Unsubstantiated objection'}
+    engine.chat=chat
+    monkeypatch.setattr('hub.context.exploration.review',review)
+    asyncio.run(engine.run(task['id']))
+    assert len(calls)==1
+    final=store.get(task['id'])
+    assert final['state']=='waiting_review' and 'Candidate source answer' in final['result']
+    assert store.latest_event(task['id'],'source_review_unsubstantiated')['data']['verified'] is False
+
+
+def test_rejected_source_draft_is_audited_but_not_reused_as_evidence(store,tmp_path,monkeypatch):
+    import json
+    task=make(store,tmp_path);engine=Engine(store);attempts=[]
+    async def chat(messages,catalog):
+        attempts.append(json.dumps(messages))
+        return {'role':'assistant','content':'Unsupported capability assertion' if len(attempts)==1 else 'Corrected source plan'},{}
+    async def review(engine,task,draft):
+        return {'verdict':'needs_correction','reason':'Check the required input.'} if 'Unsupported' in draft else {'verdict':'supported'}
+    monkeypatch.setattr('hub.context.exploration.review',review)
+    engine.chat=chat
+    asyncio.run(engine.run(task['id']))
+    assert len(attempts)==2
+    assert 'Unsupported capability assertion' not in attempts[1]
+    assert store.get(task['id'])['result']=='Corrected source plan'
+    assert any(e['kind']=='model' and e['data'].get('text')=='Unsupported capability assertion' for e in store.events(task['id']))
+
+
+@pytest.mark.parametrize('state',['paused','cancelled'])
+def test_external_task_control_during_inference_prevents_dispatch(store,tmp_path,state):
+    task=make(store,tmp_path);engine=Engine(store)
+    async def chat(*args):
+        Store(store.path).update(task['id'],state=state)
+        return {'role':'assistant','tool_calls':[{'function':{'name':'write_file','arguments':{'path':'should-not-exist.txt','content':'wrong'}}}]},{}
+    engine.chat=chat
+    asyncio.run(engine.run(task['id']))
+    assert store.get(task['id'])['state']==state
+    assert not (tmp_path/'should-not-exist.txt').exists()
+    assert not any(a['tool']=='write_file' for a in store.actions(task['id']))
+
+def test_truncated_model_response_cannot_dispatch_or_claim_completion(store,tmp_path):
+    task=make(store,tmp_path);engine=Engine(store)
+    async def chat(*args):
+        return {'role':'assistant','content':'Complete','tool_calls':[{'function':{'name':'write_file','arguments':{
+            'path':'partial.txt','content':'truncated'}}}]},{'done_reason':'length','packet':{'response_tokens':256}}
+    engine.chat=chat
+    asyncio.run(engine.run(task['id']))
+    assert store.get(task['id'])['state']=='waiting_review'
+    assert not (tmp_path/'partial.txt').exists()
+    assert not any(a['tool']=='write_file' for a in store.actions(task['id']))
+    event=store.latest_event(task['id'],'model_output_incomplete')
+    assert event['data']['tool_calls_dispatched'] is False
+
+
+@pytest.mark.parametrize('state',['paused','cancelled'])
+def test_external_control_during_final_source_review_is_preserved(store,tmp_path,monkeypatch,state):
+    task=make(store,tmp_path);engine=Engine(store);reviews=[]
+    async def chat(*args):return {'role':'assistant','content':'Unverified draft'},{}
+    async def review(*args):
+        reviews.append(1)
+        if len(reviews)==3:Store(store.path).update(task['id'],state=state)
+        return {'verdict':'needs_correction','reason':'Incomplete evidence'}
+    engine.chat=chat
+    monkeypatch.setattr('hub.context.exploration.review',review)
+    asyncio.run(engine.run(task['id']))
+    assert len(reviews)==3
+    assert store.get(task['id'])['state']==state
+
+
+def test_read_only_draft_can_request_missing_source_after_review(store,tmp_path,monkeypatch):
+    task=store.create('Read-only: investigate component reuse',str(tmp_path),'code','draft-tools')
+    engine=Engine(store);turns=[]
+    async def prepare(engine,task,messages):
+        aid=store.begin_action(task['id'],'project_context',{})
+        store.end_action(aid,{'mode':'fast'})
+        for i in range(6):
+            aid=store.begin_action(task['id'],'context_expand',{'path':f'{i}.py'})
+            store.end_action(aid,{'path':f'{i}.py','ref':f'fast/{i}:h','start':1,'end':1,'text':'def existing(): return 1'})
+    async def chat(messages,catalog):
+        turns.append(messages)
+        if len(turns)<=2:
+            assert {x['function']['name'] for x in catalog}=={'project_context','context_search','context_expand','context_related'}
+        if len(turns)==1:return {'role':'assistant','content':'Unverified absence claim'},{}
+        if len(turns)==2:
+            assert 'Search for existing component' in str(messages)
+            return {'role':'assistant','tool_calls':[{'function':{'name':'context_search','arguments':{'query':'existing component'}}}]},{}
+        return {'role':'assistant','content':'Existing component found; implementation remains untested'},{}
+    async def review(engine,task,draft):
+        return {'verdict':'needs_correction','reason':'Search for existing component'} if 'Unverified' in draft else {'verdict':'supported'}
+    async def execute(task,name,args):
+        assert name=='context_search'
+        return {'results':[{'path':'existing.py','ref':'fast/actual:h'}]}
+    monkeypatch.setattr('hub.context.runtime.prepare',prepare)
+    monkeypatch.setattr('hub.context.exploration.review',review)
+    engine.chat=chat;engine.runner.execute=execute
+    asyncio.run(engine.run(task['id']))
+    assert len(turns)==3
+    assert any(a['tool']=='context_search' for a in store.actions(task['id']))
+    assert store.get(task['id'])['result']=='Existing component found; implementation remains untested'
+
+def test_directed_source_draft_returns_for_external_review_without_local_critic(store,tmp_path,monkeypatch):
+    task=store.create('CURRENT STEP: read input schema; OVERALL: plan a feature',str(tmp_path),'code','director-source')
+    store.event(task['id'],'chatgpt_action',{'request':'Read the schema only','action_id':'step1'})
+    engine=Engine(store);calls=[]
+    async def prepare(engine,task,messages):
+        for name,result in [('project_context',{'mode':'fast'})]:
+            aid=store.begin_action(task['id'],name,{})
+            store.end_action(aid,result)
+    async def chat(*args):
+        calls.append(1)
+        if len(calls)==1:return {'role':'assistant','tool_calls':[{'function':{'name':'context_expand','arguments':{'path':'schema.py'}}}]},{}
+        assert len(calls)==2,'Do not use the executor as its own director'
+        return {'role':'assistant','content':'schema.py:1 declares prompt: str. Other behavior is unverified.'},{}
+    async def execute(*args):return {'path':'schema.py','ref':'fast/schema:h','start':1,'end':1,'text':'prompt: str'}
+    engine.runner.execute=execute
+    monkeypatch.setattr('hub.context.runtime.prepare',prepare);engine.chat=chat
+    asyncio.run(engine.run(task['id']))
+    assert store.get(task['id'])['state']=='waiting_review'
+    assert 'semantic review by the director is still pending' in store.get(task['id'])['result']
+    assert store.latest_event(task['id'],'source_review_pending_director')['data']['verified'] is False
+    assert not store.latest_event(task['id'],'source_answer_review')
+
+
+def test_director_can_review_existing_source_evidence_without_forced_new_action(store,tmp_path,monkeypatch):
+    task=store.create('Read-only: correct the previous source analysis',str(tmp_path),'code','review-existing')
+    store.event(task['id'],'chatgpt_action',{'request':'Correct the existing draft','action_id':'correction'})
+    for tool,result in [('project_context',{'mode':'fast'}),('context_expand',{'path':'schema.py','ref':'fast/schema:h','start':1,'end':1,'text':'prompt: str'})]:
+        aid=store.begin_action(task['id'],tool,{})
+        store.end_action(aid,result)
+    engine=Engine(store);calls=[]
+    async def prepare(*args):pass
+    async def chat(*args):
+        calls.append(1)
+        assert len(calls)==1,'Existing read evidence must not trigger repeated answer attempts'
+        return {'role':'assistant','content':'schema.py:1 declares prompt: str; awaiting independent review.'},{}
+    monkeypatch.setattr('hub.context.runtime.prepare',prepare)
+    engine.chat=chat
+    asyncio.run(engine.run(task['id']))
+    assert store.get(task['id'])['state']=='waiting_review'
+    assert len(store.actions(task['id']))==2
+    assert 'semantic review by the director is still pending' in store.get(task['id'])['result']
+
 
 def test_unknown_action_blocks_resume(store,tmp_path):
     task=make(store,tmp_path)
@@ -341,3 +520,67 @@ def test_supervised_repair_returns_evidence_without_executor_loop(store,tmp_path
     assert final['state']=='waiting_review' and len(turns)==1
     assert 'overall task is not complete' in final['result']
     assert result.get('error',result.get('test',{}).get('output')) in final['result']
+
+
+def test_read_large_utf8_file_pages_without_file_size_rejection(store,tmp_path):
+    import hashlib
+    text=('שלום אבג\n'*180000)+'unique_tail'
+    (tmp_path/'large.txt').write_text(text,encoding='utf8')
+    runner=ToolRunner();task=make(store,tmp_path)
+    for offset in (65533,len(text)-20):
+        page=asyncio.run(runner.execute(task,'read_file',{'path':'large.txt','offset':offset,'chars':40}))
+        assert page['content']==text[offset:offset+40]
+        assert page['total_characters']==len(text)
+        assert page['sha256']==hashlib.sha256(text.encode('utf8')).hexdigest()
+    assert page['next_offset'] is None
+
+
+def test_exhausted_source_review_preserves_draft_for_director(store,tmp_path,monkeypatch):
+    from hub.task_answer import task_answer
+    task=store.create('Read-only: map the project',str(tmp_path),'code','review-draft-preservation')
+    engine=Engine(store);calls=[]
+    async def prepare(*args):pass
+    async def ground(*args):return []
+    async def chat(*args):
+        calls.append(1)
+        return {'role':'assistant','content':f'Observed draft {len(calls)}; runtime unknown.'},{}
+    async def review(*args):
+        return {'verdict':'needs_correction','actionable':True,'reason':'Local reviewer disputes interpretation.'}
+    monkeypatch.setattr('hub.context.runtime.prepare',prepare)
+    monkeypatch.setattr('hub.context.exploration.ground_named_sources',ground)
+    monkeypatch.setattr('hub.context.exploration.review',review)
+    engine.chat=chat
+    asyncio.run(engine.run(task['id']))
+    final=store.get(task['id'])
+    assert len(calls)==3 and final['state']=='waiting_review'
+    assert task_answer(final)['text']=='Observed draft 3; runtime unknown.'
+    assert 'Observed draft 3' in final['result']
+    assert store.latest_event(task['id'],'source_review_exhausted')['data']['verified'] is False
+
+
+@pytest.mark.parametrize('stale',[False,True])
+def test_director_exact_patch_uses_real_runner_without_model(store,tmp_path,monkeypatch,stale):
+    from hub.development.guidance import Guidance
+    from hub.development.service import Development
+    workspace=tmp_path/'project';workspace.mkdir()
+    original='def total(a, b):\n    return a + b\n'
+    replacement='def total(a, b):\n    return a * b  # exact director code\n'
+    (workspace/'billing.py').write_text(original,encoding='utf-8')
+    task=store.create('Apply the director correction in an isolated candidate',str(workspace),'code','exact')
+    monkeypatch.setattr('hub.tools.ROOT',tmp_path)
+    dev=Development(store,tmp_path/'candidates');candidate=dev.create(task)
+    patch={'candidate_id':candidate['id'],'expected_revision':candidate['revision'],
+           'changes':[{'path':'billing.py','base_hash':'0'*64 if stale else candidate['files']['billing.py'],'content':replacement}]}
+    Guidance(store).submit(task['id'],task['revision'],0,'','exact','Apply verbatim and return diff',exact_patch=patch)
+    engine=Engine(store)
+    async def no_model(*args,**kwargs):raise AssertionError('Exact patch must not invoke a model')
+    engine.chat=no_model
+    asyncio.run(engine.run(task['id']))
+    actions=store.actions(task['id'])
+    assert [a['tool'] for a in actions]==(['candidate_patch'] if stale else ['candidate_patch','candidate_diff'])
+    assert store.get(task['id'])['state']=='waiting_review'
+    assert (workspace/'billing.py').read_text(encoding='utf-8')==original
+    directory=dev.workspaces.directory(candidate['id'],dev.inspect(task,candidate['id']))
+    assert (directory/'billing.py').read_text(encoding='utf-8')==(original if stale else replacement)
+    if stale:assert actions[0]['result']['error']
+    else:assert store.latest_event(task['id'],'director_patch_evidence')['data']['model_inference'] is False

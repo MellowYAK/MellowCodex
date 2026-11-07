@@ -58,6 +58,8 @@ async def lifespan(app):
     bridge_monitor=asyncio.create_task(app.state.bridge.watch())
     from .relay import supervise
     relay_monitor=asyncio.create_task(supervise()) if (STATE/'relay.json').exists() else None
+    from .shutdown import Shutdown
+    app.state.shutdown = Shutdown(engine, model_catalog_service, [monitor, schedule_monitor, index_monitor, bridge_monitor])
     try:
         model_catalog_service.recover()
         store.recover()
@@ -87,6 +89,22 @@ async def lifespan(app):
         owner.close()
 
 app=FastAPI(title='Local Agent Hub',version=__version__,lifespan=lifespan,docs_url=None,redoc_url=None)
+
+@app.post('/api/lifecycle/shutdown')
+async def shutdown_agent():
+    try:
+        return app.state.shutdown.start()
+    except RuntimeError as exc:
+        raise HTTPException(409, str(exc))
+
+@app.get('/api/lifecycle/status')
+async def shutdown_status():
+    return app.state.shutdown.status
+
+@app.get('/api/lifecycle/labels')
+async def shutdown_labels():
+    from .i18n import t
+    return {key:t('lifecycle.'+key,'he') for key in ('shutdown','stopping')}
 STATIC=Path(__file__).parent/'static'
 from .context.api import router as context_router
 def project_context_service():
@@ -120,6 +138,9 @@ async def local_only(request: Request, call_next):
             origin=request.headers.get('origin')
             if not request.headers.get('x-hub-key') and origin not in ALLOWED_ORIGINS:
                 return JSONResponse({'detail':'Same-origin request required'},status_code=403)
+    lifecycle=getattr(app.state,'shutdown',None)
+    if lifecycle and lifecycle.status['state']!='idle' and request.method not in ('GET','HEAD') and not request.url.path.startswith('/api/lifecycle/'):
+        return JSONResponse({'detail':'Agent shutdown in progress; new work is disabled'},status_code=503)
     response=await call_next(request)
     response.headers['X-Content-Type-Options']='nosniff'
     response.headers['X-Frame-Options']='DENY'
@@ -227,7 +248,8 @@ class NewTask(BaseModel):
     criteria: list[Criterion] = Field(default_factory=list,max_length=30)
 
 def public_task(task):
-    return {k:v for k,v in task.items() if k not in ('messages','idem')}
+    from .task_answer import task_answer
+    return {**{k:v for k,v in task.items() if k not in ('messages','idem')},'answer':task_answer(task)}
 
 @app.post('/api/tasks',status_code=201)
 async def create_task(body: NewTask):
@@ -266,6 +288,12 @@ async def get_task(task_id: str):
 async def events(task_id: str,after: int=0):
     store.get(task_id)
     return store.events(task_id,after)
+
+@app.get('/api/tasks/{task_id}/source/{action_id}')
+async def recorded_task_source(task_id:str,action_id:str):
+    from .source_feedback import recorded_source
+    store.get(task_id)
+    return recorded_source(store.actions(task_id),action_id)
 
 @app.get('/api/tasks/{task_id}/review')
 async def review_bundle(task_id: str):
@@ -307,6 +335,8 @@ async def review(task_id: str,body: Review):
         raise Conflict('Only the saved handoff task without a pending send can retry in its linked conversation')
     if task['revision']!=body.expected_revision or task['state']!='waiting_review':
         raise Conflict('Task is not awaiting this revision of review')
+    if body.decision=='request_changes' and any(a['state']=='pending' for a in store.actions(task_id)):
+        raise Conflict('Reconcile uncertain actions before resuming this task')
     checks=engine.verify(task)
     if body.decision=='approve' and any(not c['passed'] for c in checks):
         raise Conflict('Acceptance criteria still fail')
@@ -566,6 +596,25 @@ class ChatMessage(BaseModel):
     mode:Literal['code','inspect','desktop','browser']='desktop'
     request_id:str=Field(min_length=8,max_length=200)
     attachments:list[dict]=Field(default_factory=list,max_length=5)
+
+from .development.guidance import SourceRequirement
+
+class SourceMessage(BaseModel):
+    text:str=Field(min_length=1,max_length=8000)
+    request_id:str=Field(min_length=8,max_length=100)
+    sources:list[SourceRequirement]=Field(min_length=1,max_length=20)
+
+@app.post('/api/chats/{chat_id}/sources')
+async def chat_sources(chat_id:str,body:SourceMessage):
+    """Install exact director instructions before making the task runnable."""
+    from .development.guidance import Guidance
+    task=conversations().submit(chat_id,body.text,'code',body.request_id)
+    guide=Guidance(store)
+    status=guide.status(task['id'])
+    guide.submit(task['id'],task['revision'],status['guidance_revision'],status['consumer_epoch'],
+                 body.request_id,body.text,required_sources=[s.model_dump() for s in body.sources],evidence_only=True)
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
 
 @app.post('/api/chats/{chat_id}/messages')
 async def chat_message(chat_id:str,body:ChatMessage):

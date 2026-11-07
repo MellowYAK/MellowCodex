@@ -2,6 +2,13 @@
 from ..i18n import t
 
 def register_mcp(mcp,local,read,write):
+    @mcp.tool(annotations=write)
+    async def task_request_changes(task_id:str,expected_revision:int,reason:str):
+        """Return an evidence-based correction to the SAME waiting_review task and resume its runner. Read get_task first and pass its exact revision. Preserve the original objective and existing guidance/tool restrictions. This requests changes, never approves completion or deployment. If the response is lost, read the same task before retrying; a stale revision must not create a duplicate task. For structured source/tool constraints submit task_guide before this call."""
+        import re
+        if not re.fullmatch('[a-f0-9]{32}',task_id):raise ValueError('Invalid task ID')
+        if expected_revision<0 or not reason.strip() or len(reason)>10000:raise ValueError('Invalid correction')
+        return await local('/api/tasks/'+task_id+'/review',dict(decision='request_changes',expected_revision=expected_revision,reason=reason))
     @mcp.tool(description=t('development.read_tool'),annotations=read)
     async def candidate_read(task_id:str,candidate_id:str,paths:list[str],start:int=1,max_lines:int=80):
         return await local('/api/development/read',dict(task_id=task_id,candidate_id=candidate_id,paths=paths,start=start,max_lines=max_lines))
@@ -27,8 +34,8 @@ def register_mcp(mcp,local,read,write):
     async def task_guidance_status(task_id:str):
         return await local('/api/development/guidance/status',{'task_id':task_id})
     @mcp.tool(description=t('development.guide_tool'),annotations=write)
-    async def task_guide(task_id:str,expected_task_revision:int,expected_revision:int,consumer_epoch:str,request_id:str,text:str,required_tools:list[str]|None=None):
-        return await local('/api/development/guidance',dict(task_id=task_id,expected_task_revision=expected_task_revision,expected_revision=expected_revision,consumer_epoch=consumer_epoch,request_id=request_id,text=text,required_tools=required_tools or []))
+    async def task_guide(task_id:str,expected_task_revision:int,expected_revision:int,consumer_epoch:str,request_id:str,text:str,required_tools:list[str]|None=None,required_sources:list[dict]|None=None,allowed_tools:list[str]|None=None,evidence_only:bool=False,exact_patch:dict|None=None,context_read:dict|None=None):
+        return await local('/api/development/guidance',dict(task_id=task_id,expected_task_revision=expected_task_revision,expected_revision=expected_revision,consumer_epoch=consumer_epoch,request_id=request_id,text=text,required_tools=required_tools or [],required_sources=required_sources or [],allowed_tools=allowed_tools,evidence_only=evidence_only,exact_patch=exact_patch,context_read=context_read))
     @mcp.tool(description=t('development.diff_tool'),annotations=read)
     async def candidate_diff(task_id:str,candidate_id:str):
         return await local('/api/development/diff',dict(task_id=task_id,candidate_id=candidate_id))

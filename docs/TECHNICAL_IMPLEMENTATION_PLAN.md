@@ -810,3 +810,17 @@ Decision continuity implementation: exact user-request anchors retain source has
 
 ### PLAY implementation checkpoint - 2026-11-07
 Native Hub versioned PLAY protocol/tool catalog, per-chat transport/favorites/URL settings and new-conversation bootstrap are implemented. Shared HTTP/MCP controls and IAB settings persistence are checked;306 full fixtures and43 newest focused fixtures passed. No APC code copied for these features. Remaining acceptance: native signed-in browser bootstrap/response, hidden-pane continuation, restoring saved bindings after process restart, automatic source-bound memory feedback and public MCP. No production activation.
+
+
+### Source-first comparison track — 2026-11-07
+User requests two exclusive per-project modes for comparison, without damaging APC work. `fast` implements source-first exploration (inventory/instructions, search/read, dependencies/tests, bounded evidence, implement/verify); `apc_baseline` preserves the existing PARTIAL APC-derived index, not the complete upstream system. Separate source caches; one queue; shared explicit user constraints; no automatic dual scan. Native additions must not be reported as APC code reuse. Ember Video is a read-only acceptance project; compare source hashes/counts and evidence-backed feature planning, not exact wording. No Ember feature implementation or GPU generation is authorized by this comparison alone.
+
+### Current user sequencing and general feedback requirement (2026-11-07)
+Finish native local-only indexing/mapping acceptance first. External feedback is optional and general, not limited to indexing: either the local executor or the configured external director can initiate a task, send observations, request guidance/review and return corrections through MCP or PLAY Web. Reuse the existing director/feedback state rather than adding a competing workflow. Both modes use the same source map; initially exchange relevant path/signature/relationship capsules, then hash-bound line excerpts on demand. Headers alone are not semantic evidence. Delivery deduplication must be scoped to the external conversation/context and invalidated for changed content or unavailable prior context. This requirement is not yet a claim of end-to-end validation.
+
+### Component and contract investigation — 2026-11-07
+Implemented measured-map component selection, per-component relationship tracing, and static Python request-field/validator evidence. This is native fast-mode work, not additional APC reuse. Staged semantic contract composition is still not accepted: local model drafts and critics can both misinterpret dependencies. Keep local-only acceptance separate from optional GPT director integration; no production rollout or parity claim.
+
+## 2026-11-07 — Local-model recovery audit checkpoint
+
+Implementation was paused at the user's request for evidence-based diagnosis. The supplementary plan is E:/AI/repos/local-agent-hub/docs/LOCAL_MODEL_RECOVERY_PLAN-2026-11-07.md. It preserves the existing APC/index/runner/feedback work and prioritizes controlled source-packet and directed-step experiments before more implementation. The previous focused suite passed 94 checks; real semantic acceptance remains incomplete. This amendment does not mark the original phases complete or activate any change. This plan and its original copy have diverged; preserve both rather than overwriting either with the other.

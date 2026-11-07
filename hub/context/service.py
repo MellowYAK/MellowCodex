@@ -19,27 +19,42 @@ EXCLUDED={'.git','.venv','venv','node_modules','__pycache__','.pytest_cache','mo
           'state','backups','credentials','secrets','uploads','downloads','artifacts',
           'output','dist','build','vendor','data','.tools'}
 EXTENSIONS={'.py','.js','.ts','.tsx','.jsx','.php','.html','.css','.json','.md','.toml','.yaml','.yml','.ps1','.sql','.txt'}
-MAX_FILE=1_000_000
+MAX_IMPORT_METADATA=1_000_000
 MAX_FILES=15000
+SOURCE_CHUNK=64_000
+AST_PARSE_BYTES=4_000_000
+
+def file_digest(path):
+    with path.open('rb') as source:return hashlib.file_digest(source,'sha256').hexdigest()
+
+def source_chunks(path,limit=None):
+    """Bound each FTS insertion without excluding a large source file."""
+    consumed=0;overlap=''
+    with path.open('r',encoding='utf-8-sig') as source:
+        while limit is None or consumed<limit:
+            chunk=source.read(SOURCE_CHUNK if limit is None else min(SOURCE_CHUNK,limit-consumed))
+            if not chunk:break
+            yield overlap+chunk
+            consumed+=len(chunk);overlap=chunk[-256:]
 
 def digest(data):return hashlib.sha256(data).hexdigest()
 def identity(*parts):return digest('\0'.join(parts).encode())[:32]
 def norm(text):
     return ''.join(c for c in unicodedata.normalize('NFKD',str(text)).casefold() if unicodedata.category(c)!='Mn')
 
-def allowed(rel):
+def allowed(rel,extensions=EXTENSIONS):
     p=Path(rel)
     return not (any(part.lower() in EXCLUDED for part in p.parts)
                 or p.name.startswith('.env') or p.name.lower() in {'config.php','hub.key'}
                 or re.search(r'(?:credential|secret|private.?key|token)',p.name,re.I)
-                or p.suffix.lower() not in EXTENSIONS)
+                or p.suffix.lower() not in extensions)
 
-def safe_path(root,rel):
+def safe_path(root,rel,eligible=allowed):
     win=PureWindowsPath(rel)
     if not rel or win.is_absolute() or win.drive or ':' in rel or '\x00' in rel:
         raise CapabilityError('context.invalid_path')
     root=Path(root).resolve();p=(root/rel).resolve()
-    if not p.is_relative_to(root) or not allowed(rel):raise CapabilityError('context.invalid_path')
+    if not p.is_relative_to(root) or not eligible(rel):raise CapabilityError('context.invalid_path')
     # Refuse links even when their current target happens to stay within root.
     cur=root
     for part in Path(rel).parts:
@@ -62,9 +77,16 @@ def extract(rel,text):
     return symbols,imports,'text_v1'
 
 class ProjectContext:
+    database_name = "context.sqlite3"
+    body_limit = 64000
+    allowed = staticmethod(allowed)
+    extract = staticmethod(extract)
+    python_extractor = 'python_ast_v1'
+
+    def safe_path(self,root,rel):return safe_path(root,rel,self.allowed)
     def __init__(self,state,conversations):
         self.state=Path(state);self.state.mkdir(parents=True,exist_ok=True)
-        self.path=self.state/'context.sqlite3';self.conversations=conversations
+        self.path=self.state/self.database_name;self.conversations=conversations
         with self.db() as db:
             db.executescript('''
 CREATE TABLE IF NOT EXISTS snapshots(project TEXT PRIMARY KEY,revision INTEGER NOT NULL,updated REAL NOT NULL,counts TEXT NOT NULL);
@@ -100,31 +122,45 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(file_id UNINDEXED,project U
         if not root.is_dir():raise CapabilityError('context.invalid_path')
         with self.db() as db:
             old={r['path']:dict(r) for r in db.execute('SELECT * FROM files WHERE project=?',(project_id,))}
+            cached={(r['hash'],r['extractor']):r for r in old.values()}
             seen=set();changed=[];skipped=0;unchanged=0
             from .inventory import walk
             deadline=time.monotonic()+30;read_bytes=0
             for rel in walk(root,EXCLUDED,deadline):
-                if not allowed(rel):continue
+                if not self.allowed(rel):continue
                 if len(seen)>=MAX_FILES:raise CapabilityError('context.limit')
                 try:
-                    path=safe_path(root,rel);stat=path.stat()
-                    if stat.st_size>MAX_FILE:skipped+=1;continue
+                    path=self.safe_path(root,rel);stat=path.stat()
                     read_bytes+=stat.st_size
                     if read_bytes>100_000_000 or time.monotonic()>deadline:raise ValueError('Index read budget exceeded; previous index preserved')
                     prior=old.get(rel)
-                    raw=path.read_bytes()
-                    if prior and prior['mtime']==stat.st_mtime_ns and prior['size']==stat.st_size and prior['extractor']==('python_ast_v1' if rel.endswith('.py') else 'text_v1') and digest(raw)==prior['hash']:
+                    h=file_digest(path)
+                    expected_parser='streamed_text_v1' if stat.st_size>AST_PARSE_BYTES else (self.python_extractor if rel.endswith('.py') else 'text_v1')
+                    compatible=(expected_parser,'syntax_error:'+expected_parser)
+                    if prior and prior['extractor'] in compatible and h==prior['hash']:
+                        # A timestamp-only change is not changed source. Still
+                        # hash bytes so preserved timestamps cannot hide edits.
+                        db.execute('UPDATE files SET size=?,mtime=? WHERE id=?',(stat.st_size,stat.st_mtime_ns,prior['id']))
                         seen.add(rel);unchanged+=1;continue
-                    text=raw.decode('utf-8-sig');h=digest(raw)
+                    reusable=next((cached[(h,kind)] for kind in compatible if (h,kind) in cached),None)
+                    text=path.read_text(encoding='utf-8-sig') if not reusable and stat.st_size<=AST_PARSE_BYTES else None
                 except OSError:
                     raise
                 except (UnicodeError,CapabilityError):skipped+=1;continue
                 seen.add(rel)
-                syms,imports,extractor=extract(rel,text);fid=identity(project_id,rel)
+                if reusable:
+                    syms,imports,extractor=json.loads(reusable['symbols']),json.loads(reusable['imports']),reusable['extractor']
+                else:
+                    syms,imports,extractor=self.extract(rel,text) if text is not None else ([],[],'streamed_text_v1')
+                    if extractor=='syntax_error':extractor+=':'+expected_parser
+                fid=identity(project_id,rel)
                 metadata=json.dumps([a['payload'] for a in self.annotations(project_id,rel)],ensure_ascii=False)
-                db.execute('INSERT OR REPLACE INTO files VALUES(?,?,?,?,?,?,?,?,?)',(fid,project_id,rel,h,len(raw),stat.st_mtime_ns,extractor,json.dumps(syms),json.dumps(imports)))
+                db.execute('INSERT OR REPLACE INTO files VALUES(?,?,?,?,?,?,?,?,?)',(fid,project_id,rel,h,stat.st_size,stat.st_mtime_ns,extractor,json.dumps(syms),json.dumps(imports)))
                 db.execute('DELETE FROM search WHERE file_id=?',(fid,))
-                db.execute('INSERT INTO search VALUES(?,?,?,?,?)',(fid,project_id,norm(rel),norm(text[:64000]),norm(metadata)))
+                for chunk in source_chunks(path,self.body_limit):
+                    db.execute('INSERT INTO search VALUES(?,?,?,?,?)',(fid,project_id,norm(rel),norm(chunk),norm(metadata)))
+                if not stat.st_size:db.execute('INSERT INTO search VALUES(?,?,?,?,?)',(fid,project_id,norm(rel),'',norm(metadata)))
+                if file_digest(path)!=h:raise ValueError('Source changed during indexing; previous index preserved')
                 changed.append(rel)
             deleted=set(old)-seen
             for rel in deleted:
@@ -160,11 +196,29 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(file_id UNINDEXED,project U
     def search(self,project_id,query,limit=10,offset=0):
         self.project(project_id)
         if not query.strip() or len(query)>500 or not 1<=limit<=40 or not 0<=offset<=10000:raise CapabilityError('context.invalid')
-        terms=re.findall(r'\w+',norm(query),re.U)[:16]
+        terms=self.query_terms(query) if hasattr(self,'query_terms') else re.findall(r'\w+',norm(query),re.U)[:16]
         if not terms:return {'results':[]}
         expr=' OR '.join('"'+term+'"' for term in terms)
+        path_candidates=self.search_paths(project_id,query) if hasattr(self,'search_paths') else []
+        ranked_paths=self.rank_paths(project_id,query) if hasattr(self,'rank_paths') else []
         with self.db() as db:
-            rows=db.execute('''SELECT f.*,bm25(search,0,0,5,1,8) score,snippet(search,3,'[',']',' â€¦ ',32) excerpt FROM search JOIN files f ON f.id=search.file_id WHERE search MATCH ? AND search.project=? ORDER BY score LIMIT ? OFFSET ?''',(expr,project_id,limit+1,offset)).fetchall()
+            constraint='';bindings=[]
+            if path_candidates:
+                constraint=' AND f.path IN ('+','.join('?' for _ in path_candidates)+')';bindings=path_candidates
+            elif getattr(self,'prefer_all_terms',False) and len(terms)>1 and not ranked_paths:
+                strict=' INTERSECT '.join('SELECT file_id FROM search WHERE search MATCH ? AND project=?' for _ in terms)
+                strict_args=[v for term in terms for v in ('"'+term+'"',project_id)]
+                if db.execute(strict+' LIMIT 1',strict_args).fetchone():
+                    constraint=' AND f.id IN ('+strict+')';bindings=strict_args
+            ordering=('CASE f.path '+ ' '.join('WHEN ? THEN '+str(i) for i in range(len(ranked_paths)))+' ELSE '+str(len(ranked_paths))+' END, ') if ranked_paths else ''
+            cursor=db.execute('''SELECT f.*,bm25(search,0,0,5,1,8) score,snippet(search,3,'[',']',' ... ',32) excerpt FROM search JOIN files f ON f.id=search.file_id WHERE search MATCH ? AND search.project=?'''+constraint+' ORDER BY '+ordering+'score',[expr,project_id,*bindings,*ranked_paths])
+            rows=[];found=set()
+            for candidate in cursor:
+                if candidate['id'] in found:continue
+                found.add(candidate['id'])
+                if len(found)<=offset:continue
+                rows.append(candidate)
+                if len(rows)>limit:break
         results=[]
         for r in rows[:limit]:
             notes=self.annotations(project_id,r['path']);meta=norm(json.dumps(notes,ensure_ascii=False))
@@ -188,17 +242,19 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(file_id UNINDEXED,project U
 
     def expand(self,project_id,ref,start=1,lines=80):
         if start<1 or not 1<=lines<=200:raise CapabilityError('context.invalid')
-        row=self.row(project_id,ref);p=self.project(project_id);path=safe_path(p['path'],row['path'])
+        row=self.row(project_id,ref);p=self.project(project_id);path=self.safe_path(p['path'],row['path'])
         if not path.is_file():raise CapabilityError('context.stale')
-        if path.stat().st_size>MAX_FILE:raise CapabilityError('context.limit')
-        raw=path.read_bytes()
-        if digest(raw)!=row['hash']:raise CapabilityError('context.stale')
-        all_lines=raw.decode('utf-8-sig').splitlines();selected=[];length=0
-        for line in all_lines[start-1:start-1+lines]:
-            if length+len(line)>12000:break
-            selected.append(line);length+=len(line)+1
-        if not selected and start<=len(all_lines):raise CapabilityError('context.limit')
-        return {'ref':ref,'path':row['path'],'start':start,'end':start+len(selected)-1,'text':'\n'.join(selected),'next_line':start+len(selected) if start+len(selected)<=len(all_lines) else None,'total_lines':len(all_lines)}
+        if file_digest(path)!=row['hash']:raise CapabilityError('context.stale')
+        selected=[];length=0;total=0;full=False
+        with path.open('r',encoding='utf-8-sig') as source:
+            for total,line in enumerate(source,1):
+                if total<start or full:continue
+                line=line.rstrip('\r\n')
+                if len(selected)>=lines or length+len(line)>12000:full=True;continue
+                selected.append(line);length+=len(line)+1
+        if not selected and start<=total:raise CapabilityError('context.limit')
+        if file_digest(path)!=row['hash']:raise CapabilityError('context.stale')
+        return {'ref':ref,'path':row['path'],'start':start,'end':start+len(selected)-1,'text':'\n'.join(selected),'next_line':start+len(selected) if start+len(selected)<=total else None,'total_lines':total}
 
     def related(self,project_id,ref):
         row=self.row(project_id,ref);imports=json.loads(row['imports']);stem=Path(row['path']).stem
@@ -214,7 +270,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(file_id UNINDEXED,project U
         return {'ref':ref,'symbols':json.loads(row['symbols'])[:100],'imports':imports[:80],'related':related[:40]}
 
     def annotate(self,project_id,path,aliases=None,tags=None,notes='',must_not_break=None,origin='user'):
-        p=self.project(project_id);safe_path(p['path'],path)
+        p=self.project(project_id);self.safe_path(p['path'],path)
         payload={'aliases':aliases or [],'tags':tags or [],'notes':notes,'must_not_break':must_not_break or []}
         if len(json.dumps(payload,ensure_ascii=False))>12000:raise CapabilityError('context.limit')
         for k in ('aliases','tags','must_not_break'):
@@ -230,8 +286,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(file_id UNINDEXED,project U
         return {'path':path,'revision':revision,'origin':origin,'saved':True}
 
     def import_apc(self,project_id,path):
-        p=self.project(project_id);source=safe_path(p['path'],path)
-        if source.stat().st_size>MAX_FILE:raise CapabilityError('context.limit')
+        p=self.project(project_id);source=self.safe_path(p['path'],path)
+        if source.stat().st_size>MAX_IMPORT_METADATA:raise CapabilityError('context.limit')
         raw=json.loads(source.read_text(encoding='utf-8-sig'))
         if isinstance(raw,dict) and raw.get('schema') not in (None,'apc.project_map_search_index.v1'):
             raise ValueError('Unsupported APC index schema')
@@ -245,10 +301,9 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(file_id UNINDEXED,project U
                 key=str(doc.get('doc_id',rel))
                 if key in seen:raise ValueError('Duplicate document identity; conflicting entry skipped')
                 seen.add(key)
-                target=safe_path(p['path'],rel)
+                target=self.safe_path(p['path'],rel)
                 if not target.is_file():raise CapabilityError('context.missing')
-                if target.stat().st_size>MAX_FILE:raise CapabilityError('context.limit')
-                measured=digest(target.read_bytes())
+                measured=file_digest(target)
                 if content_hash and content_hash!=measured:raise ValueError('Stale file content hash')
                 origin='apc:'+identity(path,key)
                 current=[a for a in self.annotations(project_id,rel) if a['origin']==origin]

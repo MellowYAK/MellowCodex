@@ -95,7 +95,7 @@ def test_progress_ledger_survives_recent_group_compaction():
         messages.extend([{'role':'assistant','tool_calls':[{'function':{'name':name,'arguments':{}}}]},{'role':'tool','tool_name':name,'content':json.dumps(result)}])
     result=prepare_messages(messages,[],4096,512)
     assert result[:2]==messages[:2]
-    ledger=result[2]['content']
+    ledger=next(m['content'] for m in result if 'Observed tool calls' in m.get('content',''))
     assert 'tools_enable' in ledger and 'candidate_inspect' in ledger
     assert 'failed_tool' not in ledger
 
@@ -105,7 +105,50 @@ def test_lookup_refs_and_schema_error_survive_compaction():
     for name,result in [('context_search',{'results':[{'path':'tests/test_real.py','ref':'real:hash'}]}),('context_expand',{'error':'start must be at least 1'})]:
         messages += [{'role':'assistant','tool_calls':[{'function':{'name':name,'arguments':{}}}]},{'role':'tool','tool_name':name,'content':json.dumps(result)}]
     result=prepare_messages(messages,[],4096,512)
-    packet=next(m['content'] for m in result if m.get('content','').startswith('Measured lookup'))
+    packet=next(m['content'] for m in result if 'Measured lookup' in m.get('content',''))
     assert 'real:hash' in packet and 'tests/test_real.py' in packet
     assert 'start must be at least 1' in packet
     assert messages[0]['content']=='Use tools'
+
+
+def test_search_does_not_erase_already_read_source_evidence():
+    messages=[{'role':'system','content':'Use tools'},{'role':'user','content':'Inspect source'}]
+    for name,data in [('context_expand',{'path':'a.py','ref':'a:hash','start':1,'end':1,'text':'return 42','next_line':None}),
+                      ('context_search',{'results':[{'path':'a.py','ref':'a:hash','suggested_start':1}]})]:
+        messages.extend([{'role':'assistant','tool_calls':[{'function':{'name':name,'arguments':{}}}]},
+                         {'role':'tool','tool_name':name,'content':json.dumps(data)}])
+    packet=next(m['content'] for m in prepare_messages(messages,[],4096,512) if 'Measured lookup' in m.get('content',''))
+    assert 'return 42' in packet and 'same_range_reads' in packet
+
+
+def test_read_range_ledger_unions_pages_and_resets_changed_hash():
+    messages=[{'role':'system','content':'Use tools'},{'role':'user','content':'Inspect source'}]
+    for start,end,ref in [(1,2,'a:old'),(3,4,'a:old')]:
+        data={'path':'a.py','ref':ref,'start':start,'end':end,'text':'a\nb','next_line':end+1 if end<4 else None,'total_lines':4}
+        messages.extend([{'role':'assistant','tool_calls':[{'function':{'name':'context_expand','arguments':{}}}]},
+                         {'role':'tool','tool_name':'context_expand','content':json.dumps(data)}])
+    def packet():return next(m['content'] for m in prepare_messages(messages,[],4096,512) if 'Measured lookup' in m.get('content',''))
+    assert '"read_ranges": [[1, 4]]' in packet() and '"all_source_lines_observed": true' in packet()
+    data.update(ref='a:new',start=3,end=4)
+    messages.extend([{'role':'assistant','tool_calls':[{'function':{'name':'context_expand','arguments':{}}}]},
+                     {'role':'tool','tool_name':'context_expand','content':json.dumps(data)}])
+    assert '"read_ranges": [[3, 4]]' in packet() and '"all_source_lines_observed": false' in packet()
+
+
+def test_mutable_ledger_does_not_precede_stable_source_history():
+    messages=[{'role':'system','content':'Use tools'},{'role':'user','content':'Inspect source'},
+              {'role':'assistant','tool_calls':[{'function':{'name':'context_expand','arguments':{'ref':'a:h'}}}]},
+              {'role':'tool','tool_name':'context_expand','content':json.dumps({'path':'a.py','ref':'a:h','start':1,'end':1,'text':'def observed(): pass','total_lines':1,'next_line':None})}]
+    result=prepare_messages(messages,[],8192,512)
+    assert result[2]==messages[2] and result[3]['role']=='tool'
+    assert result[-1]['role']=='user' and 'Measured lookup evidence' in result[-1]['content']
+def test_source_compaction_discards_derived_flow_before_original_lines():
+    import json
+    from hub.model_context import compact_result
+    source={'ref':'fast/a:hash','path':'a.py','start':1,'end':2,'total_lines':2,'text':'first\nsecond',
+            'measured_flow':{'facts':['huge'*5000]},'measured_input_declarations':[{'field':'value'}]}
+    result=json.loads(compact_result(source,limit=1000))
+    assert result['text']=='first\nsecond' and result['end']==2
+    assert result['omitted_derived_metadata']==['measured_flow']
+    assert result['measured_input_declarations']==source['measured_input_declarations']
+    assert 'measured_flow' in source

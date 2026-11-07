@@ -3,6 +3,8 @@ import asyncio
 import json
 import time
 import hashlib
+import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from ..i18n import CapabilityError
 
@@ -15,14 +17,42 @@ class Indexing:
             columns={r[1] for r in db.execute('PRAGMA table_info(project_index_jobs)')}
             if 'generation' not in columns:
                 db.execute('ALTER TABLE project_index_jobs ADD COLUMN generation INTEGER NOT NULL DEFAULT 0')
-            for name,kind,default in [('fingerprint','TEXT',"''"),('last_full','REAL','0'),('failures','INTEGER','0'),('retry_after','REAL','0')]:
+            for name,kind,default in [('mode','TEXT',"'apc_baseline'"),('fingerprint','TEXT',"''"),('last_full','REAL','0'),('failures','INTEGER','0'),('retry_after','REAL','0')]:
                 if name not in columns:db.execute(f'ALTER TABLE project_index_jobs ADD COLUMN {name} {kind} NOT NULL DEFAULT {default}')
 
-    def settings(self,project_id,enabled):
+    @contextmanager
+    def exclusive(self,project_id):
         self.service.project(project_id)
+        folder=self.service.state/'context-locks';folder.mkdir(exist_ok=True)
+        lock=sqlite3.connect(folder/(hashlib.sha256(project_id.encode()).hexdigest()+'.sqlite3'),timeout=30)
+        try:
+            lock.execute('BEGIN IMMEDIATE')
+            yield
+        finally:
+            lock.rollback();lock.close()
+
+    def settings(self,project_id,enabled,mode=None):
+        with self.exclusive(project_id):return self._settings(project_id,enabled,mode)
+
+    def _settings(self,project_id,enabled,mode=None):
+        self.service.project(project_id)
+        if mode not in (None,'fast','apc_baseline'):raise ValueError('Unknown index mode')
         with self.store.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            current=db.execute('SELECT mode,state FROM project_index_jobs WHERE project=?',(project_id,)).fetchone()
+            if current and mode and mode!=current['mode'] and current['state']=='running':
+                raise ValueError('Index scan running; wait for it to finish before switching mode')
             db.execute("INSERT INTO project_index_jobs(project,enabled,state,updated,result) VALUES(?,?,'not_indexed',?,'{}') ON CONFLICT(project) DO UPDATE SET enabled=excluded.enabled",(project_id,int(enabled),time.time()))
+            if mode and (not current or mode!=current['mode']):
+                db.execute("UPDATE project_index_jobs SET mode=?,state='queued',result='{}',fingerprint='',last_full=0,generation=generation+1 WHERE project=?",(mode,project_id))
         return self.status(project_id)
+
+    def selected(self,project_id):
+        mode=self.status(project_id).get('mode','apc_baseline')
+        if mode=='fast':
+            from .fast import FastContext
+            return FastContext(self.service.state,self.service.conversations)
+        return self.service
 
     def request(self,project_id,enabled=None):
         self.service.project(project_id)
@@ -44,7 +74,7 @@ class Indexing:
     def status(self,project_id):
         self.service.project(project_id)
         with self.store.connect() as db:row=db.execute('SELECT * FROM project_index_jobs WHERE project=?',(project_id,)).fetchone()
-        return dict(row)|{'result':json.loads(row['result']),'enabled':bool(row['enabled'])} if row else {'project':project_id,'state':'not_indexed','enabled':False}
+        return dict(row)|{'result':json.loads(row['result']),'enabled':bool(row['enabled'])} if row else {'project':project_id,'state':'not_indexed','enabled':False,'mode':'apc_baseline'}
 
     async def once(self):
         with self.store.connect() as db:
@@ -77,20 +107,24 @@ class Indexing:
         from .service import allowed,safe_path,EXCLUDED
         root=Path(self.service.project(project_id)['path'])
         if not root.is_dir():raise OSError('Project root unavailable; existing index retained')
+        selected=self.selected(project_id)
         records=[]
         for rel in walk(root,EXCLUDED,time.monotonic()+30):
-            if not allowed(rel):continue
-            stat=safe_path(root,rel).stat();records.append((rel,stat.st_size,stat.st_mtime_ns))
+            if not selected.allowed(rel):continue
+            stat=selected.safe_path(root,rel).stat();records.append((rel,stat.st_size,stat.st_mtime_ns))
         # Parser changes force reconciliation even when source metadata is unchanged.
-        parser_hash=hashlib.sha256(Path(__file__).with_name('service.py').read_bytes()).hexdigest()
+        parser_hash=hashlib.sha256(Path(__file__).with_name('service.py').read_bytes()+Path(__file__).with_name('fast.py').read_bytes()).hexdigest()
         return hashlib.sha256(json.dumps([parser_hash,sorted(records)],ensure_ascii=False).encode()).hexdigest()
 
     def _refresh(self,row):
+        with self.exclusive(row['project']):return self._refresh_locked(row)
+
+    def _refresh_locked(self,row):
         before=self.fingerprint(row['project'])
         if row['state']=='ready' and before==row['fingerprint'] and time.time()-row['last_full']<600:
             result=json.loads(row['result']);result['background_check']='metadata unchanged; full content reconciliation at least every 10 minutes'
             return result,before,row['last_full'],False
-        result=self.service.refresh(row['project'])
+        result=self.selected(row['project']).refresh(row['project'])
         after=self.fingerprint(row['project'])
         return result,after,time.time(),before!=after
 

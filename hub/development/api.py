@@ -3,6 +3,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from .contracts import PatchProposal
+from .guidance import SourceRequirement, ContextRead
 
 class TaskRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -26,6 +27,11 @@ class GuidanceRequest(TaskRequest):
     request_id:str=Field(min_length=1,max_length=100)
     text:str=Field(min_length=1,max_length=8000)
     required_tools:list[str]=Field(default_factory=list,max_length=20)
+    required_sources:list[SourceRequirement]=Field(default_factory=list,max_length=20)
+    allowed_tools:list[str]|None=Field(default=None,max_length=200)
+    evidence_only:bool=Field(default=False,strict=True)
+    exact_patch:PatchProposal|None=None
+    context_read:ContextRead|None=None
 
 class RepairRequest(TestRequest):
     paths:list[str]=Field(min_length=1,max_length=10)

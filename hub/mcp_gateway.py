@@ -43,6 +43,16 @@ async def list_projects_and_chats()->dict:
     return await local('/api/chats')
 
 @mcp.tool(annotations=WRITE)
+async def agent_shutdown()->dict:
+    """Fully shut down the local agent on explicit user request: stop tasks, unload Hub-managed models, close desktop and owned MCP/relay services. Shared Ollama is preserved. Response means accepted, not completed; connection will close. Model loading remains disabled until explicit load."""
+    return await local('/api/lifecycle/shutdown',{})
+
+@mcp.tool(annotations=READ)
+async def agent_shutdown_status()->dict:
+    """Read shutdown stages and errors while the Hub is reachable. Disconnection alone does not prove successful unload."""
+    return await local('/api/lifecycle/status')
+
+@mcp.tool(annotations=WRITE)
 async def bind_chat_project(chat_id:str,path:str)->dict:
     """Assign an existing local folder to this chat for future tasks, preserving history. Call before work in another project. Active work must finish first. Absolute file paths are available in desktop/code tasks under the existing Windows account."""
     return await local('/api/chats/'+ident(chat_id)+'/project',{'path':path})
@@ -101,7 +111,18 @@ async def get_task(task_id:str)->dict:
             seen.add(evidence['id'])
             reviews.append(await local('/api/chats/'+ident(evidence['chat_id'])+'/memory-review/'+ident(evidence['id'])))
             if len(reviews)>=4:break
-    return {'task':task,'status':{k:v for k,v in diagnostics.items() if k!='diagnostics'},'memory_reviews':reviews,'memory_review_next_action':'For pending reviews, inspect the actual original conversation available to you and submit conversation_memory_review_reply; if unavailable report context_available=false. Do not invent memory or resubmit the original task.' if any(r['status']=='pending' for r in reviews) else None,'recent_actions':[{'tool':a['tool'],'state':a['state'],'result':compact_result(a.get('result') or {})} for a in actions[-8:]]}
+    from .source_feedback import source_feedback
+    return {'source_evidence':source_feedback(actions),'task':task,'status':{k:v for k,v in diagnostics.items() if k!='diagnostics'},'memory_reviews':reviews,'memory_review_next_action':'For pending reviews, inspect the actual original conversation available to you and submit conversation_memory_review_reply; if unavailable report context_available=false. Do not invent memory or resubmit the original task.' if any(r['status']=='pending' for r in reviews) else None,'recent_actions':[{'tool':a['tool'],'state':a['state'],'result':compact_result(a.get('result') or {})} for a in actions[-8:]]}
+
+@mcp.tool(annotations=READ)
+async def task_source(task_id:str,action_id:str)->dict:
+    """Retrieve exact recorded source omitted from get_task's bounded packet. Use an observed omitted_sources.action_id. No model, rerun or filesystem reread. Snapshot hashes identify the original version; refresh before edits if stale."""
+    return await local('/api/tasks/'+ident(task_id)+'/source/'+ident(action_id))
+
+@mcp.tool(annotations=WRITE)
+async def request_sources(chat_id:str,request_id:str,request:str,sources:list[dict])->dict:
+    """Ask the executor for exact indexed source, without local model interpretation. First obtain project_brief/search. Each source has path,start,end and optional sha256. Instructions are installed BEFORE execution, avoiding a submit/guide race. Poll get_task, review source_evidence and retrieve omitted ranges with task_source. Reuse request_id on retry. No code modifications or Git required."""
+    return await local('/api/chats/'+ident(chat_id)+'/sources',{'text':request,'request_id':request_id,'sources':sources})
 
 @mcp.tool(annotations=READ)
 async def wait_task(task_id:str,ctx:Context=None)->dict:
@@ -254,7 +275,15 @@ async def health():
             ready=response.is_success and response.json().get('info',{}).get('title')=='Local Agent Hub'
     except Exception:ready=False
     if not ready:raise HTTPException(503,'Local agent unavailable')
-    return {'status':'ok','product':'local_agent','version':__version__}
+    tools=await mcp.list_tools()
+    # Fingerprint only the public tool schema, never runtime state or credentials.
+    catalog=[{'name':tool.name,'inputSchema':tool.input_schema} for tool in tools]
+    catalog.sort(key=lambda item:item['name'])
+    digest=hashlib.sha256(json.dumps(catalog,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    return {'status':'ok','product':'local_agent','version':__version__,
+            'tool_catalog':{'count':len(catalog),'sha256':digest,
+                            'supervised_source_tools':all(name in {t.name for t in tools} for name in
+                                ('project_context','context_search','context_expand','task_guide','task_request_changes'))}}
 
 @app.get('/consent')
 def consent(ticket:str):

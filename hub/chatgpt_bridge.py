@@ -54,7 +54,36 @@ def action_from_reply(text):
     if not isinstance(action,dict) or not isinstance(action.get('id'),str) or not isinstance(action.get('task'),str):return None
     if not 1<=len(action['id'])<=120 or not 1<=len(action['task'])<=12000:return None
     if 'mode' in action and action['mode'] not in ('inspect','code','desktop','browser'):return None
-    return {'id':action['id'],'task':action['task'],**({'mode':action['mode']} if 'mode' in action else {})}
+    result={'id':action['id'],'task':action['task'],**({'mode':action['mode']} if 'mode' in action else {})}
+    if 'context_read' in action:
+        from .development.guidance import ContextRead
+        if action.get('mode')!='code' or action.get('required_sources') or action.get('exact_patch') or action.get('evidence_only'):return None
+        try:result['context_read']=ContextRead.model_validate(action['context_read']).model_dump()
+        except (ValueError,TypeError):return None
+    if 'required_sources' in action:
+        from .development.guidance import SourceRequirement
+        sources=action['required_sources']
+        if action.get('mode')!='code' or not isinstance(sources,list) or len(sources)>20:return None
+        try:result['required_sources']=[SourceRequirement.model_validate(s).model_dump() for s in sources]
+        except (ValueError,TypeError):return None
+    if 'evidence_only' in action:
+        if type(action['evidence_only']) is not bool:return None
+        if action['evidence_only'] and (action.get('mode')!='code' or not result.get('required_sources')):return None
+        result['evidence_only']=action['evidence_only']
+    if 'exact_patch' in action:
+        from .development.contracts import PatchProposal
+        if action.get('mode')!='code' or result.get('required_sources') or result.get('evidence_only'):return None
+        try:result['exact_patch']=PatchProposal.model_validate(action['exact_patch']).model_dump()
+        except (ValueError,TypeError):return None
+    if 'allowed_tools' in action:
+        allowed=action['allowed_tools']
+        if action.get('mode')!='code' or not isinstance(allowed,list) or len(allowed)>200:return None
+        if any(not isinstance(n,str) or not re.fullmatch('[a-z][a-z0-9_]{0,79}',n) for n in allowed):return None
+        if result.get('required_sources') and 'context_expand' not in allowed:return None
+        if result.get('evidence_only') and not set(allowed)<={'project_context','context_refresh','context_expand'}:return None
+        if result.get('exact_patch') and set(allowed)!={'candidate_patch','candidate_diff'}:return None
+        result['allowed_tools']=sorted(set(allowed))
+    return result
 
 def image_delivery_ready(message,paths):
     """Verify loaded images and actual file cards on the new sent message.

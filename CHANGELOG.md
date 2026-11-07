@@ -1,3 +1,13 @@
+# 0.15.0 — 2026-11-07
+
+- Added native fast source indexing alongside the separate APC-derived baseline: persisted SHA-256, incremental parsing, paged maps, source search, relationship candidates and explicit parser coverage. No new APC source copied.
+- Added bounded project briefing and exact source delivery to a director. Structured map/source/patch steps use the existing runner without local-model rewriting and end awaiting director review.
+- Repaired PLAY objective reuse of an already linked conversation, narrowed context-read tool scope, and prevented failed pre-dispatch guidance from leaving queued orphan tasks.
+- Added retrieval receipts shared by HTTP/MCP and runner calls. Existing direct MCP context tools and automatic PLAY feedback were tested against Ember Video without Git or media execution.
+- Includes the documented source-synthesis experiments, scoped shutdown tools and their known limitations. Local-only semantic acceptance remains unsuccessful; shipping the supervised path does not claim otherwise.
+- Current acceptance and exact limits: docs/MAPPING_ACCEPTANCE-2026-11-07.md. Earlier dated development checkpoints below retain their contemporaneous failures/pending states; the acceptance document identifies the final tested mapping state. Full original product/UI/Guardian plan is not complete.
+- Release metadata requires the next normal service restart; publication is not deployment. New MCP convenience wrappers can remain unavailable in a cached client catalog; existing context tools were the live-tested route.
+
 # 0.14.1 — 2026-11-07
 
 PLAY conversation recovery and directed execution:
@@ -15,7 +25,81 @@ Shared native-editor workflow: observed New-tab control, asynchronous tab-creati
 
 Live acceptance 09adc2beab4c447194821c52472bdfa5: three Hebrew jokes, text_verified true, screenshot visually inspected, two tool calls, 16.89 seconds. 20 focused tests passed. Not validated across all applications. Earlier development failures remain recorded below.
 
-## Unreleased — 2026-11-07
+## Development history included in 0.15.0 (chronological checkpoints)
+
+- Directed execution: PLAY and MCP guidance now accept an exact, revision/hash-fenced candidate patch. The normal task runner applies the supplied file contents and returns a diff without model inference or another autonomous discovery pass. Stale content is rejected without a retry. Director review, tests and activation remain separate steps. Native Hub implementation; no additional APC source reused. Validation: 113 focused Engine/guidance/bridge/protocol tests passed; 15 guidance tests passed after the additional parser/replay regression. Live transport and production activation remain pending.
+
+- Fast project maps now expose measured parser counts, symbol count and syntax-error coverage, with explicit exclusions and limits. Supervised development assigns evidence selection and judgment to the director from the start; exact patches bypass local-model rewriting. No additional APC code reused.
+
+- Source synthesis now drops an unverified previous draft before source evidence, reports budget-omitted source locations when they fit, and prioritizes source over those hints. Shared synthesis instructions distinguish navigation/user actions from automatic orchestration and asynchronous job creation from completion. Native Hub change; no additional APC reuse.
+
+- Native fast-index recovery: conservatively interpret finite boolean rejection predicates in straight-line after validators without executing project code; unsupported predicates remain unmeasured. Preserve complete indexed request classes inside partial excerpts. Exact indexed paths in a read-only question now seed focused reads and retain the question's requested output rather than forcing broad architecture synthesis. Source compaction drops derived metadata before original source lines. APC baseline unchanged. Focused checks: 26 source/model-context tests and four navigation/synthesis tests passed. A single Qwen 4B adapter trial scored 12/12 against the existing independent Pydantic oracle in 9.78s without GPT; whole-runner acceptance remains pending.
+
+- Directed source synthesis assembles paged reads only within one source version and honors a requested SHA256. Incomplete or conflicting ranges are listed as missing instead of silently selecting an older complete excerpt. Three focused regressions passed in 0.64s. Native Hub code, no new APC imports; production activation is not claimed.
+
+- PLAY source review now retains prior observed source excerpts when a correction performs no new reads. Screenshots and effect reports remain limited to the current attempt. Native Hub fix; no additional APC reuse. 66 bridge/source-feedback/visual-recovery tests passed in 12.58s. Replay of actual Engine revision 84 recovered seven delivered excerpts (14 explicitly omitted) where the previous current-attempt filter delivered none. Live transport/deployment remain unverified.
+
+- A read-only investigation resumed under director guidance now synthesizes only the current step and requested source ranges. The overall objective remains authorization context; the autonomous broad-plan prompt no longer replaces a narrow correction. Implementation tasks and APC mode are not switched into this diagnostic synthesis path. 50 source/context tests passed16.23s; real same-task run returned the requested JSON shape but still failed semantic review. No production deployment or new APC reuse.
+
+- Python measured flow now records direct string-key reads with source lines and branch conditions, separately from default-bearing method calls. These syntax facts do not assert that a field is a mandatory user input. Native Hub improvement, no new APC reuse. 49 source-contract/context-mode tests passed in 16.82s; semantic runner verification remains pending.
+
+- Staged source-extraction diagnostics now partition source ranges instead of silently dropping trailing files under the context budget. Oversized individual lines report an explicit failure. Engine supports an opt-in Ollama JSON output schema, separately fingerprinted in metrics; ordinary tool calls are unchanged. Exact quotations are verified independently, while interpretation remains unverified. Native Hub work, no new APC reuse. 48 focused tests passed (28.40s); live diagnostic and runner integration remain incomplete.
+
+- 2026-11-07: Fast source-flow extraction now recovers complete indexed Python units inside otherwise unparseable partial excerpts. It preserves source coordinates, excludes cut-off units, marks incomplete enclosing context, and reuses the observed facts in synthesis. 48 source/context checks passed; actual Ember expansions recovered 56 and 60 flow facts from previously unparseable ranges. No semantic runner success, deployment, or additional APC reuse claimed.
+
+- 2026-11-07: Added syntax-derived Python flow facts (calls, positional/keyword inputs, assigned outputs, returns and if/else conditions) to fast source expansion and synthesis evidence. Facts retain line coordinates, parse/omission status, and never assert runtime feasibility or type compatibility. Derived flow is dropped before original source when input budget is tight. Native Hub implementation; no new APC reuse. Initial 56 source/context checks passed; standalone real-source extraction observed text encoding and image conditioning. End-to-end reasoning improvement remains unverified.
+
+- 2026-11-07: Added MCP `task_request_changes` to resume the same reviewed task through the existing revision-fenced HTTP review route. The shared director contract now distinguishes recording guidance from restarting execution. Corrections cannot resume uncertain pending actions. 48 API/guidance/answer/protocol tests passed, including MCP wrapper to HTTP, preserved goal/tool scope, stale replay and uncertain-effect rejection. Public connector does not yet expose the new tool; no live public acceptance claimed. Native Hub change, no additional APC reuse.
+
+- 2026-11-07: Expose the executor answer separately from runtime status in HTTP/MCP task results and PLAY feedback. Preserve original text; parse only complete JSON or a single complete JSON fence, rejecting duplicate keys/nonfinite constants. Syntax parsing never grants semantic approval. Hide old answers during resumed execution or after later messages. Native Hub code, no APC reuse. Thirty focused tests passed; stored real Engine correction scored 12/12 cases. Automatic transport/deployment remains unverified.
+
+- 2026-11-07: Shared PLAY/MCP director instructions require the external supervisor to interpret the original user request, preserve it as evidence, and formulate English executor steps without changing constraints or literal identifiers. Local self-translation is explicitly not independent feedback. Native Hub change, no additional APC reuse. Focused protocol/guidance/evidence tests: 18 passed; live normalization round-trip and production activation not yet verified.
+
+- Recovery implementation resumed: preserve directed context calls instead of substituting autonomous navigation; record model finish reasons and prepared-packet fingerprints/counts. 95 focused checks passed before packet telemetry; real directed investigation still failed semantic acceptance. Not deployed; no additional APC code reused.
+
+- 2026-11-07: Documented a preservation-first local-model recovery plan after reviewing code, historical acceptance evidence, current hardware and primary-source documentation. Implementation is paused at the user's request. The preceding focused test run passed 94 checks in 43.13 seconds; the latest real directed-source trial still failed semantic acceptance. No new inference, service restart, deployment or publication was performed during this audit. No additional APC code was copied. See docs/LOCAL_MODEL_RECOVERY_PLAN-2026-11-07.md.
+
+
+- Read-only source investigations retain the focused source-tool catalog and recent search/relationship results after requesting additional evidence. Previously a tool call could return the next step to the general workflow or omit its navigation result from the next draft. Contract comparison now forbids silently adding user inputs to fit an existing API. 67 context/core checks passed; independent acceptance still pending.
+
+- Source correction now receives its previous draft explicitly marked unverified alongside the critique and observed code, avoiding loss of the proposal being corrected. Invalid reviewer output is retained as bounded diagnostic evidence, and non-object JSON is rejected. Map refresh waits for the queued index result instead of showing stale counts until reopened. 67 context/core checks passed; real independent semantic acceptance remains pending.
+
+- Native fast source discovery now includes a compact filename tree and prioritizes actual source evidence when budgeting navigation, tool schemas and nested JSON. Drafts retain read-only source tools for missing evidence. Map summaries display readable cache/change counts. 34 focused context checks passed; real small-model semantic acceptance remains in progress. No additional APC code copied. — 2026-11-07
+
+- a read-only draft that gains named-source evidence or fails local review now receives a focused revision pass rather than requiring another six new source ranges. Source evidence remains authoritative; feedback is explicitly a hypothesis. Drafts are length-bounded and instructed to omit guessed runtime paths, ports and installation state. Explicit implementation requests retain their normal tool loop. Source tools tolerate redundant ref/path only when both identify the same indexed file, and still reject stale content hashes.
+
+- Explicit read-only source investigations can alternate bounded evidence gathering with a focused draft synthesis pass with read-only source tools, retaining the original objective and observed source ranges. Drafts still pass through actual source grounding and review; the stage is not completion evidence or a shortcut for implementation requests. The model's analysis-only classification alone cannot enable this path without an explicit read-only request marker. 63 context/core checks passed; actual small-model acceptance pending.
+
+- Content hashes now reuse source analysis despite timestamp-only changes and across identical-content renames. Syntax-error results carry the parser version and are cached until content or parser changes, avoiding repeated failed AST work. File bytes are still hashed to detect edits with preserved timestamps; moved paths update the search map. Direct Ember repeat scan: 310 unchanged, zero parsed files, 0.53 seconds. No extra APC code was copied.
+- A new conversation's first request is no longer described as prior project evidence, and history-retrieval guidance is included only when prior turns, notes or anchors exist. History tools remain available; existing conversations retain their memory behavior. Actual repeated-history failures are retained in the acceptance audit.
+
+- Source-navigation planning now receives the project instructions/architecture excerpts already read by the agent and the measured entrypoint candidates, rather than selecting generic search words from the user request alone. No inferred project facts are injected; existing context budgets apply. Native fast-mode workflow, not APC reuse.
+
+- Fast source search orders implementation filename matches by distinct matched query concepts, then filename-term rarity, retaining other hits. A generic worker no longer receives the same filename priority as a worker matching the requested feature too. APC baseline ranking is unchanged. Fixture and direct Ember lookup passed; new end-to-end acceptance remains pending.
+- Task runners recheck persisted pause/cancel state after inference and before dispatch, preventing an external controller's cancellation from being overwritten by a later model response. Two cross-store control regressions passed. Already executing tools are not undone by this guard.
+
+- Repeated source searches remain anchored to actual search hits rather than recursively treating dependency lists as new search roots. Match-centered reads check a bounded unread source prefix before following dependencies, so request schemas are not silently skipped. Rejected drafts remain in the model-event audit but are withheld from subsequent inference context to avoid reinforcing incorrect assertions. 59 focused context/core checks passed in 31.27 seconds; fresh actual-agent acceptance pending.
+- Before reviewing a source-based answer, unread filenames mentioned in the draft are resolved by exact indexed matches and read through logged agent tools. Frontend files also expose same-directory, same-component implementation candidates, explicitly marked as filename heuristics. Review prioritizes both full paths and basenames and receives an inventory of files actually read; partial excerpts do not establish file absence. Native Hub work, separate from APC. Actual trial 24 verified discovery/read of a previously omitted file, but its semantic answer was still rejected in independent QA.
+- Fast concept search ranks matching implementation filenames ahead of generic project prose while retaining alternative matches. Feature analysis now explicitly compares requested inputs/outputs with source validation and worker requirements; local review prioritizes that contract over speculative absence claims from partial excerpts. Native Hub changes, not additional APC code. Full regression: 400 passed in 112.59 seconds before the final contract-guidance edit; autonomous understanding acceptance remains pending.
+- Exact source-call/decorator searches prioritize literal matches before token fallback, preventing an observed route lookup from drifting to unrelated files containing the same words. 26 focused checks passed; direct Ember lookup located the requested route at its actual source line. This adapter check is not autonomous agent acceptance.
+- Strong implementation-filename leads are no longer excluded by an additional descriptive query term. Initial source navigation reserves reads for later search concepts instead of spending the entire startup allowance on the first concept and its dependencies. 27 focused checks passed. Actual Coder trials remain unaccepted; local review still needs stronger evidence grounding.
+- Fast lookup prioritizes explicit indexed filenames and measured AST definitions; named-function navigation opens the definition even beyond the first symbol page. Repeated broad searches trace an already-read implementation's dependencies before walking incidental matches. These native Hub corrections preserve the APC baseline policy.
+- Unknown compound identifiers can locate source files by matching multiple name components instead of falling back only to generic words such as endpoint/handler. Results explicitly distinguish navigation leads from verified symbol definitions.
+- Fast Python extraction resolves existing module candidates in `from package import module` and relative imports, including reverse links. Concrete modules precede package markers in related results; the versioned fast extractor refreshes its cache without rewriting APC baseline metadata.
+- Fast task startup now grounds model-selected search concepts in actual tool results: focused source reads plus an implementation relationship and relevant test when available. All calls use the existing runner/action log; no generated summary is substituted for source, no project-specific file list is embedded, and later exploration remains available.
+
+- Removed the separate 300 KB generic text-read rejection using streaming paged reads with change detection. Source review no longer cuts a function body at 2,200 characters while labeling it as a complete range.
+
+- Source investigation merges delivered line intervals before advancing, preventing pagination cycles. Fast searches prefer all-term file matches across chunks with partial fallback; APC search policy remains unchanged. Mutable inference progress follows stable history to avoid invalidating its prefix every turn.
+
+- Fast source tools accept exact indexed relative paths with live hash verification. Removed inferred intermediate summaries after a live trial invented absence of uninspected code; retained measured excerpts instead. Final answers receive a bounded local source consistency review, explicitly not independent QA.
+
+- Removed the 1 MB source-file exclusion: streaming text chunks, unique-file search results and paged hash-verified reads. Ember comparison now includes all 310 eligible text/source files, with matching hashes and 1,689 Python symbols; a >4 MB tail-search regression passed. APC metadata import remains a separate bounded format.
+- Fast investigation receives a focused coding instruction packet, observed match line numbers and preserved read evidence; reworded search loops advance to observed source. The map prioritizes instructions, manifests and possible entrypoints (explicitly heuristic). UI refresh now reopens the map and supports continuing source pages.
+
+- Added selectable source-first exploration (`fast`) alongside the preserved partial APC-derived baseline. Separate caches and mode-bound refs; shared safe readers, one existing indexing queue, per-project serialized operations, UI/local/HTTP/MCP settings, paged capsules and reverse Python import candidates. Native Hub workflow, not copied APC implementation.
+- Fast code-task bootstrap reads current project instructions from source. Model context retains bounded source excerpts and repeated-range counts to reduce repeated exploration. End-to-end effectiveness remains under measured acceptance; the first Ember run timed out while rereading source and is retained as a failed trial.
+
 
 - PLAY associates replies with the preceding rendered user message before falling back to a turn key. ChatGPT can group consecutive status/result messages under the status turn key; this previously left delivered results waiting indefinitely. Live isolated delivery, answer ingestion and return to listening verified. Native Hub change, not APC-derived; not deployed to production.
 
@@ -351,7 +435,13 @@ Vision benchmark — 2026-11-06: Actual local Qwen screenshot feedback, one desk
 - Five provider/catalog fixtures passed. IAB downloaded the official Qwen 0.5B Q4_K_M GGUF and observed installed/verified, with no loaded model. Scope: installation integrity, not inference quality or public connector acceptance. Split/private/projection formats remain unsupported; repository revision is recorded but not pinned.
 
 
-### Unreleased — 2026-11-07 continuation: memory and product shell
+### Unreleased — 2026-11-07
+
+- Removed the separate 300 KB generic text-read rejection using streaming paged reads with change detection. Source review no longer cuts a function body at 2,200 characters while labeling it as a complete range.
+
+- Source investigation merges delivered line intervals before advancing, preventing pagination cycles. Fast searches prefer all-term file matches across chunks with partial fallback; APC search policy remains unchanged. Mutable inference progress follows stable history to avoid invalidating its prefix every turn.
+
+- Fast source tools accept exact indexed relative paths with live hash verification. Removed inferred intermediate summaries after a live trial invented absence of uninspected code; retained measured excerpts instead. Final answers receive a bounded local source consistency review, explicitly not independent QA. continuation: memory and product shell
 - Added chronological conversation_history with exact-text cursors across old requests, results, actions and events. Added revisioned explicit continuity notes shared by HTTP, MCP and the UI. Current objective is anchored in the fixed model prefix. Full retention does not imply an unlimited model input window.
 - Added Hub-native navigation overflow, categorized settings, safe text-only Markdown rendering, conversation memory dialog and a consistent responsive design layer. Plugins/skills and RAG have separate navigation; unimplemented installation capabilities remain explicitly labeled. The embedded native browser is a separate surface still undergoing repair.
 - Added durable factual execution state, bounded tool discovery, truthful source continuation and direct-index-refresh status synchronization. Metadata fast path retains periodic content-hash reconciliation.
@@ -411,7 +501,13 @@ Unreleased — 2026-11-07: added shared reversible ChatGPT draft archive/list/re
 
 - Memory answer validation now retains saved remote feedback (including verdict, status and source reference) returned by history tools. Explicit assistant reports survive source-read ordering. This addresses observed live loss of already-received feedback;30 focused fixtures passed4.66s. Full/live retest pending.
 
-### Unreleased — 2026-11-07 project/PLAY dispatch repair
+### Unreleased — 2026-11-07
+
+- Removed the separate 300 KB generic text-read rejection using streaming paged reads with change detection. Source review no longer cuts a function body at 2,200 characters while labeling it as a complete range.
+
+- Source investigation merges delivered line intervals before advancing, preventing pagination cycles. Fast searches prefer all-term file matches across chunks with partial fallback; APC search policy remains unchanged. Mutable inference progress follows stable history to avoid invalidating its prefix every turn.
+
+- Fast source tools accept exact indexed relative paths with live hash verification. Removed inferred intermediate summaries after a live trial invented absence of uninspected code; retained measured excerpts instead. Final answers receive a bounded local source consistency review, explicitly not independent QA. project/PLAY dispatch repair
 - Shared conversation folder binding through local tools, HTTP, UI selector and MCP; history preserved and active task workspace immutable.
 - Explicit absolute file access for desktop/code; discoverable development tools in PLAY desktop mode.
 - Feedback timeout receipt reconciliation and restart recovery for completed tasks.
@@ -432,7 +528,13 @@ Regression run after context/progress fixes: 353 passed in92.35s. Subsequent sup
 
 Final checkpoint for this repair: full suite353 passed in96.35s; after the last catalog-focus change,8 binding/protocol tests passed in4.26s. Desktop-dispatched coding now exposes the development catalog without unrelated UI schemas; explicitly enabling desktop/browser groups restores those tools. Live resumed task c6d725a36a134b708a3e8dd1e6528f9f observed missing index, ran context_refresh (234 indexed files), and then context_search returned source references. Evidence: E:/AI/audits/browser-chrome-20261107/map-resumed-mcp.json. This is actual local agent execution observed through the local MCP facade, not a claim that the entire delegated development task or public connector deployment is finished.
 
-### Unreleased — 2026-11-07 PLAY recovery
+### Unreleased — 2026-11-07
+
+- Removed the separate 300 KB generic text-read rejection using streaming paged reads with change detection. Source review no longer cuts a function body at 2,200 characters while labeling it as a complete range.
+
+- Source investigation merges delivered line intervals before advancing, preventing pagination cycles. Fast searches prefer all-term file matches across chunks with partial fallback; APC search policy remains unchanged. Mutable inference progress follows stable history to avoid invalidating its prefix every turn.
+
+- Fast source tools accept exact indexed relative paths with live hash verification. Removed inferred intermediate summaries after a live trial invented absence of uninspected code; retained measured excerpts instead. Final answers receive a bounded local source consistency review, explicitly not independent QA. PLAY recovery
 - Persist pre-submit versus submission-started phases; restore interrupted feedback after restart without duplicating submitted messages. Complete only full owned drafts (ignoring rendering whitespace), preserving edits and partial drafts.
 - Restore embedded page viewport before composer preparation; record compact delivery diagnostics without draft text. Native Hub changes, no additional APC code copied.
 
@@ -463,3 +565,133 @@ Native Hub changes; no APC code imported in this checkpoint. The wider technical
 
 
 2026-11-07 public MCP Git acceptance: task 6d06fb7c5f94424e9cd7194a78f39178 executed run_shell through the public connector and returned equal local/remote main hashes b618f0699ec6fc1bc01e7f300bb8f6ae083e7e1b, exit 0, clean status. This verifies actual public-MCP Git read access. Initial attempt in an older conversation was rejected before execution with HTTP409 because an unrelated prior action remained uncertain; that history was preserved. The read-only Git test used a separate persistent Git conversation. This does not establish discovery of all new development/memory tools or autonomous repair/deployment parity.
+
+### Unreleased — measured component navigation (2026-11-07)
+- Fast project investigation can select up to three existing implementation paths from its measured filename map before keyword fallback. Every selected component is read and its relationships inspected through recorded agent tools. Unlisted/invented paths are rejected.
+- No additional APC code was copied; this change belongs to the separate fast investigation path. Model interpretation still requires real-task acceptance.
+
+Fast source packets additionally include AST-measured Python BaseModel field declarations, required/default expressions and source line references. This is a local deterministic aid, not an LLM conclusion; validators, inheritance and runtime consumers remain explicitly unverified by these declarations. No APC components were copied for this change.
+
+- Trial 45 ended waiting_review after 158.83s; unload verified zero loaded models. Observed late source-review state overwriting cancellation; added a persisted pause/cancel check after review before state transitions. This control fix has targeted regression coverage; a real cancellation retest has not yet been run. Semantic source-understanding acceptance remains failed.
+
+### Feedback continuity follow-up (2026-11-07, Unreleased)
+- Preserve director guidance and required-tool expectations in focused source synthesis, instead of dropping them when rebuilding the model packet.
+- PLAY accepts an optional validated execution mode (code/inspect/browser/desktop); legacy requests retain desktop mode.
+- Recover a virtualized conversation cursor from a confirmed outbound message ID when both human cursors are absent. Unknown history without a stable anchor remains blocked.
+- Validation: 72 context/engine fixtures and 46 bridge/protocol/guidance fixtures passed. Live transport acceptance remains in progress; not a production release. No APC code added in this change.
+
+### PLAY conversation-load recovery (Unreleased, 2026-11-07)
+- Recognize the visible ChatGPT conversation-load error separately from login/loading. Retry only the bound URL, at most twice per bridge session, at least 30 seconds apart; preserve cursors and never resend pending messages. Refuse recovery during drafts, generation, overlays, login or uncertain sends.
+- 50 focused bridge/protocol fixtures passed; live recovery not established because the saved conversation was no longer found in the product browser inventory. No new APC code.
+# Unreleased — local-model recovery, 2026-11-07
+
+- Separate focused director source instructions from broad autonomous discovery instructions; preserve project obligations.
+- Add durable source-range/hash requirements to the existing Guidance service and expose the same contract through MCP/HTTP and PLAY v3. Exact reads use the existing runner, with recorded actions, coverage checks, revision/epoch fencing and no automatic repeat of failed chunks. A source-coverage failure waits for review rather than implying a human approval is needed.
+- Fix coverage accounting for an excerpt whose last requested line is empty. Add negative checks for missing lines, mixed hashes, invalid paths/ranges and compacted text.
+- Reject truncated model responses before tool dispatch or completion; preserve packet/finish diagnostics for review. Per-call inference profiles allow controlled reasoning/output-budget diagnostics without changing saved preferences.
+- This is native Hub work; no new APC code was imported. Semantic acceptance and deployed transport verification remain incomplete; see VALIDATION.md.
+
+Unreleased — 2026-11-07: read-only source synthesis displays exact observed line coordinates, retaining raw evidence and falling back to raw formatting before a budget would evict the final range. Context tests 41 passed; related context/contracts tests 27 passed. Not deployed; wider model reasoning acceptance remains open.
+
+## Unreleased — director tool scope (2026-11-07)
+
+- Added durable optional allowed_tools constraints to coding guidance, HTTP/MCP and PLAY v4. Task constraints intersect across guidance revisions and survive worker replacement. Catalog filtering and dispatch denial prevent stale tool requests from bypassing the scope; an empty list permits no executor tools. Required evidence must remain achievable. This is native Hub work, not additional APC reuse.
+- 68 focused tests passed. Real Engine source interpretation with recorded GPT correction matched 12/12 contract cases in 21.34 seconds using only source-reading tools; it returned Markdown instead of requested JSON and remains waiting_review. Automatic two-way feedback/public deployment is not yet accepted.
+
+- Director feedback now includes exact observed source excerpts separately from recent action summaries, with action IDs, range/offset coordinates, excerpt hashes and explicit omission manifests. Shared by PLAY and MCP get_task; no extra APC source copied. Task tool constraints are also included in model guidance packets.
+
+- 2026-11-07: Independent correction attempt was stopped after repeated successful reads of unchanged ranges. Saved its actual Engine actions/events privately in independent-correction-loop.json; no semantic acceptance. Root cause in answer-stage dispatch: directed synthesis still advertised source tools, allowing it to reopen already-completed reading. Directed read-only synthesis now supplies an empty tool catalog; Guidance still dispatches required reads beforehand. Unresolved evidence must be returned for director review. Autonomous discovery retains its tools. This native Hub fix does not replace APC or prove automatic transport.
+
+- Source-review continuation fix: a source-only director task may return a corrected draft using its recorded source evidence without being forced to execute a fresh action. It remains waiting_review, never semantically approved. This fixes the observed waiting_user result after three redundant synthesis attempts in revision 79. Required-source coverage and other execution-task completion checks remain enforced. Validation: 79 context/core tests passed in 43.56s before this continuation fix; 3 targeted director tests passed in 1.80s afterward. Automatic external feedback transport and autonomous semantic acceptance remain outstanding.
+
+
+Unreleased — 2026-11-07: local source-review rejections now require exact draft and observed-source quotations before automatic rewriting. Ungrounded criticism preserves the candidate answer in waiting_review with an explicit unverified label and audit event instead of repeating synthesis. Quotation matching does not prove semantic correctness. Native Hub implementation; no APC source reused. Five focused review/control tests passed in 4.79s; live acceptance recorded separately.
+
+Focused source answers with measured input contracts now honor an explicit human request to return a JSON array using the existing model adapter schema option in an answer-only stage. This constrains syntax, not semantic correctness; ordinary requests retain source navigation tools. One focused fixture passed in 0.60s. The preceding unconstrained actual run b359a7d434c3478fbf9079b5194416b0 reached the output limit after 38.38s and is not a pass.
+
+Actual narrow Engine check: 12/12 source validator cases, complete JSON, 18.28s, one critic call and no rewrite loop. Candidate remains waiting_review because critic evidence was ungrounded; independent oracle comparison passed. No production restart or publication; broader acceptance remains open.
+
+
+Unreleased — 2026-11-07: source reviewers may select exact inclusive source line anchors instead of reproducing code. The runtime resolves the quotation only inside delivered source ranges and still requires an exact draft quotation; range coverage does not prove semantic correctness. This avoids losing legitimate criticism because a small model mangles code or newline escaping. One focused review fixture passed (0.61s). Native Hub change, no APC code reused. Broad autonomous trial 6a2be3068e5643b193148bebf04af7b2 failed in 61.27s despite 15 observed source ranges: unsupported model-capability claims and a new backend instead of composing existing producers/consumers. Its local critic identified a real non-image branch error but provided a nonmatching quote. The trial remains a failure, not indexing acceptance.
+
+
+Unreleased — 2026-11-07: broad source synthesis ranks task-matching implementation ranges ahead of incidental recent reads. Filename overlap is only a retrieval hint; measured contract/flow presence breaks ties. Budget trimming now drops the already-used filename map and duplicate derived contracts before dropping raw source. Source logs retain all ranges. Replaying failed task 6a2be3068e5643b193148bebf04af7b2 previously delivered only text_image.py, text-image.html/js and config.py (11 omitted); the corrected packet retains text_image.py, image_video.py and image_video_worker.py, preserving the producer/consumer/validator sources. This packet replay is not semantic acceptance. Two focused fixtures passed (0.62s). Native Hub changes, no APC source copied.
+
+Unreleased — 2026-11-07: synthesis events now distinguish all observed reads from the exact source ranges delivered to the bounded model request (path, range, ref, omitted count). This makes missing-context diagnosis observable instead of treating a read count as delivery proof. Native Hub implementation; no new APC code reused.
+
+Unreleased — 2026-11-07: the shared MCP/PLAY director contract now changes responsibility after a failed semantic correction: director owns synthesis and decisions; executor returns bounded source facts before concrete implementation steps. It explicitly checks route declarations, async readiness, field mapping and evidence for cleanup/retention. This is guidance, not a guarantee that the provider follows it or proof of automatic transport. One focused PLAY protocol test passed (0.23s). Native Hub change, no additional APC source reused.
+
+### Unreleased — exact director evidence (2026-11-07)
+- Code guidance now accepts evidence_only through HTTP/MCP and PLAY. The existing runner reads requested ranges and returns original excerpts without local-model rewriting, then waits for director review. Missing coverage and transport omissions remain explicit.
+- Fast-index reference hashes are preserved in source feedback. This extends existing context/guidance; no additional APC code was copied.
+- Validation: 20 focused tests passed; real isolated runner returned six ranges in 2.30 s with no model-start events. Independent comparison verified exact text and file hashes; Ollama reported no loaded models. Production deployment and automatic director round trip remain unverified.
+
+### Unreleased — focused PLAY evidence delivery (2026-11-07)
+- Exact-evidence PLAY steps now send one current-guidance source packet instead of duplicating raw result, compact excerpts and historical versions. Missing evidence is reported even when no source was returned.
+- Director instructions point to existing candidate_patch for exact edits, avoiding unnecessary model rewriting. No new APC component.
+- Fixed compact_result raising KeyError for valid source excerpts without total_lines.
+- Validation: 55 existing bridge tests passed; a new current-scope/single-delivery regression passed after exposing and fixing the optional-total-lines crash; 16 model-context tests passed. These are fixture tests, not automatic live GPT acceptance.
+
+### Unreleased — partial request-class detection (2026-11-07)
+- Source contracts now compare syntactically valid excerpts with indexed class boundaries, explicitly report complete/partial/unknown, and supply the required full class range. Autonomous and directed instructions require completion before full-schema claims. Existing APC-independent fast index metadata is reused; no APC imports added.
+- 11 source-contract tests passed. Actual Ember fast-index read 1–23 correctly reports partial; completing class 16–24 reveals omitted project_id. No model inference or Ember edits.
+
+### 2026-11-07: Keep read-only mapping within the requested scope
+
+The real autonomous runner task d0153d74eda2427198c8c8dd62c76f0e ended after 129.47 seconds with an unverified draft that proposed integration work despite a mapping-only objective. Shared source instructions incorrectly required change/test planning for every read-only investigation and a capability-contract table for every synthesis. These requirements are now conditional on the actual request; mapping asks for measured coverage, navigation and relationships. No APC code was imported for this fix. The first regression run found a source-budget regression (47 passed, 1 failed); synthesis instructions were shortened instead of weakening the evidence-budget assertion. Task 76966f004c074a3394f3c62207e39c3f is an actual runner diagnostic launched before that final prompt shortening; its outcome is pending. This is not production or semantic acceptance.
+
+### 2026-11-07: Preserve measured index coverage in synthesis
+
+Actual runner task 76966f004c074a3394f3c62207e39c3f returned an unverified draft after 84.59 seconds. It incorrectly called the 310-file index filenames-only and confused omitted packet entries with parser coverage. The synthesis packet discarded overview.coverage; it now carries measured_index (mode, total_files, coverage) separately from the bounded filename tree. This is a native shared Hub fix, not imported APC code. Qwen was unloaded after the trial.
+
+The four exact follow-up ranges from task 08dfbeb2d76d4461975bf6bdcfc140bf revision40 were manually uploaded to the same GPT conversation. GPT read them and returned corrected source-cited defaults, image readiness, video polling and terminal/recovery states; it requested no additional ranges for that architectural proposal. It explicitly excluded runtime and automatic PLAY acceptance. This validates manual director review of raw runner evidence only, not unattended transport or independent local reasoning. Screenshot remains in the private audit directory.
+
+### 2026-11-07: Preserve rejected drafts and diagnose gateway catalog
+
+After three local source-review rejections, Engine previously saved its retry placeholder instead of the latest executor answer. This deprived task_answer and external feedback of the actual draft. Engine now retains that draft, records source_review_exhausted with the critic result and verified=false, and returns both under waiting_review. It does not turn critic rejection into success. Engine regression: 1 passed (39 deselected), 1.16s.
+
+Gateway health now reports a fingerprint/count of its public tool input schemas and whether the source-guidance tool set is registered. No project contents, paths, tokens or credentials are exposed. This helps distinguish the loaded gateway catalog from a cached connector catalog. Six remote tests passed in 2.21s after correcting the SDK field name input_schema. This change is not yet loaded in production. No APC code was reused for these fixes.
+
+Actual autonomous task c2e4b6a3c96e463aa71ebb271200b4fb ended waiting_review after 154.19s; semantic acceptance failed. The final critic questioned image/video conditioning but this alone does not establish a source contradiction. Qwen was unloaded after the run. No unchanged rerun was started.
+
+Unreleased follow-up: mapping review receives measured coverage and follows the requested scope instead of imposing a feature-design check. One focused regression passed. Real autonomous map trial e5ff40b10c0b4d719b78f8142a41f0ac remains unaccepted: correct coverage totals, incomplete subsystem navigation and incorrect file references. See VALIDATION for actual evidence and packet omissions. Native Hub, no additional APC reuse.
+
+### Unreleased — full agent shutdown
+- Added shared lifecycle shutdown through Settings, the desktop tray and MCP `agent_shutdown`. Stops task scheduling, active tasks, owned terminal sessions and downloads; verifies unloading Hub-managed Ollama models before closing the desktop and requesting graceful server exit. Existing lifespan cleanup stops the owned relay and MCP gateway. Shared Ollama is preserved.
+- New work is rejected during shutdown. Inference remains disabled until explicit load. Stage failures are recorded in state/last-shutdown.json; an unload failure keeps the service available for diagnosis.
+- Validation: two isolated lifecycle tests passed. Live desktop/service shutdown and public MCP deployment have not yet been verified.
+
+- Added a separate administrator full-shutdown desktop launcher for stale/elevated Hub services. It freezes identified installation processes before terminating owned service children, disables automatic inference, verifies managed Ollama unload, and saves an explicit outcome. No executable-name-wide kill is used. This recovery shutdown may interrupt in-flight work; it does not claim tasks completed.
+
+### Director onboarding packet (in progress)
+Added project_brief shared by HTTP, local tools and MCP: measured map, original hashed opening sources and optional task search; no local inference or Git dependency. Native Hub addition; no new APC source imported. Two focused tests passed in 1.30s. Real ToolRunner packet 2696eaec7bfa44c08a62b99df46878aa returned 310 files / 1689 Python symbols, and three opening-source ranges verified against disk hashes and lines. This is adapter evidence; fresh GPT review and live transport acceptance remain pending.
+
+### Fresh director conversation evidence
+GPT in new conversation 6aef7bc6-2348-83ed-9872-a7389d4c9b7a read the actual project_brief attachment and correctly identified the standalone studio and measured parser limits. It requested four source ranges. Actual isolated Engine task 6ba47bcda6dd46f3b49c48f03236a8f4 returned them in 1.42s without model inference; task remained waiting_review. One source was omitted by the bounded feedback packet. Added task_source (HTTP/MCP) to retrieve an observed source action without rereading/rerunning and preserved total_lines. All four source hashes and requested line texts checked against disk, returned to GPT for review. Six source-feedback tests passed in 0.07s. Transport here is manual relay; unattended PLAY/MCP remains unproven. No new APC code reused.
+
+- Directed source requests now install source requirements before enqueueing,
+  avoiding the submit/guide race and local interpretation of retrieval requests.
+  Added MCP request_sources over the shared HTTP route. A focused API test passed
+  for pre-enqueue guidance, idempotent retry and conflicting payload rejection.
+  Deployment and external connector discovery still require live verification.
+
+- Added deterministic PLAY context_read for map/search/relations using the existing
+  runner and selected index. It cannot dispatch shell or edits, and never infers a
+  development request from indexing. Added retrieval metadata receipts.
+- Focused context-read validation passed; real isolated Engine map-only task
+  returned in 0.76s without local inference. Automated live PLAY remains pending.
+
+
+### 2026-11-07 PLAY objective conversation continuity
+Live mapping acceptance exposed that starting a bounded objective created a second local chat for an already linked GPT conversation. Sending failed at the ownership check before composer submission. Start now reuses the linked local chat, rejects cross-project reuse, and includes the current PLAY protocol. Focused fixture covers same-chat continuation and project isolation; live acceptance still pending. No Ember Video services or media execution are required for indexing.
+
+Live PLAY GPT requested context_read brief with a wider read-tool allowlist. Guidance now intersects that list with the single selected tool; explicit exclusion still rejects. Two focused tests passed. A rejected pre-dispatch guidance step now becomes failed rather than leaving a queued orphan. Initial live attempt executed no tools; acceptance continues after reload.
+
+2026-11-07 live PLAY loop completed in linked chat e249a777ce6d46bbb6a28bf2820991b1: GPT requested brief, related metadata, then four hashed source ranges; local runner returned results automatically and GPT produced a source-backed map. Tasks 973b29dbce5942679acfac676933a125, 06dd978fe882467fb6c70b4f33510aa5, 6a75df94c60249af9765dbb7ffefc5a8. No local inference or project mutation requested. Evidence: play-map-runner-evidence.json and play-map-director-final.txt in the recovery audit directory (not committed). First two steps also recorded an unnecessary scope-rejected project_context bootstrap; deterministic context_read now skips that bootstrap. This final cleanup still awaits normal deployment. MCP direct retrieval was observed earlier; full release/publication remains pending.
+
+
+### 2026-11-07 direct MCP mapping acceptance
+In the connected GPT conversation, three actual MCP calls completed: project_context, context_search (project storage/versioning), context_expand (ember_video/projects.py lines 120-206). Server context_access receipts confirm all three HTTP-backed calls; GPT described save/revision/current/history behavior and explicitly separated source verification from runtime execution. No Git access, media execution or local inference was requested. Receipt evidence is stored outside the repository at E:/AI/audits/recovery-directed-20261107/mcp-map-access-receipts.json. PLAY separately completed brief -> related -> exact source -> director review automatically. All five returned PLAY source hashes independently match current files. New convenience MCP wrappers may remain absent from existing client catalogs; the existing direct context tools were the tested route. Publication and the final bootstrap cleanup deployment remain pending.
+
+### Supervised execute-return-review contract — 2026-11-07 (Unreleased)
+The shared MCP/PLAY director instructions explicitly require one bounded step, recorded output, director acceptance or exact correction, then the next step. Director disconnection must preserve pending review rather than silently enabling autonomous work. Ordinary director review is distinct from human approval. Deterministic map/source/patch paths enforce their existing waiting_review boundary; this wording change alone does not establish strict execution enforcement for every generic tool or deploy updated instructions into an already connected chat. Native Hub change; no APC code imported.
