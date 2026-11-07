@@ -1,0 +1,128 @@
+"""Persistent projects and chat-to-task relationships, stored with the task database."""
+import json,uuid
+from pathlib import Path
+from .store import now,Conflict
+
+class Conversations:
+    def __init__(self,store):
+        self.store=store
+        with store.connect() as db:
+            db.executescript('''CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY,name TEXT NOT NULL,path TEXT UNIQUE NOT NULL);
+CREATE TABLE IF NOT EXISTS chats(id TEXT PRIMARY KEY,project_id TEXT NOT NULL,title TEXT NOT NULL,pinned INTEGER DEFAULT 0,archived INTEGER DEFAULT 0,created TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS project_notes(project_id TEXT PRIMARY KEY,notes TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS chat_tasks(chat_id TEXT NOT NULL,task_id TEXT UNIQUE NOT NULL,position INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS chat_tasks_order ON chat_tasks(chat_id,position);
+CREATE INDEX IF NOT EXISTS actions_task_state ON actions(task_id,state);''')
+    def project(self,path,name=None):
+        path=str(Path(path).resolve())
+        if not Path(path).is_dir():raise ValueError('Choose an existing folder on this computer')
+        with self.store.connect() as db:
+            db.execute('INSERT OR IGNORE INTO projects VALUES(?,?,?)',(uuid.uuid4().hex,name or Path(path).name or path,path))
+            return dict(db.execute('SELECT * FROM projects WHERE path=?',(path,)).fetchone())
+    def bind_project(self,chat_id,path,active_task_id=None):
+        """Bind future turns without rewriting historical task workspaces."""
+        self.get(chat_id)
+        project=self.project(path)
+        with self.store.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            busy=db.execute("SELECT t.id FROM chat_tasks c JOIN tasks t ON t.id=c.task_id WHERE c.chat_id=? AND t.state IN ('queued','running','verifying','waiting_desktop')",(chat_id,)).fetchall()
+            if any(r['id']!=active_task_id for r in busy):raise Conflict('Finish the active task before changing its project')
+            if active_task_id and not db.execute('SELECT 1 FROM chat_tasks WHERE chat_id=? AND task_id=?',(chat_id,active_task_id)).fetchone():raise ValueError('Task does not belong to chat')
+            db.execute('UPDATE chats SET project_id=? WHERE id=?',(project['id'],chat_id))
+        if active_task_id:self.store.event(active_task_id,'project_binding_changed',{'project':project,'effective':'next_task'})
+        return {'chat_id':chat_id,'project':project,'effective':'next_task','history_preserved':True}
+
+    def create(self,project_id,title='New chat'):
+        with self.store.connect() as db:
+            if not db.execute('SELECT 1 FROM projects WHERE id=?',(project_id,)).fetchone():raise KeyError('Project not found')
+            chat_id=uuid.uuid4().hex
+            db.execute('INSERT INTO chats(id,project_id,title,created) VALUES(?,?,?,?)',(chat_id,project_id,title,now()))
+        return self.get(chat_id)
+    def get(self,chat_id):
+        with self.store.connect() as db:
+            row=db.execute('SELECT c.*,p.path workspace FROM chats c JOIN projects p ON p.id=c.project_id WHERE c.id=?',(chat_id,)).fetchone()
+            if not row:raise KeyError('Chat not found')
+            result=dict(row)
+            ids=[r[0] for r in db.execute('SELECT task_id FROM chat_tasks WHERE chat_id=? ORDER BY position',(chat_id,))]
+        result['turns']=[self.store.get(i) for i in ids]
+        return result
+    def inventory(self):
+        with self.store.connect() as db:
+            return {'projects':[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY name')], 'chats':[dict(r) for r in db.execute('SELECT * FROM chats ORDER BY pinned DESC,created DESC')]}
+    def page(self,chat_id,before=None,limit=30):
+        """A bounded chronological viewport; no task-message arrays or history deletion."""
+        if not 1<=limit<=60 or before is not None and before<0:raise ValueError('Invalid conversation page')
+        with self.store.connect() as db:
+            row=db.execute('SELECT c.*,p.path workspace FROM chats c JOIN projects p ON p.id=c.project_id WHERE c.id=?',(chat_id,)).fetchone()
+            if not row:raise KeyError('Chat not found')
+            result=dict(row)
+            total=db.execute('SELECT COUNT(*) FROM chat_tasks WHERE chat_id=?',(chat_id,)).fetchone()[0]
+            rows=db.execute('SELECT c.position,t.id,t.revision,t.goal,t.result,t.state,t.mode,t.created,t.updated FROM chat_tasks c JOIN tasks t ON t.id=c.task_id WHERE c.chat_id=? AND (? IS NULL OR c.position<?) ORDER BY c.position DESC LIMIT ?', (chat_id,before,before,limit+1)).fetchall()
+        result.update(turns=[dict(r) for r in rows[:limit]][::-1],total_turns=total,has_older=len(rows)>limit,
+                      next_before=rows[limit-1]['position'] if len(rows)>limit else None,before=before)
+        return result
+    def update(self,chat_id,title,pinned,archived):
+        self.get(chat_id)
+        with self.store.connect() as db:
+            db.execute('UPDATE chats SET title=?,pinned=?,archived=? WHERE id=?',(title,pinned,archived,chat_id))
+        return self.get(chat_id)
+    def submit(self,chat_id,goal,mode,idem,attachments=None,isolated=False):
+        idem='chat:'+chat_id+':'+idem
+        # A new turn must not deserialize a year's worth of task message arrays.
+        # Retained history remains accessible via the chronological paging API.
+        with self.store.connect() as db:
+            row=db.execute('SELECT c.*,p.path workspace FROM chats c JOIN projects p ON p.id=c.project_id WHERE c.id=?',(chat_id,)).fetchone()
+            if not row:raise KeyError('Chat not found')
+            chat=dict(row)
+            existing=db.execute('SELECT id,goal,mode FROM tasks WHERE idem=?',(idem,)).fetchone()
+            busy=db.execute("SELECT 1 FROM chat_tasks c JOIN tasks t ON t.id=c.task_id WHERE c.chat_id=? AND t.state IN ('queued','running','verifying','waiting_desktop') LIMIT 1",(chat_id,)).fetchone()
+            uncertain=[r[0] for r in db.execute("SELECT DISTINCT c.task_id FROM chat_tasks c JOIN actions a ON a.task_id=c.task_id WHERE c.chat_id=? AND a.state='pending'",(chat_id,))]
+            recent=[dict(r) for r in db.execute('SELECT t.id,t.goal,t.result,t.state FROM chat_tasks c JOIN tasks t ON t.id=c.task_id WHERE c.chat_id=? ORDER BY c.position DESC LIMIT 12',(chat_id,))][::-1]
+            position=db.execute('SELECT COALESCE(MAX(position),-1)+1 FROM chat_tasks WHERE chat_id=?',(chat_id,)).fetchone()[0]
+        if existing:
+            if existing['goal']!=goal or existing['mode']!=mode:raise Conflict('Different message for existing request')
+            return self.store.get(existing['id'])
+        if busy:raise Conflict('This chat is still working; stop or wait before sending another message')
+        if uncertain and not isolated:raise Conflict('Reconcile the uncertain previous action before continuing')
+        context=[]
+        with self.store.connect() as db:
+            notes=db.execute('SELECT notes FROM project_notes WHERE project_id=?',(chat['project_id'],)).fetchone()
+        if notes and notes[0]:context.append({'role':'user','content':'User-saved project instructions: '+notes[0]})
+        for t in ([] if isolated else recent):
+            context.extend([{'role':'user','content':t['goal']},
+                {'role':'assistant','content':'Historical assistant report (not verified current state; may contain errors). '
+                    'Use the original user request and recorded tool evidence when checking this report. '+
+                    json.dumps({'source_task_id':t['id'],'state':t['state'],
+                                'reported_text':t['result'] or None},ensure_ascii=False)}])
+        # File references must survive follow-up turns without embedding binary bytes.
+        for t in recent:
+            for event in self.store.events(t['id']):
+                if event['kind']=='attachments':
+                    context.append({'role':'user','content':'Previously attached files (data): '+json.dumps(event['data'],ensure_ascii=False)})
+        from .attachments import prepare_attachments
+        attached_text,images=prepare_attachments(attachments or [])
+        task=self.store.create(goal,chat['workspace'],mode,idem)
+        if isolated and uncertain:
+            self.store.event(task['id'],'isolated_request',{'unresolved_previous_tasks':uncertain,'replayed':False})
+            context.append({'role':'user','content':'This is a separate NEW human request. Earlier tasks have unresolved effects and must not be resumed or replayed. Obtain fresh observations for this request; if it depends on an unresolved effect, stop and explain that dependency.'})
+        current={'role':'user','content':goal+('\n\n'+attached_text if attached_text else '')}
+        if images:current['images']=images
+        self.store.update(task['id'],messages=context+[current])
+        file_ids=[i['file_id'] for i in attachments or [] if i.get('file_id')]
+        if file_ids:
+            from .file_library import FileLibrary
+            self.store.event(task['id'],'attachments',{'files':[FileLibrary().get(i,ready=True) for i in file_ids]})
+        with self.store.connect() as db:
+            db.execute('INSERT INTO chat_tasks VALUES(?,?,?)',(chat_id,task['id'],position))
+            if position==0:db.execute('UPDATE chats SET title=? WHERE id=?',(goal[:70],chat_id))
+        return self.store.get(task['id'])
+
+def migrate_legacy(store):
+    c=Conversations(store)
+    with store.connect() as db:
+        old=[dict(r) for r in db.execute('SELECT t.id,t.goal,t.workspace,t.created FROM tasks t LEFT JOIN chat_tasks ct ON ct.task_id=t.id WHERE ct.task_id IS NULL')]
+    for t in old:
+        if not Path(t['workspace']).is_dir():continue
+        p=c.project(t['workspace']);chat=c.create(p['id'],t['goal'][:70])
+        with store.connect() as db:
+            db.execute('INSERT OR IGNORE INTO chat_tasks VALUES(?,?,0)',(chat['id'],t['id']))

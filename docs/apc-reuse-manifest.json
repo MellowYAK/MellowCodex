@@ -1,0 +1,304 @@
+{
+  "schema": "mellow.apc-reuse-audit.v1",
+  "date": "2026-11-07",
+  "source_commit": "da4782284cff68e3310749583f6f0b26e0907d55",
+  "source_root": "E:\\AI\\audits\\apc-github-2026-11-07-da47822\\apc-main",
+  "archive_sha256": "0657154558f30f6743158dc4551e4d53aaeceabf32c323755158252c807326ae",
+  "scope": "Selective contract reimplementation; status per item, no claim of running the PHP application.",
+  "license_note": "APC composer manifest says proprietary. Preserve user source ownership and dependency notices; review obligations before redistribution.",
+  "items": [
+    {
+      "source_path": "inc/project_map.php",
+      "sha256": "1362eecef9677ffbbc53901c871362e6651e8a0317b1d12156fc42e81e577bfd",
+      "bytes": 406232,
+      "proposed_destination": "hub/context/scanner.py; hub/context/search.py",
+      "reuse_reason": "Incremental identity, keywords/aliases, behavior metadata and relation contracts",
+      "status": "partially_reimplemented_narrow_live_tested",
+      "destination": [
+        "hub/context/service.py",
+        "hub/context/api.py",
+        "hub/context/tools.py",
+        "hub/context/apc.py"
+      ],
+      "validation": [
+        "tests/test_project_context.py",
+        "tests/test_context_integration.py",
+        "E:/AI/audits/context-acceptance-20261107-c/acceptance.json",
+        "tests/test_apc_adapter.py"
+      ],
+      "remaining": "Full entity graph import, public MCP/ChatGPT acceptance, incremental watcher/performance and broader extractors remain pending.",
+      "deviations": [
+        "Python AST and FTS5 instead of PHP extraction and JSON candidate scan",
+        "File-scoped metadata and heuristic relationships only; full feature graph not ported",
+        "Typed file import distinguishes entity/content hashes; routes/pages/selectors explicitly unsupported, not mapped to filesystem paths."
+      ]
+    },
+    {
+      "source_path": "api/project-map-search.php",
+      "sha256": "03a3a59181c24421cd7db43e6e3c1919296ceba712c8f965815fcea9bf059818",
+      "bytes": 11746,
+      "proposed_destination": "hub/context/search.py",
+      "reuse_reason": "Bounded explainable target-aware search",
+      "status": "partially_reimplemented_narrow_live_tested",
+      "destination": [
+        "hub/context/service.py",
+        "hub/context/api.py",
+        "hub/context/tools.py"
+      ],
+      "validation": [
+        "tests/test_project_context.py",
+        "tests/test_context_integration.py",
+        "E:/AI/audits/context-acceptance-20261107-c/acceptance.json"
+      ],
+      "remaining": "Historical narrow Engine/IAB acceptance exists; unfinished indexing queue, fresh public MCP/ChatGPT, many-project performance, broader extractors and typed APC import parity remain pending. No literal PHP copy or complete APC runtime parity claimed. See technical plan section 15.",
+      "deviations": [
+        "Python AST and FTS5 instead of PHP extraction and JSON candidate scan",
+        "File-scoped metadata and heuristic relationships only; full feature graph not ported",
+        "Importer needs typed entity/content hash distinctions and structured term normalization"
+      ]
+    },
+    {
+      "source_path": "inc/project_map_components.php",
+      "sha256": "8e8ecfee02b2a06f3a1e1c87d6233bcaa8725e149243b9d5afd169f652e24473",
+      "bytes": 2547,
+      "proposed_destination": "hub/context/extractors/",
+      "reuse_reason": "Component grouping with confidence",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/project_map_living_manual_v2.php",
+      "sha256": "945b873a76993c1d225c6433879286a26b6a8724a879346e6104c1c181b4e1a5",
+      "bytes": 109180,
+      "proposed_destination": "hub/context/store.py",
+      "reuse_reason": "Stable feature identity and manual corrections",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/obligation_compiler.php",
+      "sha256": "c41093d4bd9ce597b9c4288e4a540b763239341c2d4f2a0aac595a0d38361809",
+      "bytes": 18431,
+      "proposed_destination": "hub/context/packets.py",
+      "reuse_reason": "Required task obligations",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/task_contract.php",
+      "sha256": "df0e2b1b411260a4522cf2f8466d0f6d33bb5d7f63d6cc3fb6af3bc9daba6283",
+      "bytes": 26428,
+      "proposed_destination": "hub/development/contracts.py",
+      "reuse_reason": "Explicit task constraints and acceptance",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/budget_optimizer.php",
+      "sha256": "9f4f1ad73a7216ff78341e44f0cad678d633a417ef6fa86eb8236d3f9c80c7be",
+      "bytes": 21755,
+      "proposed_destination": "hub/context/packets.py",
+      "reuse_reason": "Coverage/cost-based bounded selection",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/context_router.php",
+      "sha256": "ddf2cdc40f0922d53259797195946c4a20dbcc9737f321c1fbc30cd6dd708360",
+      "bytes": 52044,
+      "proposed_destination": "hub/context/packets.py",
+      "reuse_reason": "Source routing and safe bounded payloads",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/candidate_engine.php",
+      "sha256": "f38010a568d5577380371bf0872e7eef80a57399f1ebcd6288913cce23cdaaaf",
+      "bytes": 35981,
+      "proposed_destination": "hub/context/search.py",
+      "reuse_reason": "Candidate selection semantics",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/session_delta_planner.php",
+      "sha256": "0162aa684f878466f88bb96edd2efd94db36241f319a3a375d0a4e3990249df4",
+      "bytes": 33734,
+      "proposed_destination": "hub/context/packets.py",
+      "reuse_reason": "Scoped hashes and conservative delivery state",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/recall_classifier.php",
+      "sha256": "fef9d65697fd28c322b2a81388ba78610aeb3d95240e8a25f395ac2971fcf4fc",
+      "bytes": 11997,
+      "proposed_destination": "hub/context/repair_memory.py",
+      "reuse_reason": "HOT/WARM/COLD retrieval",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/reminder_engine.php",
+      "sha256": "90019fffba152d023b5ddf7639d4a9bfc5f74608a748d557f72904a3453a8a30",
+      "bytes": 38307,
+      "proposed_destination": "hub/context/packets.py",
+      "reuse_reason": "Task-specific reminder rules",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/capability_cues.php",
+      "sha256": "f7f186365336e3725434f8056d27ba2623e8af44832c8ebfeba3af4e46a81e6d",
+      "bytes": 15725,
+      "proposed_destination": "hub/tools.py",
+      "reuse_reason": "Task-specific capability discovery",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/token_metrics.php",
+      "sha256": "e0aa726476d0debd5905983b94d6a0c9fb4ed0befeba371b934f129dd485b504",
+      "bytes": 35118,
+      "proposed_destination": "hub/context/packets.py",
+      "reuse_reason": "Estimated versus measured token usage",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/verified_capabilities.php",
+      "sha256": "0169bf584c6ec11f307b8d0bfa015679f6e4ceefcdd6a55af94796eab9e0cb20",
+      "bytes": 98073,
+      "proposed_destination": "hub/context/repair_memory.py",
+      "reuse_reason": "Immutable evidence and repair lineage",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/project_map_backup.php",
+      "sha256": "6277764775b073139119519dde5ec0608df7d109164e5a56c03ac788f03a6c8b",
+      "bytes": 111952,
+      "proposed_destination": "hub/development/workspaces.py",
+      "reuse_reason": "Snapshot and evidence identity",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/project_source_history.php",
+      "sha256": "e9d14e4036d2c3919347b05d6eca410a25eb5f05b7a233a674f08d476ad4e38c",
+      "bytes": 42843,
+      "proposed_destination": "hub/development/workspaces.py",
+      "reuse_reason": "Source-history semantics",
+      "status": "design_contract_partial_prototype_fixture_tested",
+      "destination": [
+        "hub/development/workspaces.py",
+        "hub/development/contracts.py",
+        "hub/development/service.py"
+      ],
+      "validation": [
+        "tests/test_development_workspaces.py"
+      ],
+      "remaining": "Partial manifest workspace prototype only. Not full APC schema parity; runner, Git snapshots, public API/MCP, agent acceptance, resource management and Guardian remain pending."
+    },
+    {
+      "source_path": "inc/project_connection.php",
+      "sha256": "d058f7e4f323dee886d512055f19b3d8b46f339cc5552983408f752b6d8bd78f",
+      "bytes": 37797,
+      "proposed_destination": "hub/development/contracts.py",
+      "reuse_reason": "Independent source authority and execution locations",
+      "status": "design_contract_partial_prototype_fixture_tested",
+      "destination": [
+        "hub/development/workspaces.py",
+        "hub/development/contracts.py",
+        "hub/development/service.py"
+      ],
+      "validation": [
+        "tests/test_development_workspaces.py"
+      ],
+      "remaining": "Partial manifest workspace prototype only. Not full APC schema parity; runner, Git snapshots, public API/MCP, agent acceptance, resource management and Guardian remain pending."
+    },
+    {
+      "source_path": "inc/direct_chat.php",
+      "sha256": "b61aa4aca38de1d6d99733a4ffbb1a02220e137a4236c87dff8774c955daeebd",
+      "bytes": 14421,
+      "proposed_destination": "hub/bridge_controller.py; hub/conversations.py",
+      "reuse_reason": "Conversation/task correlation and reconnect",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/ops.php",
+      "sha256": "ccacaecba6095f5e121ed511b0f6642bc1d0743cc87d6b4144bf2918f75352f0",
+      "bytes": 1577140,
+      "proposed_destination": "hub/store.py; hub/bridge_controller.py",
+      "reuse_reason": "Selected paired-command queue semantics, not whole file",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "inc/context/workstreams.php",
+      "sha256": "7673e11fa26ed8d77a0d2ce09d57518d19b015617327c4fdab5b24bcad16c6fa",
+      "bytes": 66166,
+      "proposed_destination": "hub/development/service.py",
+      "reuse_reason": "Draft/queued distinction and task revisions",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "tests/test_direct_chat_persistence_contract.py",
+      "sha256": "a090993a37486c8a540e100de10aeb730f784bb1d5c018432507557bcb5c6788",
+      "bytes": 11860,
+      "proposed_destination": "tests/development/",
+      "reuse_reason": "Regression scenarios; replace source-string assertions with behavior tests",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "tests/test_context_optimizer_core_contract.php",
+      "sha256": "bed5ce928d80dd013791361e60d10153be772f50e19ee8c3c2cbce2643ca65ce",
+      "bytes": 23326,
+      "proposed_destination": "tests/context/",
+      "reuse_reason": "Pure optimizer fixture candidates, isolated parity verification required",
+      "status": "selected_for_design_not_ported"
+    },
+    {
+      "source_path": "tests/test_verified_solution_memory_contract.php",
+      "sha256": "74d7ff0b55a173bcecbce52464894fb207970c88a93ac7e69572e6a6390c0581",
+      "bytes": 8246,
+      "proposed_destination": "tests/context/",
+      "reuse_reason": "Repair-memory invariants",
+      "status": "selected_for_design_not_ported"
+    }
+  ],
+  "continuation_audit": {
+    "date": "2026-11-07",
+    "source_hashes_verified": 24,
+    "report": "TECHNICAL_IMPLEMENTATION_PLAN.md section 15",
+    "evidence": "E:/AI/audits/plan-reconciliation-20261107/findings.json",
+    "production_activation_verified": false
+  },
+  "bridge_candidate_audit": {
+    "date": "2026-11-07",
+    "source_commit": "da4782284cff68e3310749583f6f0b26e0907d55",
+    "integrated": false,
+    "items": [
+      {
+        "source_path": "tools/browser_runtime/apc_browser_runtime.py",
+        "sha256": "d7677091691b54d361ab54004c540e0a163fe0565ec02d7f7c341ecbf075827b",
+        "capability": "Browser console/page-error collection, mobile overflow checks, before/after evidence",
+        "decision": "Evaluate selective extraction of diagnostics. Existing Hub already has Qt/CDP navigation, clicks, fill, scroll, screenshots, uploads, PDFs and virtual pointer; do not replace it with a duplicate external Chromium runtime.",
+        "status": "source_reviewed_not_integrated"
+      },
+      {
+        "source_path": "tools/browser_runtime/apc_browser_action.py",
+        "sha256": "c9cb421008919c5d6715b80014f9aac94d3a02762ed71eb878422eedf67521bf",
+        "capability": "Task-scoped dispatcher, scope binding and persistent sessions",
+        "decision": "Compare task/session binding and diagnostic result contracts. APC PHP gateway, encrypted context store and bundled runtime are not drop-in Hub dependencies.",
+        "status": "source_reviewed_not_integrated"
+      },
+      {
+        "source_path": "tools/local_bridge/visual_connector_trainer.py",
+        "sha256": "9c561879d781b385b7eaea32b6b58d6f4be4dcb10daf844af14572ab6254fe6e",
+        "capability": "Learned UI Automation target selectors and window/process profiles",
+        "decision": "Potential plugin/skill for reusable application-specific targets. Requires fresh-target validation; no coordinate replay on stale windows.",
+        "status": "source_reviewed_not_integrated"
+      },
+      {
+        "source_path": "tools/local_bridge/apc_local_bridge.py",
+        "sha256": "3f3c183f6a7612120744d2feef2568f9e0d5391166d9d2d4e798d61caf8c8fa3",
+        "capability": "Managed subprocess ownership and durable result outbox",
+        "decision": "Compare existing Hub terminal lifecycle and delivery reconciliation. Consider only missing guarantees, not second command queue.",
+        "status": "source_reviewed_not_integrated"
+      },
+      {
+        "source_path": "tools/browser_runtime/apc_hybrid_snapshot_capture.py",
+        "sha256": "aaa2ab4b38f10af1b450a7c74d3f2d8404d1472fea46cce159be7e1956d4aea7",
+        "capability": "Hybrid navigable snapshots",
+        "decision": "Source labels itself fixture-only. Do not present as production feature or import wholesale.",
+        "status": "source_reviewed_not_integrated"
+      }
+    ]
+  }
+}

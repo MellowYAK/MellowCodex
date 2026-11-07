@@ -1,0 +1,25 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+data/
+
+.venv/
+
+# Local runtime, credentials and generated acceptance artifacts
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+state/
+artifacts/
+audits/
+backups/
+browser-profile/
+browser-profiles/
+*.log

@@ -1,0 +1,10 @@
+{
+  "manifest_version":3,
+  "name":"Local Agent — Session Transfer",
+  "version":"0.1.0",
+  "description":"Transfer the selected site's session to your local agent, only when you click Transfer and enter a one-time pairing code.",
+  "permissions":["activeTab","cookies","scripting"],
+  "host_permissions":["http://127.0.0.1:8876/*"],
+  "optional_host_permissions":["https://*/*","http://*/*"],
+  "action":{"default_title":"Transfer this site to Local Agent","default_popup":"popup.html"}
+}
