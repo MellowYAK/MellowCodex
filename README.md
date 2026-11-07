@@ -434,3 +434,5 @@ The models tool group exposes read-only model_memory_status for resident models,
 
 
 Development checkpoint (2026-11-07, unreleased): a real ChatGPT Web PLAY director/Qwen2.5-Coder repair round trip now has recorded passing tests and director review. Code integration is separate from deployment. Diff compaction preserves changed-file counts/path summaries when patch details are omitted; full evidence remains in task history. See VALIDATION.md for measured results and remaining public MCP/upgrade limitations.
+
+Source repository: https://github.com/MellowYAK/MellowCodex (main). The first development baseline was uploaded through the local agent with a reviewed staged-file set and matching local/remote Git commit. Git publication does not activate a production release. See AGENTS.md for the validated-change publication workflow.
