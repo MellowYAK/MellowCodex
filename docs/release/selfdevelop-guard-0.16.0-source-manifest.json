@@ -13,17 +13,17 @@
   "entries": {
     "CHANGELOG.md": {
       "source_sha256": "1480d8f89a3ab9033eaaf26a548550af6663430dae7b2fdc2580f13d877224ff",
-      "release_sha256": "662f9ec34c8e36055deaf8b5149cd55608362e6b95722bd63adb3d920b370e6c",
+      "release_sha256": "15d4197deedcd49499c20c3e273231e8c2f0e04c5ada37d68f806e1bce8fc456",
       "selection": "full_source_or_release_metadata"
     },
     "README.md": {
       "source_sha256": "a2f903f40b6acc0bfe7368807a45571ee81a1a9c2611ccccca50fe0d8bae53d2",
-      "release_sha256": "83818e17368c71300e49265c0e4ec29cbef6afe5f37a937fe38f762ecb91bc96",
+      "release_sha256": "57d3b4e02057f0b0dfeede162f8fb4a429fc655721167945876317d116d1e412",
       "selection": "full_source_or_release_metadata"
     },
     "VALIDATION.md": {
       "source_sha256": "5de0bf1b9d37d164488b3034b5be06a35a2318b2a29ec38d7b222981ab4159ac",
-      "release_sha256": "922b7e2a0e7a36d1161028d55af06a08db740d98953e9b9256f90edaa47e3088",
+      "release_sha256": "c42a3ca7d073dc79af063e87d5af1c31517b8689eedc9c45c62efa81a1a3cf11",
       "selection": "full_source_or_release_metadata"
     },
     "hub/__init__.py": {
@@ -72,9 +72,9 @@
       "selection": "full_source_or_release_metadata"
     },
     "hub/development/worker.py": {
-      "source_sha256": "02d814d85be98235b56c8fceec8395525d7652597f2a87fe355fb86a84d2d6f0",
-      "release_sha256": "02d814d85be98235b56c8fceec8395525d7652597f2a87fe355fb86a84d2d6f0",
-      "selection": "full_source_or_release_metadata"
+      "source_sha256": "7b6a2209e0281c7caa372469447dafa41ece40b22d6f3f7ed1c8b0c0360cc709",
+      "release_sha256": "7b6a2209e0281c7caa372469447dafa41ece40b22d6f3f7ed1c8b0c0360cc709",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
     },
     "hub/development/workspaces.py": {
       "source_sha256": "7f12188764a08ed5c43a202761b7c81ee69cbb546e2687b9806a3ccbb0faedb6",
@@ -103,7 +103,7 @@
     },
     "docs/release/SELFDEVELOP_GUARD_0.16.0.md": {
       "source_sha256": null,
-      "release_sha256": "2c77ae15950dd0478711b60b40777b1405e6271ee9ef98d42bb88c236f43fcb2",
+      "release_sha256": "21495115c8d8b56a16ebad50b9baa3c78fa7a7d372039bfff1edefdbfabc883b",
       "selection": "full_source_or_release_metadata"
     },
     "docs/validation/correct-command-type-2026-11-08.md": {
@@ -225,11 +225,45 @@
       "source_sha256": "0e67e8d39251e559ac3667ac44153f700cebddd6b4b1e06a8e828139d39d3afa",
       "release_sha256": "0e67e8d39251e559ac3667ac44153f700cebddd6b4b1e06a8e828139d39d3afa",
       "selection": "full_source_or_release_metadata"
+    },
+    "docs/validation/worker-focused-edits-2026-11-08.md": {
+      "source_sha256": "c191e4449cdc49ec31d7737c8ae6d80e51515b55477466bdced187457a9512d2",
+      "release_sha256": "c191e4449cdc49ec31d7737c8ae6d80e51515b55477466bdced187457a9512d2",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "hub/development/runner.py": {
+      "source_sha256": "b8237cfb815f23d5691470c1c7f16ead09ffb6843dd0c63c97d02765d7cbff8b",
+      "release_sha256": "b8237cfb815f23d5691470c1c7f16ead09ffb6843dd0c63c97d02765d7cbff8b",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "tests/test_runner_pycache_isolation.py": {
+      "source_sha256": "6b73fb033f10f34beaf8d40f484c80c9097d91c654ce3a042bb67f0b333b3f50",
+      "release_sha256": "6b73fb033f10f34beaf8d40f484c80c9097d91c654ce3a042bb67f0b333b3f50",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "tests/test_worker_focused_edits.py": {
+      "source_sha256": "c99d2889802fd5cb313845be170b8d855b4da76e0e4d20ddc933984751b6d0ee",
+      "release_sha256": "c99d2889802fd5cb313845be170b8d855b4da76e0e4d20ddc933984751b6d0ee",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
     }
   },
   "excluded_private_handoffs": [
     "docs/APC_SELFDEVELOP_IMPLEMENTATION_PLAN-2026-11-07.md",
     "docs/SELFDEVELOP_DIRECTOR_HANDOFF-2026-11-08.md",
     "docs/SELFDEVELOP_HANDOFF-2026-11-07.md"
-  ]
+  ],
+  "followup_update": {
+    "update_id": "ff437e2351ec4aefaa228a816922a6e4",
+    "state": "ACTIVE_VERIFIED",
+    "candidate_id": "18c8d01a043d4b82ad866fd0e3435d10",
+    "candidate_revision": 13,
+    "reported_candidate_tests": "21 passed in 13.64s; verified=true; source_changed=[] (user-provided director evidence)",
+    "scope": [
+      "docs/validation/worker-focused-edits-2026-11-08.md",
+      "hub/development/runner.py",
+      "hub/development/worker.py",
+      "tests/test_runner_pycache_isolation.py",
+      "tests/test_worker_focused_edits.py"
+    ]
+  }
 }

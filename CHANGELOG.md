@@ -704,3 +704,5 @@ In the connected GPT conversation, three actual MCP calls completed: project_con
 
 ### Supervised execute-return-review contract — 2026-11-07 (Unreleased)
 The shared MCP/PLAY director instructions explicitly require one bounded step, recorded output, director acceptance or exact correction, then the next step. Director disconnection must preserve pending review rather than silently enabling autonomous work. Ordinary director review is distinct from human approval. Deterministic map/source/patch paths enforce their existing waiting_review boundary; this wording change alone does not establish strict execution enforcement for every generic tool or deploy updated instructions into an already connected chat. Native Hub change; no APC code imported.
+
+<!-- 0.16.0 isolated release follow-up: focused worker edits and runner pycache isolation confirmed installed by Guard ff437e2351ec4aefaa228a816922a6e4; no autonomous-development claim. -->

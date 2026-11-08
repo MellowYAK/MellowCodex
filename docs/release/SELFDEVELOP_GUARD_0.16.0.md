@@ -17,3 +17,11 @@ No UI, delegation, wallpaper, progress_guard, OmniRoute or changes still isolate
 
 ## Integrity
 The adjacent selfdevelop-guard-0.16.0-source-manifest.json captures selected files' live source SHA-256 and isolated release SHA-256 for review and future drift detection.
+
+## Verified installation follow-up (2026-11-08)
+- Mellow Guard update ff437e2351ec4aefaa228a816922a6e4 reported ACTIVE_VERIFIED. Five installed file SHA-256 hashes were checked against its manifest before transfer into the isolated release worktree.
+- Changes: focused, hash-fenced find/replace proposals normalized to full content in worker.py; runner.py assigns a separate temporary PYTHONPYCACHEPREFIX to each pytest subprocess to prevent equal-size/same-second stale pyc collisions. Both regression test files and worker-focused validation record included.
+- Candidate 18c8d01a043d4b82ad866fd0e3435d10 revision 13: 21 passed in 13.64s, verified=true, source_changed=[] as confirmed by the supervising user, distinct from the independent installed-file hash check and isolated release tests.
+- This does not prove autonomous local planning, reasoning, full deployment of this Git commit, or cross-machine acceptance.
+
+- Release checkout follow-up focused regression: 17 passed in 12.68 seconds, Python AST parse passed for hub/development/worker.py and runner.py. No models, services or source changes in live were made by this audit.

@@ -879,3 +879,9 @@ Final deterministic context bootstrap cleanup deployed by normal shutdown/start.
 2026-11-07 shared director contract clarification: 19 protocol/guidance fixture tests passed in 2.88s. These checks do not constitute a new live transport test or universal enforcement of all generic actions. Existing live map/source acceptance remains the evidence for the bounded deterministic path.
 
 2026-11-07 release check: 68 focused context-mode, project-brief, source-feedback and source-contract fixtures passed in 17.80s. Current production UI displayed 310 indexed/unchanged files, fast mode, and successfully searched `save projects.py` and expanded its original save/revision code. This was read-only UI verification, not an Ember runtime test. git diff --check passed.
+
+## 0.16.0 installed Guard follow-up ? 2026-11-08
+
+Guard update ff437e2351ec4aefaa228a816922a6e4 reported ACTIVE_VERIFIED for five files; actual installed SHA-256 hashes matched the journal. Candidate 18c8d01a043d4b82ad866fd0e3435d10 revision 13 had 21 passed in 13.64 seconds, verified=true, source_changed=[] according to the supervising user; independent isolated release test results must be listed separately. No autonomous local-development proof is claimed.
+
+- Release checkout follow-up focused regression: 17 passed in 12.68 seconds, Python AST parse passed for hub/development/worker.py and runner.py. No models, services or source changes in live were made by this audit.
