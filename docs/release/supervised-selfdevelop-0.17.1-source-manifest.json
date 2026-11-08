@@ -23,7 +23,7 @@
     },
     "VALIDATION.md": {
       "source_sha256": null,
-      "release_sha256": "db8813e15f5dd3a05a0f89ff2001b16b4c17eb204419347902a33b6ccf262fe4",
+      "release_sha256": "0446e0c24b4c78d0a67141083f5137d48c574bd0df3cd3a1ac8443842408bc07",
       "selection": "0.17.1_release_metadata"
     },
     "hub/__init__.py": {
@@ -268,7 +268,7 @@
     },
     "docs/SUPERVISED_SELFDEVELOP_COMPLETION_PLAN-2026-11-08.md": {
       "source_sha256": null,
-      "release_sha256": "87a6e9c6ae34fcb7a265d668e06ccfdaa09a8afb0bd1300de60f7883ab47f9ff",
+      "release_sha256": "d4a906f5ea8e4eb36aacc3ad7801ec3556d004f8a4c32e47fdeecd29dbe17784",
       "selection": "0.17.1_release_metadata"
     },
     "docs/release/SUPERVISED_SELFDEVELOP_0.17.0.md": {
@@ -283,7 +283,7 @@
     },
     "docs/release/SUPERVISED_SELFDEVELOP_0.17.1.md": {
       "source_sha256": null,
-      "release_sha256": "71c8ac63c35f249f18ca0fd111ecd7595ec8ec8047792fd99da204c6e490c2c7",
+      "release_sha256": "6a6e85c9f2f3178eea2c861a70a57d381696a7a277431bc3ba6ec504c418273d",
       "selection": "0.17.1_release_metadata"
     }
   },
@@ -390,6 +390,14 @@
     "director_mode": "gpt_mcp_exact_local_executor",
     "optional_planner_experiment": "reconcile_required_before_write_context_budget",
     "original_guided_chat": "8cae5657612a4fbeb390c51a8201fb64",
-    "source_chat_completion": "VERIFY_IN_ORIGINAL_CHAT"
+    "source_chat_completion": "VERIFIED_IN_ORIGINAL_CHAT",
+    "source_chat_message_id": "83fb81753a474ca38cf77d0417d248d2",
+    "source_chat_report_dedupe": "chatgpt-final-verified-guided-idempotency-install-20261108-001",
+    "guided_install_task": "c976f61108eb4270b0b286451392aa18",
+    "guided_install_revision": 6,
+    "guided_install_exit_code": 0,
+    "mcp_reconnected": true,
+    "qwen_loaded": false,
+    "loaded_models": []
   }
 }
