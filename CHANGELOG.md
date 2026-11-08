@@ -1,3 +1,12 @@
+# 0.18.0 - 2026-11-08
+
+- Added an explicit GPT-requested same-chat preflight recovery API/MCP route with bounded narrow/exact modes and stable request identity; no local autonomous/model director.
+- Anchored failure-time worker packet and source SHA-256 digests; legacy unanchored packets, changed candidate/source hashes, ambiguous history and pending/uncertain effects are rejected instead of replayed.
+- Exact continuation checks the current authorized revision, tests only within existing scope and records verified receipt/state atomically before external GPT semantic review; no autoapproval or automated Guard activation.
+- Candidate 5a6d8a40174a4c75989221a2319c0a77 revision 14, exactly five approved source/test files. Existing focused receipt test-ba7b4ec6e2a34bd5bd591bf0254330d8.json: 30 passed in 15.23s, verified=true, source_changed=[].
+- Guard 9a4ef1f526904a22b84bd624fd5d8159 ACTIVE_VERIFIED; five installed hashes independently matched candidate rev14 and journal. This verifies bootstrap installation only. Positive live recovery is still unproven, and the full versioned Git release metadata has not been deployed from publication.
+- Current acceptance remains GPT sole director via MCP plus exact local executor. Prior guided acceptance is independently verified; the older optional automatic objective experiment failed at preflight and must not be described as successful. No main merge or production restart by the publication task.
+
 # 0.17.1 - 2026-11-08
 
 - Fixed replay idempotency of previously authorized SelfDevelop objective requests after their source-mapping task reaches done. Identical request returns the existing run without repeating actions; changed arguments, fresh unauthorized requests and cross-chat requests are rejected.

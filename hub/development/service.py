@@ -207,12 +207,29 @@ class Development:
                     'test_feedback':test_feedback,'director_correction':director_correction}
             packet_path=self.workspaces.candidate(identifier)/('worker-packet-'+__import__('uuid').uuid4().hex+'.json')
             packet_path.write_text(json.dumps(packet,ensure_ascii=False,indent=2),encoding='utf-8')
-            self.store.event(task['id'],'coding_worker_started',{'candidate_id':identifier,'revision':revision,'packet':str(packet_path),'model':packet['model']})
+            self.store.event(task['id'],'coding_worker_started',{'candidate_id':identifier,'revision':revision,'packet':str(packet_path),'packet_sha256':sha(packet_path.read_bytes()),'source_sha256':{rel:entry['sha256'] for rel,entry in sources.items()},'model':packet['model']})
             # Reject syntactically broken Python before touching the candidate.
             # Give the patch-only worker one bounded correction opportunity with
             # the actual parser error; do not ask the executor to rediscover it.
             for attempt in range(2):
-                response=await run(packet,settings.request_timeout_seconds+15)
+                try:
+                    response=await run(packet,settings.request_timeout_seconds+15)
+                except ValueError as exc:
+                    # This exact worker exception is raised by the context
+                    # preflight before inference or patch proposal parsing.
+                    if str(exc)=='ValueError: Scoped work packet exceeds selected context budget; narrow source files':
+                        current=self.inspect(task,identifier)
+                        unchanged=(current['revision']==revision
+                            and current['files']==manifest['files']
+                            and all(sha(safe_path(directory,rel).read_bytes())==item['sha256']
+                                    for rel,item in sources.items()))
+                        if unchanged:
+                            self.store.event(task['id'],'coding_worker_preflight_rejected',
+                                {'candidate_id':identifier,'revision':revision,
+                                 'packet_sha256':sha(packet_path.read_bytes()),
+                                 'source_sha256':{rel:item['sha256'] for rel,item in sources.items()},
+                                 'candidate_changed':False,'stage':'context_budget_before_inference'})
+                    raise
                 proposed=WorkerPatch.model_validate(response['proposal'])
                 syntax_errors=[]
                 for change in proposed.changes:

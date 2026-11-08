@@ -133,6 +133,25 @@ def router(provider):
             body.chat_id,body.task_id,body.request_id,body.paths,body.tests,
             body.model,body.max_attempts,body.director_mode,body.deploy_after_review)
 
+    class ObjectiveRecovery(BaseModel):
+        model_config=ConfigDict(extra='forbid')
+        chat_id:str=Field(pattern='^[a-f0-9]{32}$')
+        request_id:str=Field(min_length=8,max_length=100)
+        mode:str=Field(pattern='^(narrow|exact)$')
+        reason:str=Field(min_length=1,max_length=1000)
+        expected_candidate_revision:int=Field(ge=0,strict=True)
+        paths:list[str]|None=Field(default=None,min_length=1,max_length=10)
+        tests:list[str]|None=Field(default=None,min_length=1,max_length=30)
+
+    @routes.post('/selfdevelop/objective/recover')
+    async def objective_recover(body:ObjectiveRecovery):
+        """GPT-requested same-chat recovery. Never infer semantic approval."""
+        from .selfdevelop import SelfDevelop
+        dev=provider()
+        return await SelfDevelop(dev.store).recover_objective(
+            body.chat_id,body.request_id,body.mode,body.reason,dev,
+            body.expected_candidate_revision,body.paths,body.tests)
+
     @routes.get('/selfdevelop/objective/{chat_id}')
     async def objective_status(chat_id:str):
         from .selfdevelop import SelfDevelop

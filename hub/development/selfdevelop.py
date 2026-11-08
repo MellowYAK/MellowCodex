@@ -246,6 +246,214 @@ class SelfDevelop:
                              {'chat_id':chat_id,'request_id':request_id,'policy':director_mode})
         return self.objective_status(chat_id)
 
+    async def recover_objective(self, chat_id, request_id, mode, reason, development,
+                                expected_candidate_revision, paths=None, tests=None):
+        """Explicit GPT-directed recovery of the existing run; never auto-repair.
+
+        Verify the saved failed-worker packet against its historical candidate
+        snapshot and current bytes. Any ambiguity leaves reconciliation required.
+        An exact follow-up tests current bytes and atomically records the verified
+        result and review gate under the existing candidate writer lock.
+        """
+        import threading
+        from .ownership import candidate_owner
+        from .workspaces import sha
+        from ..context.service import safe_path
+
+        if (not isinstance(request_id,str) or not 8<=len(request_id)<=100
+            or not isinstance(reason,str) or not reason.strip() or len(reason)>1000
+            or mode not in ('narrow','exact')
+            or type(expected_candidate_revision) is not int or expected_candidate_revision<0):
+            raise ValueError('Exact GPT recovery request, reason and revision required')
+        run=self.objective_status(chat_id)
+        if run['phase']=='not_authorized':
+            raise Conflict('No authorized objective to recover')
+        task=self.store.get(run['task_id'])
+        if run['plan']['director_mode']!='gpt' or task['state']!='waiting_review':
+            raise Conflict('GPT-directed recovery requires original reviewable task')
+        selected_paths=list(paths) if paths is not None else run['plan']['paths']
+        selected_tests=list(tests) if tests is not None else run['plan']['tests']
+        if (not selected_paths or not selected_tests or len(set(selected_paths))!=len(selected_paths)
+            or not set(selected_paths).issubset(run['plan']['paths'])
+            or set(selected_tests)!=set(run['plan']['tests'])):
+            raise Conflict('Recovery cannot expand writable scope or drop original tests')
+        payload={'request_id':request_id,'mode':mode,'reason':reason.strip(),
+                 'revision':expected_candidate_revision,'paths':selected_paths,
+                 'tests':selected_tests}
+        history=self.store.events(run['task_id'])
+        prior=[event for event in history if event['kind']=='selfdevelop_objective_recovery_requested'
+               and event['data'].get('request_id')==request_id]
+        if prior:
+            if len(prior)!=1 or prior[0]['data']!=payload:
+                raise Conflict('Recovery request ID belongs to another proposal')
+            return self.objective_status(chat_id)
+        if run['phase'] not in (('reconcile_required','director_action_required')
+                                if mode=='exact' else ('reconcile_required',)) or not run['candidate_id']:
+            raise Conflict('An explicit, reviewable preflight recovery state is required')
+        if 'Scoped work packet exceeds selected context budget' not in run['error']:
+            raise Conflict('Only verified budget preflight can use this recovery')
+        started=[event for event in history if event['kind']=='coding_worker_started'
+                 and event['data'].get('candidate_id')==run['candidate_id']
+                 and event['data'].get('revision')==run['candidate_revision']]
+        if len(started)!=1:
+            raise Conflict('Unique original worker packet evidence missing')
+        original=started[0]
+        later=[event for event in history if event['seq']>original['seq']]
+        if any(event['kind'] in ('coding_worker_finished','coding_worker_rejected',
+                 'selfdevelop_objective_repair_result','worker_release_staged','coding_worker_started')
+               or (event['kind']=='candidate_staged' and
+                   event['data'].get('origin')=='coding_worker')
+               for event in later):
+            raise Conflict('Worker side effects or unclassified progress are uncertain')
+        if mode=='narrow' and any(event['kind']=='candidate_staged' for event in later):
+            raise Conflict('Candidate effects after preflight are uncertain')
+        if any(action['state']=='pending' for action in self.store.actions(run['task_id'])):
+            raise Conflict('Uncertain pending action; no replay or recovery')
+
+        def inspect_bytes():
+            manifest=development.inspect(task,run['candidate_id'])
+            candidate_root=development.workspaces.candidate(run['candidate_id'])
+            packet_path=Path(original['data'].get('packet',''))
+            if (not packet_path.is_file() or packet_path.is_symlink()
+                or packet_path.resolve().parent!=candidate_root.resolve()):
+                raise Conflict('Failure-time worker packet is absent or outside candidate')
+            packet_bytes=packet_path.read_bytes()
+            anchored=original['data'].get('packet_sha256')
+            if (not isinstance(anchored,str) or len(anchored)!=64
+                or any(char not in '0123456789abcdef' for char in anchored)):
+                raise Conflict('Authenticated failure-time packet digest required for both recovery modes')
+            if sha(packet_bytes)!=anchored:
+                raise Conflict('Failure-time packet digest changed')
+            try:
+                packet=json.loads(packet_bytes)
+            except (UnicodeError,ValueError) as exc:
+                raise Conflict('Failure-time packet cannot be decoded') from exc
+            if (packet.get('task_id')!=run['task_id'] or
+                packet.get('candidate_id')!=run['candidate_id'] or
+                packet.get('candidate_revision')!=run['candidate_revision'] or
+                not isinstance(packet.get('sources'),dict)):
+                raise Conflict('Failure-time packet identity mismatch')
+            if set(run['plan']['paths']).difference(packet.get('allowed_paths',[])):
+                raise Conflict('Authorized writable packet paths mismatch')
+            original_root=development.workspaces.candidate(run['candidate_id'])/'source'
+            historical=packet['sources']
+            if not historical or not set(run['plan']['tests']).issubset(packet.get('acceptance_tests',[])):
+                raise Conflict('Failure-time source/test scope missing')
+            for rel,entry in historical.items():
+                if not isinstance(entry,dict) or not isinstance(entry.get('sha256'),str):
+                    raise Conflict('Unverifiable failure-time source digest')
+                # The original snapshot is immutable candidate input, not the live repo.
+                saved=safe_path(original_root,rel)
+                if not saved.is_file() or sha(saved.read_bytes())!=entry['sha256']:
+                    raise Conflict('Failure-time original source bytes cannot be proven')
+                if original['data'].get('source_sha256') and original['data']['source_sha256'].get(rel)!=entry['sha256']:
+                    raise Conflict('Failure-time source event digest differs from packet')
+            if manifest['revision']!=expected_candidate_revision:
+                raise Conflict('Current candidate revision mismatch')
+            folder=development.workspaces.directory(run['candidate_id'],manifest)
+            current={}
+            for rel,declared in manifest['files'].items():
+                path=safe_path(folder,rel)
+                if not path.is_file():
+                    raise Conflict('Candidate source file missing')
+                actual=sha(path.read_bytes())
+                if actual!=declared:
+                    raise Conflict('Candidate manifest does not match current source bytes')
+                current[rel]=actual
+            if mode=='narrow':
+                if manifest['revision']!=run['candidate_revision']:
+                    raise Conflict('Candidate revision changed after preflight')
+                for rel,entry in historical.items():
+                    if current.get(rel)!=entry['sha256']:
+                        raise Conflict('Candidate bytes differ from failure-time packet')
+            return manifest,current
+
+        # All cooperating candidate writers use this existing cross-process lock.
+        with development._lock, candidate_owner(development.workspaces.candidate(run['candidate_id'])):
+            manifest,pretest_hashes=inspect_bytes()
+            with self.store.connect() as db:
+                db.execute('BEGIN IMMEDIATE')
+                row=db.execute('SELECT phase,candidate_id,candidate_revision,error,plan '
+                               'FROM selfdevelop_objective_runs WHERE chat_id=?',(chat_id,)).fetchone()
+                owner=db.execute('SELECT 1 FROM chat_tasks WHERE chat_id=? AND task_id=?',
+                                 (chat_id,run['task_id'])).fetchone()
+                pending=db.execute("SELECT 1 FROM actions WHERE task_id=? AND state='pending' LIMIT 1",
+                                   (run['task_id'],)).fetchone()
+                current_task=db.execute('SELECT state FROM tasks WHERE id=?',(run['task_id'],)).fetchone()
+                if (not row or row['phase']!=run['phase'] or row['candidate_id']!=run['candidate_id']
+                    or row['candidate_revision']!=run['candidate_revision'] or row['error']!=run['error']
+                    or not owner or pending or not current_task or current_task['state']!='waiting_review'):
+                    raise Conflict('Objective ownership, phase or effects changed before claim')
+                if db.execute("SELECT 1 FROM events WHERE task_id=? AND kind='selfdevelop_objective_recovery_requested' AND json_extract(data,'$.request_id')=?",
+                              (run['task_id'],request_id)).fetchone():
+                    raise Conflict('Recovery request identity raced')
+                next_phase='director_action_required' if mode=='narrow' else 'recovery_testing'
+                db.execute('UPDATE selfdevelop_objective_runs SET phase=?,updated=? WHERE chat_id=?',
+                           (next_phase,now(),chat_id))
+                db.execute('INSERT INTO events(task_id,revision,kind,data,at) '
+                           'SELECT id,revision,?,?,? FROM tasks WHERE id=?',
+                           ('selfdevelop_objective_recovery_requested',
+                            json.dumps(payload,ensure_ascii=False),now(),run['task_id']))
+                if mode=='narrow':
+                    # Record narrowed scope, but never enqueue automatic worker.
+                    plan=dict(run['plan']);plan['paths']=selected_paths
+                    db.execute('UPDATE selfdevelop_objective_runs SET plan=? WHERE chat_id=?',
+                               (json.dumps(plan,sort_keys=True,ensure_ascii=False),chat_id))
+        if mode=='narrow':
+            return self.objective_status(chat_id)
+
+        # The worker is NEVER launched in this path: only the exact existing
+        # acceptance test API may run. Interrupted recovery_testing is inert.
+        try:
+            receipt=await development.test(task,run['candidate_id'],
+                                           expected_candidate_revision,selected_tests)
+        except Exception as exc:
+            return self._objective_move(chat_id,'recovery_testing','reconcile_required',
+                                        error='Exact test interrupted: '+str(exc)[:600])
+        # Event + phase + receipt identity are committed as one transaction.
+        # The candidate lock fences other patch writers during final validation.
+        with development._lock, candidate_owner(development.workspaces.candidate(run['candidate_id'])):
+            observed,current_hashes=inspect_bytes()
+            with self.store.connect() as db:
+                db.execute('BEGIN IMMEDIATE')
+                row=db.execute('SELECT phase,candidate_id,candidate_revision FROM selfdevelop_objective_runs WHERE chat_id=?',
+                               (chat_id,)).fetchone()
+                pending=db.execute("SELECT 1 FROM actions WHERE task_id=? AND state='pending' LIMIT 1",
+                                   (run['task_id'],)).fetchone()
+                state=db.execute('SELECT state,revision FROM tasks WHERE id=?',(run['task_id'],)).fetchone()
+                tested=db.execute("SELECT data FROM events WHERE task_id=? AND kind='candidate_tested' ORDER BY seq DESC LIMIT 1",
+                                  (run['task_id'],)).fetchone()
+                tested=json.loads(tested['data']) if tested else {}
+                valid=bool(row and row['phase']=='recovery_testing'
+                    and row['candidate_id']==run['candidate_id']
+                    and row['candidate_revision']==run['candidate_revision']
+                    and state and state['state']=='waiting_review' and not pending
+                    and current_hashes==pretest_hashes
+                    and observed['revision']==expected_candidate_revision
+                    and receipt.get('verified') is True and receipt.get('exit_code')==0
+                    and not receipt.get('timed_out') and not receipt.get('source_changed')
+                    and receipt.get('candidate_id',run['candidate_id'])==run['candidate_id']
+                    and receipt.get('revision')==expected_candidate_revision
+                    and isinstance(receipt.get('evidence'),str) and receipt['evidence']
+                    and tested.get('candidate_id')==run['candidate_id']
+                    and tested.get('revision')==expected_candidate_revision
+                    and tested.get('verified') is True
+                    and tested.get('evidence')==receipt.get('evidence'))
+                if not valid:
+                    raise Conflict('Exact source hash, test evidence or recovery phase changed; inspect manually')
+                record={'chat_id':chat_id,'candidate_id':run['candidate_id'],
+                        'revision':expected_candidate_revision,'verified':True,
+                        'evidence':receipt['evidence'],'recovery_mode':'exact'}
+                stamp=now()
+                db.execute('INSERT INTO events(task_id,revision,kind,data,at) '
+                           'SELECT id,revision,?,?,? FROM tasks WHERE id=?',
+                           ('selfdevelop_objective_repair_result',
+                            json.dumps(record,ensure_ascii=False),stamp,run['task_id']))
+                db.execute("UPDATE selfdevelop_objective_runs SET phase='semantic_review_required',"
+                           "candidate_revision=?,test_evidence=?,error='',updated=? WHERE chat_id=?",
+                           (expected_candidate_revision,receipt['evidence'],stamp,chat_id))
+        return self.objective_status(chat_id)
+
     def _objective_move(self,chat_id,expected,phase,**fields):
         """Atomic compare-and-swap phase update with no side-effect replay."""
         with self.store.connect() as db:

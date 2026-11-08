@@ -45,6 +45,21 @@ def register_mcp(mcp,local,read,write):
                  tests=tests,model=model,max_attempts=max_attempts,
                  director_mode=director_mode,deploy_after_review=deploy_after_review))
 
+    @mcp.tool(annotations=write)
+    async def selfdevelop_recover_objective(chat_id:str,request_id:str,mode:str,
+                                            reason:str,expected_candidate_revision:int,
+                                            paths:list[str]|None=None,tests:list[str]|None=None):
+        """GPT-directed recovery in the SAME SelfDevelop objective/chat.
+        Narrow requires unchanged candidate and proven preflight-only
+        context-budget failure. Exact verifies current revision and original
+        tests before explicit semantic GPT review.
+        Uncertain effects are never replayed. No local approval or Guard.
+        """
+        return await local('/api/development/selfdevelop/objective/recover',
+            dict(chat_id=chat_id,request_id=request_id,mode=mode,reason=reason,
+                 expected_candidate_revision=expected_candidate_revision,
+                 paths=paths,tests=tests),timeout=170)
+
     @mcp.tool(annotations=read)
     async def selfdevelop_objective_status(chat_id:str):
         """Return persisted original objective, repair phase, candidate revision, test evidence, director-review gate and Guard update ID after reconnect. Read-only and never auto-approves tests."""

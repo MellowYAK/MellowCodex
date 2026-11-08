@@ -1,3 +1,12 @@
+# 0.18.0 approved preflight recovery bootstrap validation - 2026-11-08
+
+- B approved candidate 5a6d8a40174a4c75989221a2319c0a77 rev14 for EXACTLY five paths: hub/development/selfdevelop.py, hub/development/service.py, hub/development/api.py, hub/development/tools.py, tests/test_selfdevelop_preflight_recovery.py.
+- Focused candidate receipt test-ba7b4ec6e2a34bd5bd591bf0254330d8.json: 30 passed in 15.23s, exit code 0, verified=true, source_changed=[]. No new suite run for this publication.
+- Mellow Guard update 9a4ef1f526904a22b84bd624fd5d8159 reached ACTIVE_VERIFIED. Independently verified all 5/5 installed file SHA-256 values equal Guard manifest and candidate rev14 snapshot.
+- Tested/implemented contracts: explicit GPT narrow/exact recovery, anchored historical worker packet hashes, rejected unanchored legacy runs, refusal on uncertain effects, atomic exact receipt/review state. Narrow/fixture tests and installed bootstrap are NOT proof of a successful positive live recovery.
+- Positive live recovery still NOT PROVEN. The previous guided exact MCP route was separately verified in original chat 8cae5657612a4fbeb390c51a8201fb64 (message_id 83fb81753a474ca38cf77d0417d248d2). The distinct optional automatic selfdevelop_run_objective experiment failed before writing and remained reconcile_required; neither result should be conflated.
+- This publication copies approved source to an isolated Git release worktree. No live code edits, model execution, new tests, restart, merge, or deployment of the full versioned 0.18.0 Git release by C.
+
 # 0.17.1 supervised exact-local-executor follow-up - 2026-11-08
 
 - Candidate 4c9e771fa50c4320b46160fcb02dc821 revision 1, task ffb03fbbf0ea4e9a837ff86ae539ea2e done revision 6; test-019636fd46fe4805ab0a2e9207165119.json: 19 passed in 30.58 seconds, verified=true, source_changed=[]. Approved source scope: hub/development/selfdevelop.py and tests/test_objective_authorization_idempotency.py only (reviewer B).
