@@ -16,7 +16,7 @@ class SelfDevelop:
             db.execute('CREATE TABLE IF NOT EXISTS selfdevelop_sessions (chat_id TEXT PRIMARY KEY, objective TEXT NOT NULL, transport TEXT NOT NULL, created TEXT NOT NULL)')
 
     def start(self, objective, conversation_key, transport):
-        if not objective.strip():
+        if not isinstance(objective, str) or not objective.strip():
             raise ValueError('An explicit human objective is required')
         if transport not in ('mcp', 'play'):
             raise ValueError('Director transport must be mcp or play')

@@ -885,3 +885,10 @@ Final deterministic context bootstrap cleanup deployed by normal shutdown/start.
 Guard update ff437e2351ec4aefaa228a816922a6e4 reported ACTIVE_VERIFIED for five files; actual installed SHA-256 hashes matched the journal. Candidate 18c8d01a043d4b82ad866fd0e3435d10 revision 13 had 21 passed in 13.64 seconds, verified=true, source_changed=[] according to the supervising user; independent isolated release test results must be listed separately. No autonomous local-development proof is claimed.
 
 - Release checkout follow-up focused regression: 17 passed in 12.68 seconds, Python AST parse passed for hub/development/worker.py and runner.py. No models, services or source changes in live were made by this audit.
+
+## Supervised objective input regression (2026-11-08)
+- Candidate 501c3c75efa14db88137b3c1f74dbc7c: first tested revision 1 had 3 failed and 6 passed; GPT-directed feedback led to revision 2 with 9 passed in 1.55s (verified=true, source_changed=[]); revision 3 revalidated 9 passed in 1.54s (verified=true, source_changed=[]).
+- Guard update 6ea9fa502bfb4d0fa17e822134c326ad reported ACTIVE_VERIFIED, and three installed source SHA-256 values matched its update journal before release selection.
+- This is proof of a single bounded supervised local-model repair following explicit failed-test feedback, not general autonomous software-development acceptance; no services or models launched by this publication review.
+
+- Independent isolated release checkout: 9 focused objective acceptance tests passed in 1.34s; Python AST parse of SelfDevelop source succeeded. This was a static/local-test release check only, not a local model autonomy test.

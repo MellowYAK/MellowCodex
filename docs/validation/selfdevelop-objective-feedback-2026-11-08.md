@@ -1,0 +1,11 @@
+# Supervised local-model repair with two-way test feedback (2026-11-08)
+
+## Original objective and first model failure
+Original SelfDevelop task `bc415b42b9b347409faa7dc0387249de` and isolated candidate `54904dad0a18492baff41043b6d71252` addressed a real validation defect: `SelfDevelop.start` raised `AttributeError` for non-string objectives. Qwen2.5-Coder 7B initially replaced the blank-objective guard with a type-only guard. Its first six focused tests passed, but director review added three original-behavior cases (`''`, spaces, and tab) that then failed. That attempt was rejected, closed with audit, and NOT deployed.
+
+## Explicit feedback-controlled follow-up
+New task `5ad28e4a972a4a92b7c7b2a051a3384f` in the SAME director chat, isolated candidate `501c3c75efa14db88137b3c1f74dbc7c`. The candidate was seeded with the **previous model-authored defective source** plus the exact nine tests; no director-authored correct source was supplied. Prior failure feedback, the original objective, and constraints requiring both non-string and whitespace rejection were provided to the local model. The defective candidate at revision 1 reproduced **3 failed, 6 passed**.
+
+One fresh `candidate_repair` invocation using the installed `qwen2.5-coder:7b` with `max_attempts=1`, `allowed_paths=['hub/development/selfdevelop.py']`, and read-only tests `tests/test_selfdevelop_start_objective_type.py` and `tests/test_selfdevelop.py` generated a single-line focused edit, normalized and staged through the existing hash/revision-gated candidate writer. It retained the existing blank-objective check while adding non-string rejection. Test evidence on candidate revision 2: **9 passed in 1.55s**, exit code 0, verified true. The director read the exact source and diff and found only the original one-line guard change plus the new test file. No automatic deployment decision was made by the model.
+
+This demonstrates **one bounded supervised model repair after explicit failed-test feedback**, not general autonomous software engineering. The local Qwen model was explicitly unloaded after inference. Production installation and MCP verification are separate Mellow Guard steps; update evidence should be consulted independently.

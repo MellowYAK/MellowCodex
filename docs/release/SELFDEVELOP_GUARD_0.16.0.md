@@ -25,3 +25,11 @@ The adjacent selfdevelop-guard-0.16.0-source-manifest.json captures selected fil
 - This does not prove autonomous local planning, reasoning, full deployment of this Git commit, or cross-machine acceptance.
 
 - Release checkout follow-up focused regression: 17 passed in 12.68 seconds, Python AST parse passed for hub/development/worker.py and runner.py. No models, services or source changes in live were made by this audit.
+
+## Supervised Qwen objective validation follow-up (2026-11-08)
+- Mellow Guard update 6ea9fa502bfb4d0fa17e822134c326ad reached ACTIVE_VERIFIED. Its three installed live-file hashes match the update journal and candidate 501c3c75efa14db88137b3c1f74dbc7c.
+- Exact one-line source change in SelfDevelop.start: check not isinstance(objective, str) before objective.strip(), preserving rejection of empty/whitespace strings.
+- First Qwen-generated correction lost the blank-objective guard: candidate revision 1 returned 3 failed, 6 passed. Explicit GPT director feedback constrained the next local Qwen repair. Revision 2 passed 9 tests in 1.55s, verified=true, source_changed=[]; revision 3 passed 9 in 1.54s after adding documentation, without source drift.
+- Evidence: docs/validation/selfdevelop-objective-feedback-2026-11-08.md and tests/test_selfdevelop_start_objective_type.py. This is one bounded supervised feedback repair; it does not establish general autonomous development. Git commit publication is not equivalent to deployment of the entire release snapshot.
+
+- Independent isolated release checkout: 9 focused objective acceptance tests passed in 1.34s; Python AST parse of SelfDevelop source succeeded. This was a static/local-test release check only, not a local model autonomy test.

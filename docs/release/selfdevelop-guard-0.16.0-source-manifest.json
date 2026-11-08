@@ -13,7 +13,7 @@
   "entries": {
     "CHANGELOG.md": {
       "source_sha256": "1480d8f89a3ab9033eaaf26a548550af6663430dae7b2fdc2580f13d877224ff",
-      "release_sha256": "15d4197deedcd49499c20c3e273231e8c2f0e04c5ada37d68f806e1bce8fc456",
+      "release_sha256": "6eee92bbf485d16d6a0dcaa8701c7b181e75b99b4666ac089b75ded58208c107",
       "selection": "full_source_or_release_metadata"
     },
     "README.md": {
@@ -23,7 +23,7 @@
     },
     "VALIDATION.md": {
       "source_sha256": "5de0bf1b9d37d164488b3034b5be06a35a2318b2a29ec38d7b222981ab4159ac",
-      "release_sha256": "c42a3ca7d073dc79af063e87d5af1c31517b8689eedc9c45c62efa81a1a3cf11",
+      "release_sha256": "88b2d2e53d27d4089e1406852e3b0096470e53c5ef18024fc23974847c4ce590",
       "selection": "full_source_or_release_metadata"
     },
     "hub/__init__.py": {
@@ -103,7 +103,7 @@
     },
     "docs/release/SELFDEVELOP_GUARD_0.16.0.md": {
       "source_sha256": null,
-      "release_sha256": "21495115c8d8b56a16ebad50b9baa3c78fa7a7d372039bfff1edefdbfabc883b",
+      "release_sha256": "88811ecf549a3e7a0ff167be350abce60613964f5a079ad3a8d68e83753febcb",
       "selection": "full_source_or_release_metadata"
     },
     "docs/validation/correct-command-type-2026-11-08.md": {
@@ -122,9 +122,9 @@
       "selection": "full_source_or_release_metadata"
     },
     "hub/development/selfdevelop.py": {
-      "source_sha256": "bd882cb5642c303053222a5fcb0f5c70c439a2cfd1ae52594dbb5e10c801a33e",
-      "release_sha256": "bd882cb5642c303053222a5fcb0f5c70c439a2cfd1ae52594dbb5e10c801a33e",
-      "selection": "full_source_or_release_metadata"
+      "source_sha256": "c6222a26b71eefd600b55c5178bcbeecd4bb33e907560185f113badab5a1b8bc",
+      "release_sha256": "c6222a26b71eefd600b55c5178bcbeecd4bb33e907560185f113badab5a1b8bc",
+      "selection": "installed Mellow Guard update 6ea9fa502bfb4d0fa17e822134c326ad"
     },
     "hub/development/syntax.py": {
       "source_sha256": "5f924217d01b5532eb2db62a017b7da49d5331e852b074b108dca0405973f869",
@@ -245,6 +245,16 @@
       "source_sha256": "c99d2889802fd5cb313845be170b8d855b4da76e0e4d20ddc933984751b6d0ee",
       "release_sha256": "c99d2889802fd5cb313845be170b8d855b4da76e0e4d20ddc933984751b6d0ee",
       "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "docs/validation/selfdevelop-objective-feedback-2026-11-08.md": {
+      "source_sha256": "37a3183e203201487a449a4b1fa8cc28b365cdb3d0247101ae3e93c3f2a4acdb",
+      "release_sha256": "37a3183e203201487a449a4b1fa8cc28b365cdb3d0247101ae3e93c3f2a4acdb",
+      "selection": "installed Mellow Guard update 6ea9fa502bfb4d0fa17e822134c326ad"
+    },
+    "tests/test_selfdevelop_start_objective_type.py": {
+      "source_sha256": "13b545696fb814218ef7f34f5f843fd78172459427a2b2a34812d6d59d5940e5",
+      "release_sha256": "13b545696fb814218ef7f34f5f843fd78172459427a2b2a34812d6d59d5940e5",
+      "selection": "installed Mellow Guard update 6ea9fa502bfb4d0fa17e822134c326ad"
     }
   },
   "excluded_private_handoffs": [
@@ -265,5 +275,35 @@
       "tests/test_runner_pycache_isolation.py",
       "tests/test_worker_focused_edits.py"
     ]
+  },
+  "objective_feedback_followup": {
+    "candidate_id": "501c3c75efa14db88137b3c1f74dbc7c",
+    "task_id": "5ad28e4a972a4a92b7c7b2a051a3384f",
+    "update_id": "6ea9fa502bfb4d0fa17e822134c326ad",
+    "update_state": "ACTIVE_VERIFIED",
+    "test_receipts": [
+      {
+        "revision": 1,
+        "passed": 6,
+        "failed": 3
+      },
+      {
+        "revision": 2,
+        "passed": 9,
+        "failed": 0,
+        "seconds": 1.55,
+        "verified": true,
+        "source_changed": []
+      },
+      {
+        "revision": 3,
+        "passed": 9,
+        "failed": 0,
+        "seconds": 1.54,
+        "verified": true,
+        "source_changed": []
+      }
+    ],
+    "claim_limit": "one director-supervised model repair after explicit failing tests; no general autonomous development verified"
   }
 }
