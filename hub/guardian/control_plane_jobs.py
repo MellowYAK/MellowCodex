@@ -35,6 +35,40 @@ class ControlPlaneJobs:
                 raise ValueError('Live source diverged from candidate base: '+change['path'])
             selected[change['path']]=change['candidate_hash']
         return stage(self.root,live,Path(m['candidate_path']),selected,evidence)
+    def find_prepared(self,dev,task,candidate_id,revision):
+        """Reconcile a lost prepare reply against existing verified Guard journals.
+
+        Unique exact live path and changed-file hashes are mandatory. Never
+        create a new stage or launch from this read-only lookup.
+        """
+        from .control_plane import read
+        candidate=dev.inspect(task,candidate_id)
+        if candidate['revision']!=revision:
+            raise ValueError('Candidate revision changed during Guard reconciliation')
+        expected={change['path']:change['candidate_hash']
+                  for change in dev.diff(task,candidate_id)['files']}
+        if not expected:
+            raise ValueError('No candidate changes to reconcile')
+        matches=[]
+        for folder in self.directory.iterdir():
+            if not folder.is_dir() or folder.is_symlink() or folder.is_junction():
+                continue
+            if not re.fullmatch('[a-f0-9]{32}',folder.name):
+                continue
+            try:
+                manifest=read(folder)
+                if Path(manifest['live']).resolve()!=Path(task['workspace']).resolve():
+                    continue
+                selected={entry['path']:entry['new'] for entry in manifest['changes']}
+                if selected!=expected:
+                    continue
+                matches.append(self.status(folder.name))
+            except (OSError,ValueError,KeyError,TypeError):
+                continue
+        if len(matches)!=1:
+            raise ValueError('No unique matching Guard journal; explicit reconciliation required')
+        return matches[0]
+
     def status(self,identifier):
         p=self.path(identifier);read(p)
         status=json.loads((p/'status.json').read_text())

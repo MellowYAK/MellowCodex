@@ -1,3 +1,12 @@
+# 0.17.0 - 2026-11-08
+
+- Added GPT-supervised durable SelfDevelop Objective Driver bootstrap with bounded candidate repair/test-feedback, exact artifact review binding and explicit semantic gate. No autonomous/local director support is claimed.
+- Added idempotent same-chat completion reporting for verified activation and rollback/failure states, as well as Guard interrupted-prepare journal reconciliation and lifecycle watcher.
+- Corrected candidate review binding to avoid partially committed task approval if exact-artifact binding fails; added focused driver and resume regression tests.
+- Verified bootstrap installation/reconnection: Mellow Guard update 6e9420b617cf40a19d35e4187256ace9 ACTIVE_VERIFIED; all eight installed files matched candidate revision 26 and Guard journal SHA-256.
+- Candidate 35531dae6d224810827c8a0f01e63f47 revision 26: 17 focused tests passed in 11.54 seconds (receipt test-c9fb1b11e8e84465a1c792cf028a6905.json; verified=true; source_changed=[]), approved for bootstrap installation by independent read-only reviewer B. This is NOT the pending separate live objective-flow acceptance.
+- No main merge or desktop/dependency upgrade; production deployment of the full 0.17.0 Git release is not claimed.
+
 # 0.16.0 ? 2026-11-08
 
 - Added supervised SelfDevelop sessions, exact commands/correction, closure and director review gates; no autonomous success claimed.

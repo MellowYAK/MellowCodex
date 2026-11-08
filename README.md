@@ -1,5 +1,9 @@
 # Local Agent Hub
 
+## Release 0.17.0 (2026-11-08)
+
+Supervised SelfDevelop Objective Driver bootstrap: a persisted bounded objective flow can produce candidate repairs and test receipts, pause for an explicit GPT semantic decision, bind review to exact candidate evidence, and continue authorized Guard mechanics with restart reconciliation and same-chat success/failure reporting. GPT through MCP remains the only authorized director, and local execution does not grant semantic approval. All eight approved bootstrap files were installed by Mellow Guard update 6e9420b617cf40a19d35e4187256ace9 with ACTIVE_VERIFIED and SHA-256 matches to candidate 35531dae6d224810827c8a0f01e63f47 revision 26. Owned Hub/MCP restart/reconnection was verified by the update health path and subsequent MCP access. This does not establish a successful live, end-to-end Objective Driver run: that proof, including exact approval, deployed hashes and original-chat completion report, is still pending. Source publication in PR #1 is not a merge or a second deployment. Details: docs/release/SUPERVISED_SELFDEVELOP_0.17.0.md.
+
 ## Release 0.16.0 (2026-11-08)
 
 SelfDevelop supports external-director supervised commands, correction, review and failed-step closure. Mellow Guard manages independent Hub/MCP update journals and rollback. Candidate local repair uses bounded test feedback and syntax preflight; MCP correspondence uses per-chat keys. This is supervised recovery, not autonomous development acceptance. Publishing this source does not deploy version 0.16.0 to the running services. See docs/release/SELFDEVELOP_GUARD_0.16.0.md.

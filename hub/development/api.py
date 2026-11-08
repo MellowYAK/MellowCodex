@@ -113,6 +113,32 @@ def router(provider):
         return await asyncio.to_thread(SelfDevelop(dev.store).close_failed,
                  body['chat_id'],body['task_id'],body['expected_revision'],
                  body['request_id'],body['reason'])
+    class ObjectiveRun(BaseModel):
+        model_config=ConfigDict(extra='forbid')
+        chat_id:str=Field(pattern='^[a-f0-9]{32}$')
+        task_id:str=Field(pattern='^[a-f0-9]{32}$')
+        request_id:str=Field(min_length=8,max_length=100)
+        paths:list[str]=Field(min_length=1,max_length=10)
+        tests:list[str]=Field(min_length=1,max_length=30)
+        model:str|None=Field(default=None,max_length=160)
+        max_attempts:int=Field(default=1,ge=1,le=3,strict=True)
+        director_mode:str='gpt'
+        deploy_after_review:bool=False
+
+    @routes.post('/selfdevelop/objective/run')
+    async def objective_run(body:ObjectiveRun):
+        from .selfdevelop import SelfDevelop
+        dev=provider()
+        return await asyncio.to_thread(SelfDevelop(dev.store).authorize_objective,
+            body.chat_id,body.task_id,body.request_id,body.paths,body.tests,
+            body.model,body.max_attempts,body.director_mode,body.deploy_after_review)
+
+    @routes.get('/selfdevelop/objective/{chat_id}')
+    async def objective_status(chat_id:str):
+        from .selfdevelop import SelfDevelop
+        dev=provider()
+        return await asyncio.to_thread(SelfDevelop(dev.store).objective_status,chat_id)
+
     @routes.post('/control-plane/prepare')
     async def prepare_control_plane(body:ReleaseRequest):
         from ..guardian.control_plane_jobs import ControlPlaneJobs

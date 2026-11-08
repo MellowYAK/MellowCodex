@@ -59,7 +59,7 @@ async def lifespan(app):
     from .relay import supervise
     relay_monitor=asyncio.create_task(supervise()) if (STATE/'relay.json').exists() else None
     from .shutdown import Shutdown
-    app.state.shutdown = Shutdown(engine, model_catalog_service, [monitor, schedule_monitor, index_monitor, bridge_monitor])
+    objective_monitor=None
     try:
         model_catalog_service.recover()
         store.recover()
@@ -68,8 +68,15 @@ async def lifespan(app):
         for task in store.list():
             if task['state']=='queued':
                 engine.enqueue(task['id'])
+        from .development.selfdevelop import SelfDevelop
+        objective_monitor=asyncio.create_task(SelfDevelop(store).watch_objectives(development_service))
+        app.state.shutdown=Shutdown(engine,model_catalog_service,
+            [monitor,schedule_monitor,index_monitor,bridge_monitor,objective_monitor])
         yield
     finally:
+        if objective_monitor:
+            objective_monitor.cancel()
+            await asyncio.gather(objective_monitor,return_exceptions=True)
         await model_catalog_service.close()
         index_monitor.cancel();await asyncio.gather(index_monitor,return_exceptions=True)
         if relay_monitor:
@@ -344,6 +351,14 @@ async def review(task_id: str,body: Review):
     if body.decision=='approve':
         if not baseline or baseline['data'].get('checks')!=checks or baseline['data'].get('evidence')!=engine.evidence(task):
             raise Conflict('Evidence changed since verification. Request a new check before approval.')
+    if body.decision=='approve':
+        from .development.selfdevelop import SelfDevelop
+        objective=SelfDevelop(store)
+        if objective.has_objective_run(task_id):
+            # Validate and atomically commit the exact artifact review.
+            # A binding failure cannot leave a partially approved task.
+            return public_task(objective.commit_objective_review(
+                task_id,body.expected_revision,body.reason,development_service()))
     state={'approve':'done','request_changes':'queued','reject':'failed'}[body.decision]
     messages=task['messages']
     if body.decision=='request_changes':
@@ -885,6 +900,9 @@ async def ai_connectors():
     from .ai_connectors import catalog
     return catalog()
 
+from .delegation_api import router as delegation_router
+app.include_router(delegation_router(store,engine))
+
 class ChatConnectionInput(BaseModel):
     transport:Literal['play','mcp']|None=None
     favorite:bool|None=None
@@ -954,9 +972,6 @@ async def set_input_mode(body:InputPreference):
     save_input_mode(STATE,body.mode)
     return {'mode':body.mode}
 
-@app.get('/api/chats/{chat_id}/correspondence')
-async def correspondence(chat_id:str,after:float=0):
-    from datetime import datetime
 class MCPObservation(BaseModel):
     project_id:str
     request_id:str
@@ -985,6 +1000,9 @@ async def mcp_observation(chat_id:str,body:MCPObservation):
     from .mcp_observation import record_observation
     return record_observation(conversations(),app.state.bridge.transcript,chat_id,body.model_dump())
 
+@app.get('/api/chats/{chat_id}/correspondence')
+async def correspondence(chat_id:str,after:float=0):
+    from datetime import datetime
     messages=app.state.bridge.transcript.list(chat_id,after)
     # Ordinary agent turns and bridge exchanges share the same saved chat timeline.
     if messages:

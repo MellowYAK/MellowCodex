@@ -85,6 +85,39 @@ CREATE INDEX IF NOT EXISTS actions_task_state ON actions(task_id,state);''')
         with self.store.connect() as db:
             db.execute('UPDATE chats SET title=?,pinned=?,archived=? WHERE id=?',(title,pinned,archived,chat_id))
         return self.get(chat_id)
+    def append_objective_report(self,chat_id,request_id,message):
+        """Atomically persist one completed report turn, never a runnable job."""
+        if not isinstance(request_id,str) or not 8<=len(request_id)<=100:
+            raise ValueError('Invalid report identity')
+        if not isinstance(message,str) or not message.strip() or len(message)>8000:
+            raise ValueError('A bounded report is required')
+        idem='chat:'+chat_id+':objective-report:'+request_id
+        with self.store.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            chat=db.execute('SELECT p.path workspace FROM chats c JOIN projects p ON p.id=c.project_id WHERE c.id=?',
+                            (chat_id,)).fetchone()
+            if not chat:raise KeyError('Chat not found')
+            existing=db.execute('SELECT id,goal,result,state FROM tasks WHERE idem=?',(idem,)).fetchone()
+            if existing:
+                if existing['result']!=message or existing['state']!='done':
+                    raise Conflict('Report identity reused with different content')
+                return existing['id']
+            if db.execute("SELECT 1 FROM chat_tasks c JOIN actions a ON a.task_id=c.task_id WHERE c.chat_id=? AND a.state='pending' LIMIT 1",(chat_id,)).fetchone():
+                raise Conflict('Reconcile uncertain chat actions before reporting completion')
+            task_id=uuid.uuid4().hex
+            stamp=now()
+            db.execute('INSERT INTO tasks(id,idem,revision,state,created,updated,goal,workspace,mode,result) '
+                       'VALUES(?,?,?,?,?,?,?,?,?,?)',
+                       (task_id,idem,1,'done',stamp,stamp,'SelfDevelop objective completion report',
+                        chat['workspace'],'inspect',message))
+            pos=db.execute('SELECT COALESCE(MAX(position),-1)+1 FROM chat_tasks WHERE chat_id=?',
+                           (chat_id,)).fetchone()[0]
+            db.execute('INSERT INTO chat_tasks VALUES(?,?,?)',(chat_id,task_id,pos))
+            db.execute('INSERT INTO events(task_id,revision,kind,data,at) VALUES(?,?,?,?,?)',
+                       (task_id,1,'selfdevelop_objective_report',
+                        json.dumps({'request_id':request_id,'source':'supervised_driver'},ensure_ascii=False),stamp))
+            return task_id
+
     def submit(self,chat_id,goal,mode,idem,attachments=None,isolated=False,presentation=None):
         idem='chat:'+chat_id+':'+idem
         # A new turn must not deserialize a year's worth of task message arrays.

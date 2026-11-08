@@ -35,6 +35,22 @@ def register_mcp(mcp,local,read,write):
         """Dispatch ONE director-authored SelfDevelop step with explicit tool scope installed before execution. Prefer isolated candidate tools; exact_patch is applied verbatim. Poll get_task, inspect actual diff/output, review the same task before another step. Reuse request_id on retry. No deployment implied."""
         return await local('/api/selfdevelop/'+chat_id+'/step',dict(request_id=request_id,instruction=instruction,allowed_tools=allowed_tools,required_tools=required_tools or [],required_sources=required_sources or [],evidence_only=evidence_only,exact_patch=exact_patch,context_read=context_read))
     @mcp.tool(annotations=write)
+    async def selfdevelop_run_objective(chat_id:str,task_id:str,request_id:str,
+                                        paths:list[str],tests:list[str],model:str|None=None,
+                                        max_attempts:int=1,director_mode:str='gpt',
+                                        deploy_after_review:bool=False):
+        """Authorize ONE persisted objective-level run for an existing reviewed source-mapping task. Mechanical candidate repair, bounded test feedback, and approved Guard continuation run without separate per-phase instructions. GPT semantic review remains mandatory; local policy cannot auto-deploy."""
+        return await local('/api/development/selfdevelop/objective/run',
+            dict(chat_id=chat_id,task_id=task_id,request_id=request_id,paths=paths,
+                 tests=tests,model=model,max_attempts=max_attempts,
+                 director_mode=director_mode,deploy_after_review=deploy_after_review))
+
+    @mcp.tool(annotations=read)
+    async def selfdevelop_objective_status(chat_id:str):
+        """Return persisted original objective, repair phase, candidate revision, test evidence, director-review gate and Guard update ID after reconnect. Read-only and never auto-approves tests."""
+        return await local('/api/development/selfdevelop/objective/'+chat_id)
+
+    @mcp.tool(annotations=write)
     async def selfdevelop_close_failed(chat_id:str,task_id:str,expected_revision:int,request_id:str,reason:str):
         """Director closes an inspected final failed SelfDevelop step; no action replay or automatic skip."""
         return await local('/api/development/selfdevelop/close-failed',dict(chat_id=chat_id,task_id=task_id,expected_revision=expected_revision,request_id=request_id,reason=reason))

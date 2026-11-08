@@ -1,3 +1,11 @@
+# 0.17.0 supervised Objective Driver bootstrap validation - 2026-11-08
+
+- Guard update ID 6e9420b617cf40a19d35e4187256ace9: ACTIVE_VERIFIED; the exact eight installed files were independently checked against the Guard journal and candidate 35531dae6d224810827c8a0f01e63f47 revision 26, all SHA-256 matches.
+- Candidate test receipt test-c9fb1b11e8e84465a1c792cf028a6905.json: 17 passed in 11.54s, verified=true, source_changed=[] (reported and externally approved bootstrap evidence). Earlier rev23 evidence covered previous failures; B reviewed and accepted the rev26 fixes for bootstrap installation.
+- Hub/MCP owned restart and subsequent MCP reconnect verified as part of that Guard update. This verifies bootstrap installation and service reachability only.
+- Remaining acceptance: a separate *live* GPT-supervised objective task must show real candidate repair, exact GPT semantic review, Guard ACTIVE_VERIFIED, approved-vs-installed file hash match and idempotent completion report in the ORIGINAL local chat. A safe rollback/stop is a correctly reported installation failure, NOT a successful live proof.
+- Broad integration suite was not required for publication; separate narrow isolated-release checks are recorded with this commit. Do not count model mocks as a live objective acceptance.
+
 # 0.16.0 isolated publication validation ? 2026-11-08
 
 - Base HEAD b2e68ba891d924dabf66c1258410ac36a1bf2e79, isolated branch release/selfdevelop-guard-0.16.0.
@@ -892,3 +900,5 @@ Guard update ff437e2351ec4aefaa228a816922a6e4 reported ACTIVE_VERIFIED for five 
 - This is proof of a single bounded supervised local-model repair following explicit failed-test feedback, not general autonomous software-development acceptance; no services or models launched by this publication review.
 
 - Independent isolated release checkout: 9 focused objective acceptance tests passed in 1.34s; Python AST parse of SelfDevelop source succeeded. This was a static/local-test release check only, not a local model autonomy test.
+
+- Independent isolated-release bootstrap check: 33 focused SelfDevelop/Guard tests passed in 14.62 seconds; AST parsing passed for seven changed Python modules. This verifies source integration, not a live Objective Driver completion.
