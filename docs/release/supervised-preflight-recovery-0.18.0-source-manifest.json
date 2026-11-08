@@ -1,0 +1,435 @@
+{
+  "schema": "mellow.release-source-manifest.v1",
+  "base_head": "b2e68ba891d924dabf66c1258410ac36a1bf2e79",
+  "release_version": "0.18.0",
+  "branch": "release/selfdevelop-guard-0.16.0",
+  "exclusions": [
+    "UI",
+    "delegation",
+    "wallpaper",
+    "progress_guard",
+    "future worker candidate edits"
+  ],
+  "entries": {
+    "CHANGELOG.md": {
+      "source_sha256": null,
+      "release_sha256": "9a2fdd36cd06293630542326a6f02ce991f6403f5d3c216d8a782686e3429b84",
+      "selection": "0.18.0_release_metadata"
+    },
+    "README.md": {
+      "source_sha256": null,
+      "release_sha256": "c84d5365e1c2bb2f53575bb86e1bafb67bdb9598cbe0dc0e4e1a3f040e2201b2",
+      "selection": "0.18.0_release_metadata"
+    },
+    "VALIDATION.md": {
+      "source_sha256": null,
+      "release_sha256": "19b43c232fef9b2d2237c8647429bbc23baa466422ff1379792cca394c035d80",
+      "selection": "0.18.0_release_metadata"
+    },
+    "hub/__init__.py": {
+      "source_sha256": null,
+      "release_sha256": "37487009a5dfc5c2baa8294e38e520318e0f98a435e889491a4fd19c3e6b824b",
+      "selection": "0.18.0_release_metadata"
+    },
+    "hub/app.py": {
+      "source_sha256": "62360a8636fc7e669ce36dc54b3b767513fe97b422da2ebe7207d70cc7201c62",
+      "release_sha256": "236281e409c2adfb4e3b907616c7a4ac8ed4b4de86707d9f471f94f6851d36b8",
+      "selection": "selective_Guard_bootstrap_no_delegation_whitelist"
+    },
+    "hub/context/runtime.py": {
+      "source_sha256": "3975f609dd0656bf90e926260d2bb7322cd43607a7fd94b04e82cc4daeb23c29",
+      "release_sha256": "3975f609dd0656bf90e926260d2bb7322cd43607a7fd94b04e82cc4daeb23c29",
+      "selection": "full_source_or_release_metadata"
+    },
+    "hub/context/tools.py": {
+      "source_sha256": "7c16be474137835272a4a5e801fb8fbceeb19f520d3dd0c173c6f3fcd51b20bf",
+      "release_sha256": "7c16be474137835272a4a5e801fb8fbceeb19f520d3dd0c173c6f3fcd51b20bf",
+      "selection": "full_source_or_release_metadata"
+    },
+    "hub/conversations.py": {
+      "source_sha256": "711e5755744fc464742714328610fb8743655ce8741e426e29003159306c8fd8",
+      "release_sha256": "711e5755744fc464742714328610fb8743655ce8741e426e29003159306c8fd8",
+      "selection": "exact_Guard_6e9420_installed"
+    },
+    "hub/development/api.py": {
+      "source_sha256": "90ee8ec05bbb2a4036912b94e3a67eb97beb9fd8aedaf463bb35a94b3caa2cea",
+      "release_sha256": "90ee8ec05bbb2a4036912b94e3a67eb97beb9fd8aedaf463bb35a94b3caa2cea",
+      "selection": "exact_ACTIVE_VERIFIED_Guard_0.18.0"
+    },
+    "hub/development/guidance.py": {
+      "source_sha256": "d7393f17fcc63f77b94051bea0efec1b4b636e0256c8d96d1e911322fceccc38",
+      "release_sha256": "d7393f17fcc63f77b94051bea0efec1b4b636e0256c8d96d1e911322fceccc38",
+      "selection": "full_source_or_release_metadata"
+    },
+    "hub/development/service.py": {
+      "source_sha256": "53c3a96749039fdf594b8f38bda6eb86c552994d64bebdcbceb43022c7a666db",
+      "release_sha256": "53c3a96749039fdf594b8f38bda6eb86c552994d64bebdcbceb43022c7a666db",
+      "selection": "exact_ACTIVE_VERIFIED_Guard_0.18.0"
+    },
+    "hub/development/tools.py": {
+      "source_sha256": "608c8b255677dfcf4c7246c7a7e72446c618452a7c30d741956a6082f7490022",
+      "release_sha256": "608c8b255677dfcf4c7246c7a7e72446c618452a7c30d741956a6082f7490022",
+      "selection": "exact_ACTIVE_VERIFIED_Guard_0.18.0"
+    },
+    "hub/development/worker.py": {
+      "source_sha256": "7b6a2209e0281c7caa372469447dafa41ece40b22d6f3f7ed1c8b0c0360cc709",
+      "release_sha256": "7b6a2209e0281c7caa372469447dafa41ece40b22d6f3f7ed1c8b0c0360cc709",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "hub/development/workspaces.py": {
+      "source_sha256": "7f12188764a08ed5c43a202761b7c81ee69cbb546e2687b9806a3ccbb0faedb6",
+      "release_sha256": "7f12188764a08ed5c43a202761b7c81ee69cbb546e2687b9806a3ccbb0faedb6",
+      "selection": "full_source_or_release_metadata"
+    },
+    "hub/engine.py": {
+      "source_sha256": "de6be4412a2cda767b7c33197ec252e4219519ea4289e5cef368fc66203d32cf",
+      "release_sha256": "dab3f1623613c81b2029cbdafecd33375bcb414405c2f7778e2ae3bb969f02ee",
+      "selection": "selected_hunks"
+    },
+    "hub/mcp_gateway.py": {
+      "source_sha256": "a99fb124232cbb87dbc2df6f9db3847237699a8605046d77cf82225b3f9d0e98",
+      "release_sha256": "e0eeab1373c1dca3c33c217c9d3f1c51d25557a283775cca7fda8a723dc2d0e7",
+      "selection": "selected_hunks"
+    },
+    "pyproject.toml": {
+      "source_sha256": null,
+      "release_sha256": "656f901e5017c49ba22c31690d5ef29d8774e46dfdffd442981e64e60367c687",
+      "selection": "0.18.0_release_metadata"
+    },
+    "tests/test_conversations.py": {
+      "source_sha256": "6183a60651acf50764a1447ce8fc96cf16c1b11d9f26dc5d37f2046f9f5e249e",
+      "release_sha256": "6183a60651acf50764a1447ce8fc96cf16c1b11d9f26dc5d37f2046f9f5e249e",
+      "selection": "full_source_or_release_metadata"
+    },
+    "docs/release/SELFDEVELOP_GUARD_0.16.0.md": {
+      "source_sha256": null,
+      "release_sha256": "88811ecf549a3e7a0ff167be350abce60613964f5a079ad3a8d68e83753febcb",
+      "selection": "full_source_or_release_metadata"
+    },
+    "docs/validation/correct-command-type-2026-11-08.md": {
+      "source_sha256": "d37667a19928347ce2813cee37374fa54d53bd8b610e4053b76f76a72af43c95",
+      "release_sha256": "d37667a19928347ce2813cee37374fa54d53bd8b610e4053b76f76a72af43c95",
+      "selection": "full_source_or_release_metadata"
+    },
+    "docs/validation/failed-closure-live-2026-11-08.md": {
+      "source_sha256": "04de64af42891342d591c3bf155b577f576603747a6cefd42393bd745cbce502",
+      "release_sha256": "d44234a7e725a4771ebf40f2767cb480863a70299ea31eb1f155cf43688f32dd",
+      "selection": "full_source_or_release_metadata"
+    },
+    "hub/development/commands.py": {
+      "source_sha256": "6aadd066a2a2191ca0a836cbb56aeafb2a1b468223821ecfd7cbf66ec8d208e4",
+      "release_sha256": "6aadd066a2a2191ca0a836cbb56aeafb2a1b468223821ecfd7cbf66ec8d208e4",
+      "selection": "full_source_or_release_metadata"
+    },
+    "hub/development/selfdevelop.py": {
+      "source_sha256": "c7fa3d7abec7075146a63ab1c10ea913ad9d0c053fd7ba9486f07847a41d8949",
+      "release_sha256": "c7fa3d7abec7075146a63ab1c10ea913ad9d0c053fd7ba9486f07847a41d8949",
+      "selection": "exact_ACTIVE_VERIFIED_Guard_0.18.0"
+    },
+    "hub/development/syntax.py": {
+      "source_sha256": "5f924217d01b5532eb2db62a017b7da49d5331e852b074b108dca0405973f869",
+      "release_sha256": "5f924217d01b5532eb2db62a017b7da49d5331e852b074b108dca0405973f869",
+      "selection": "full_source_or_release_metadata"
+    },
+    "hub/guardian/control_plane.py": {
+      "source_sha256": "7224745e3f6c27b24aeed9a4f1fc64130e91c549160fe5de5d81ab261938bfee",
+      "release_sha256": "7224745e3f6c27b24aeed9a4f1fc64130e91c549160fe5de5d81ab261938bfee",
+      "selection": "full_source_or_release_metadata"
+    },
+    "hub/guardian/control_plane_jobs.py": {
+      "source_sha256": "831e8ff93b0eebcb5049718a99112c70fda848b4297bc0cd1f124adbbdf7191e",
+      "release_sha256": "831e8ff93b0eebcb5049718a99112c70fda848b4297bc0cd1f124adbbdf7191e",
+      "selection": "exact_Guard_6e9420_installed"
+    },
+    "hub/mcp_observation.py": {
+      "source_sha256": "d48a2a04da9ef7dcee93975cad725663fe14caee9fdefc6be7a668edf313e502",
+      "release_sha256": "d48a2a04da9ef7dcee93975cad725663fe14caee9fdefc6be7a668edf313e502",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_control_plane_processes.py": {
+      "source_sha256": "0c8c78c13522a42e233bb44e4e7a5d8afd4e42d7075aa2e8042bdd41a737330d",
+      "release_sha256": "0c8c78c13522a42e233bb44e4e7a5d8afd4e42d7075aa2e8042bdd41a737330d",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_control_plane_update.py": {
+      "source_sha256": "64458ffb4f9e2ad045f366980bda228b61fed0427bbc8fdae42c44da3d90e4ad",
+      "release_sha256": "64458ffb4f9e2ad045f366980bda228b61fed0427bbc8fdae42c44da3d90e4ad",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_correct_command_type.py": {
+      "source_sha256": "eef5f189acfb510003e54da9e07712ef9a9dc69429164a663ff6cc47c8654d12",
+      "release_sha256": "eef5f189acfb510003e54da9e07712ef9a9dc69429164a663ff6cc47c8654d12",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_correction_timeout_contract.py": {
+      "source_sha256": "fc8870c3a93393f894206752aefd45fd2e7f45fd731e44ce0c6e797ac0577f73",
+      "release_sha256": "fc8870c3a93393f894206752aefd45fd2e7f45fd731e44ce0c6e797ac0577f73",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_development_syntax_preflight.py": {
+      "source_sha256": "57bd29d93fc0d416c8e24916c6aad39de7fa97f827e2b1ddd787c5ad78214af8",
+      "release_sha256": "57bd29d93fc0d416c8e24916c6aad39de7fa97f827e2b1ddd787c5ad78214af8",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_guard_gateway_owner.py": {
+      "source_sha256": "c07b6fedb1d3769a96983aeddb72274b52040a211a3a70ec1caec70879349404",
+      "release_sha256": "c07b6fedb1d3769a96983aeddb72274b52040a211a3a70ec1caec70879349404",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_guard_socket_identity.py": {
+      "source_sha256": "3e843948f2ed70605e5074f8f71661e09cb77f036fb35062b0dbf745263baf09",
+      "release_sha256": "3e843948f2ed70605e5074f8f71661e09cb77f036fb35062b0dbf745263baf09",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_local_repair_feedback.py": {
+      "source_sha256": "9c47c95494011e47df44ef26d367b08f15650ba9cc895eabaea0bae3fd21c51c",
+      "release_sha256": "9c47c95494011e47df44ef26d367b08f15650ba9cc895eabaea0bae3fd21c51c",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_mcp_observation.py": {
+      "source_sha256": "401fd2979e4a90f1923266d81bfd53cf15367cbf07df1ea94aee8cb742018db0",
+      "release_sha256": "401fd2979e4a90f1923266d81bfd53cf15367cbf07df1ea94aee8cb742018db0",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_selfdevelop.py": {
+      "source_sha256": "ad35baa828744e305847f0f82f6663d84cba992667eafb87874dc3bb1664df1d",
+      "release_sha256": "ad35baa828744e305847f0f82f6663d84cba992667eafb87874dc3bb1664df1d",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_selfdevelop_commands.py": {
+      "source_sha256": "931740381f886059ff8423ff4bd153e4b88b9a22ec21eaa0e12dce3ad6f68062",
+      "release_sha256": "931740381f886059ff8423ff4bd153e4b88b9a22ec21eaa0e12dce3ad6f68062",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_selfdevelop_failed_closure.py": {
+      "source_sha256": "d56253a868ee0bc36537506358de3a137b874953eda50aedd4501b7d027027db",
+      "release_sha256": "d56253a868ee0bc36537506358de3a137b874953eda50aedd4501b7d027027db",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_selfdevelop_guard_status.py": {
+      "source_sha256": "6db0c378cb62bccce21967260f95c554b41bbc5847a163c439b3b6582010b7f9",
+      "release_sha256": "6db0c378cb62bccce21967260f95c554b41bbc5847a163c439b3b6582010b7f9",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_selfdevelop_recovery.py": {
+      "source_sha256": "f34cfa0f43654e9db98c5d91bb7864cfab4ffc8e86a38d399815542ffc706ff9",
+      "release_sha256": "f34cfa0f43654e9db98c5d91bb7864cfab4ffc8e86a38d399815542ffc706ff9",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_worker_director_correction.py": {
+      "source_sha256": "414f392c992e8b4955ae1dd84106c891faf7bb52241ab767508e15a5dc14978b",
+      "release_sha256": "414f392c992e8b4955ae1dd84106c891faf7bb52241ab767508e15a5dc14978b",
+      "selection": "full_source_or_release_metadata"
+    },
+    "tests/test_worker_guidance_packet.py": {
+      "source_sha256": "0e67e8d39251e559ac3667ac44153f700cebddd6b4b1e06a8e828139d39d3afa",
+      "release_sha256": "0e67e8d39251e559ac3667ac44153f700cebddd6b4b1e06a8e828139d39d3afa",
+      "selection": "full_source_or_release_metadata"
+    },
+    "docs/validation/worker-focused-edits-2026-11-08.md": {
+      "source_sha256": "c191e4449cdc49ec31d7737c8ae6d80e51515b55477466bdced187457a9512d2",
+      "release_sha256": "c191e4449cdc49ec31d7737c8ae6d80e51515b55477466bdced187457a9512d2",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "hub/development/runner.py": {
+      "source_sha256": "b8237cfb815f23d5691470c1c7f16ead09ffb6843dd0c63c97d02765d7cbff8b",
+      "release_sha256": "b8237cfb815f23d5691470c1c7f16ead09ffb6843dd0c63c97d02765d7cbff8b",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "tests/test_runner_pycache_isolation.py": {
+      "source_sha256": "6b73fb033f10f34beaf8d40f484c80c9097d91c654ce3a042bb67f0b333b3f50",
+      "release_sha256": "6b73fb033f10f34beaf8d40f484c80c9097d91c654ce3a042bb67f0b333b3f50",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "tests/test_worker_focused_edits.py": {
+      "source_sha256": "c99d2889802fd5cb313845be170b8d855b4da76e0e4d20ddc933984751b6d0ee",
+      "release_sha256": "c99d2889802fd5cb313845be170b8d855b4da76e0e4d20ddc933984751b6d0ee",
+      "selection": "installed Guard update ff437e2351ec4aefaa228a816922a6e4 (exact source)"
+    },
+    "docs/validation/selfdevelop-objective-feedback-2026-11-08.md": {
+      "source_sha256": "37a3183e203201487a449a4b1fa8cc28b365cdb3d0247101ae3e93c3f2a4acdb",
+      "release_sha256": "37a3183e203201487a449a4b1fa8cc28b365cdb3d0247101ae3e93c3f2a4acdb",
+      "selection": "installed Mellow Guard update 6ea9fa502bfb4d0fa17e822134c326ad"
+    },
+    "tests/test_selfdevelop_start_objective_type.py": {
+      "source_sha256": "13b545696fb814218ef7f34f5f843fd78172459427a2b2a34812d6d59d5940e5",
+      "release_sha256": "13b545696fb814218ef7f34f5f843fd78172459427a2b2a34812d6d59d5940e5",
+      "selection": "installed Mellow Guard update 6ea9fa502bfb4d0fa17e822134c326ad"
+    },
+    "tests/test_selfdevelop_objective_driver.py": {
+      "source_sha256": "160a950e3de6676f75d4437652d26f8de650373a955e1fb060986b99209f9378",
+      "release_sha256": "160a950e3de6676f75d4437652d26f8de650373a955e1fb060986b99209f9378",
+      "selection": "exact_Guard_6e9420_installed"
+    },
+    "tests/test_selfdevelop_resume_progress.py": {
+      "source_sha256": "ae422d561e7002a252fe961462eb83fdfe9cf1e5a328939b3a16e1f186e8a699",
+      "release_sha256": "ae422d561e7002a252fe961462eb83fdfe9cf1e5a328939b3a16e1f186e8a699",
+      "selection": "exact_Guard_6e9420_installed"
+    },
+    "docs/SUPERVISED_SELFDEVELOP_COMPLETION_PLAN-2026-11-08.md": {
+      "source_sha256": null,
+      "release_sha256": "807234f753d2518e388540be1a310c0ed8b9233eb52004498a399e3a5fb24691",
+      "selection": "0.18.0_release_metadata"
+    },
+    "docs/release/SUPERVISED_SELFDEVELOP_0.17.0.md": {
+      "source_sha256": null,
+      "release_sha256": "6c11d0d0e9fb03483926314c9c859686985f7d99bbdb67fc6ac8d5adca94c0e6",
+      "selection": "release_0.17_metadata_or_documentation"
+    },
+    "tests/test_objective_authorization_idempotency.py": {
+      "source_sha256": "c2676755cbd158555b7a1abb787a6017c2d661be3310990ebd1432624b875ed2",
+      "release_sha256": "c2676755cbd158555b7a1abb787a6017c2d661be3310990ebd1432624b875ed2",
+      "selection": "exact_ACTIVE_VERIFIED_Guard_0.17.1"
+    },
+    "docs/release/SUPERVISED_SELFDEVELOP_0.17.1.md": {
+      "source_sha256": null,
+      "release_sha256": "6a6e85c9f2f3178eea2c861a70a57d381696a7a277431bc3ba6ec504c418273d",
+      "selection": "0.17.1_release_metadata"
+    },
+    "tests/test_selfdevelop_preflight_recovery.py": {
+      "source_sha256": "7713bd6df81f315ed4f6c53fca71e0dee8ec2815cb46c2c424e97c886d3f995f",
+      "release_sha256": "7713bd6df81f315ed4f6c53fca71e0dee8ec2815cb46c2c424e97c886d3f995f",
+      "selection": "exact_ACTIVE_VERIFIED_Guard_0.18.0"
+    },
+    "docs/release/SUPERVISED_PREFLIGHT_RECOVERY_0.18.0.md": {
+      "source_sha256": null,
+      "release_sha256": "c6b38f5d894eb9e2c86c91c311f128cdb99f728792b00b6bd4c0b83921e14457",
+      "selection": "0.18.0_release_metadata"
+    }
+  },
+  "excluded_private_handoffs": [
+    "docs/APC_SELFDEVELOP_IMPLEMENTATION_PLAN-2026-11-07.md",
+    "docs/SELFDEVELOP_DIRECTOR_HANDOFF-2026-11-08.md",
+    "docs/SELFDEVELOP_HANDOFF-2026-11-07.md"
+  ],
+  "followup_update": {
+    "update_id": "ff437e2351ec4aefaa228a816922a6e4",
+    "state": "ACTIVE_VERIFIED",
+    "candidate_id": "18c8d01a043d4b82ad866fd0e3435d10",
+    "candidate_revision": 13,
+    "reported_candidate_tests": "21 passed in 13.64s; verified=true; source_changed=[] (user-provided director evidence)",
+    "scope": [
+      "docs/validation/worker-focused-edits-2026-11-08.md",
+      "hub/development/runner.py",
+      "hub/development/worker.py",
+      "tests/test_runner_pycache_isolation.py",
+      "tests/test_worker_focused_edits.py"
+    ]
+  },
+  "objective_feedback_followup": {
+    "candidate_id": "501c3c75efa14db88137b3c1f74dbc7c",
+    "task_id": "5ad28e4a972a4a92b7c7b2a051a3384f",
+    "update_id": "6ea9fa502bfb4d0fa17e822134c326ad",
+    "update_state": "ACTIVE_VERIFIED",
+    "test_receipts": [
+      {
+        "revision": 1,
+        "passed": 6,
+        "failed": 3
+      },
+      {
+        "revision": 2,
+        "passed": 9,
+        "failed": 0,
+        "seconds": 1.55,
+        "verified": true,
+        "source_changed": []
+      },
+      {
+        "revision": 3,
+        "passed": 9,
+        "failed": 0,
+        "seconds": 1.54,
+        "verified": true,
+        "source_changed": []
+      }
+    ],
+    "claim_limit": "one director-supervised model repair after explicit failing tests; no general autonomous development verified"
+  },
+  "previous_source_manifest": "docs/release/supervised-selfdevelop-0.17.1-source-manifest.json",
+  "guard_bootstrap": {
+    "candidate_id": "35531dae6d224810827c8a0f01e63f47",
+    "revision": 26,
+    "guard_update": "6e9420b617cf40a19d35e4187256ace9",
+    "guard_state": "ACTIVE_VERIFIED",
+    "candidate_test_receipt": "test-c9fb1b11e8e84465a1c792cf028a6905.json",
+    "candidate_test_passed": 17,
+    "candidate_test_duration_seconds": 11.54,
+    "candidate_verified": true,
+    "source_changed": [],
+    "installed_sha256": {
+      "hub/app.py": "62360a8636fc7e669ce36dc54b3b767513fe97b422da2ebe7207d70cc7201c62",
+      "hub/conversations.py": "711e5755744fc464742714328610fb8743655ce8741e426e29003159306c8fd8",
+      "hub/development/api.py": "90d3e0c8f2665ed6aa36f6ddba8d872a9c7362d400203ae0bad179a186c3f975",
+      "hub/development/selfdevelop.py": "22f7df2c087b5c9277150902bff920af6d135cac2faf7944810e8744bf964eca",
+      "hub/development/tools.py": "dbe5455e922bf87cbf275f26d9a774a04be826bf21e5d8487ed6cfbbc5c51c5f",
+      "hub/guardian/control_plane_jobs.py": "831e8ff93b0eebcb5049718a99112c70fda848b4297bc0cd1f124adbbdf7191e",
+      "tests/test_selfdevelop_objective_driver.py": "160a950e3de6676f75d4437652d26f8de650373a955e1fb060986b99209f9378",
+      "tests/test_selfdevelop_resume_progress.py": "ae422d561e7002a252fe961462eb83fdfe9cf1e5a328939b3a16e1f186e8a699"
+    },
+    "live_objective_proof": "PENDING"
+  },
+  "isolated_release_test": {
+    "passed": 33,
+    "duration_seconds": 14.62,
+    "modules": [
+      "tests/test_selfdevelop_objective_driver.py",
+      "tests/test_selfdevelop_resume_progress.py",
+      "tests/test_selfdevelop.py",
+      "tests/test_selfdevelop_guard_status.py",
+      "tests/test_selfdevelop_failed_closure.py"
+    ],
+    "ast_parsed_files": 7,
+    "live_objective_proof": "PENDING"
+  },
+  "guard_followup": {
+    "candidate_id": "4c9e771fa50c4320b46160fcb02dc821",
+    "candidate_revision": 1,
+    "candidate_task_id": "ffb03fbbf0ea4e9a837ff86ae539ea2e",
+    "test_receipt": "test-019636fd46fe4805ab0a2e9207165119.json",
+    "test_passed": 19,
+    "test_duration_seconds": 30.58,
+    "verified": true,
+    "source_changed": [],
+    "guard_id": "af565cd45e71443e999b04fd2565aac4",
+    "guard_state": "ACTIVE_VERIFIED",
+    "installed_paths": {
+      "hub/development/selfdevelop.py": "21d44942049d57ec70dfcdbfd8cf6d6b48a763a5334a1bfa794669b48705ea24",
+      "tests/test_objective_authorization_idempotency.py": "c2676755cbd158555b7a1abb787a6017c2d661be3310990ebd1432624b875ed2"
+    },
+    "director_mode": "gpt_mcp_exact_local_executor",
+    "optional_planner_experiment": "reconcile_required_before_write_context_budget",
+    "original_guided_chat": "8cae5657612a4fbeb390c51a8201fb64",
+    "source_chat_completion": "VERIFIED_IN_ORIGINAL_CHAT",
+    "source_chat_message_id": "83fb81753a474ca38cf77d0417d248d2",
+    "source_chat_report_dedupe": "chatgpt-final-verified-guided-idempotency-install-20261108-001",
+    "guided_install_task": "c976f61108eb4270b0b286451392aa18",
+    "guided_install_revision": 6,
+    "guided_install_exit_code": 0,
+    "mcp_reconnected": true,
+    "qwen_loaded": false,
+    "loaded_models": []
+  },
+  "preflight_recovery_bootstrap": {
+    "candidate_id": "5a6d8a40174a4c75989221a2319c0a77",
+    "revision": 14,
+    "guard_id": "9a4ef1f526904a22b84bd624fd5d8159",
+    "guard_state": "ACTIVE_VERIFIED",
+    "approved_files": {
+      "hub/development/api.py": "90ee8ec05bbb2a4036912b94e3a67eb97beb9fd8aedaf463bb35a94b3caa2cea",
+      "hub/development/selfdevelop.py": "c7fa3d7abec7075146a63ab1c10ea913ad9d0c053fd7ba9486f07847a41d8949",
+      "hub/development/service.py": "53c3a96749039fdf594b8f38bda6eb86c552994d64bebdcbceb43022c7a666db",
+      "hub/development/tools.py": "608c8b255677dfcf4c7246c7a7e72446c618452a7c30d741956a6082f7490022",
+      "tests/test_selfdevelop_preflight_recovery.py": "7713bd6df81f315ed4f6c53fca71e0dee8ec2815cb46c2c424e97c886d3f995f"
+    },
+    "focused_receipt": "test-ba7b4ec6e2a34bd5bd591bf0254330d8.json",
+    "passed": 30,
+    "duration_seconds": 15.23,
+    "verified": true,
+    "source_changed": [],
+    "positive_live_recovery": "NOT_PROVEN",
+    "full_release_metadata_deployed": false,
+    "director": "GPT_via_MCP_exact_local_executor",
+    "autonomous_local_director": false
+  }
+}

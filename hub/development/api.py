@@ -34,6 +34,7 @@ class GuidanceRequest(TaskRequest):
     context_read:ContextRead|None=None
 
 class RepairRequest(TestRequest):
+    max_attempts:int=Field(default=1,ge=1,le=3,strict=True)
     paths:list[str]=Field(min_length=1,max_length=10)
     model:str|None=Field(default=None,max_length=160)
 
@@ -101,5 +102,81 @@ def router(provider):
     @routes.post('/repair')
     async def repair(body:RepairRequest):
         dev,task=bound(body)
-        return await dev.repair(task,body.candidate_id,body.revision,body.paths,body.tests,body.model)
+        return await dev.repair(task,body.candidate_id,body.revision,body.paths,body.tests,body.model,body.max_attempts)
+    @routes.post('/selfdevelop/close-failed')
+    async def close_failed_selfdevelop(body:dict):
+        from .selfdevelop import SelfDevelop
+        required=('chat_id','task_id','expected_revision','request_id','reason')
+        if set(body)!=set(required):
+            raise ValueError('Exact closure fields are required')
+        dev=provider()
+        return await asyncio.to_thread(SelfDevelop(dev.store).close_failed,
+                 body['chat_id'],body['task_id'],body['expected_revision'],
+                 body['request_id'],body['reason'])
+    class ObjectiveRun(BaseModel):
+        model_config=ConfigDict(extra='forbid')
+        chat_id:str=Field(pattern='^[a-f0-9]{32}$')
+        task_id:str=Field(pattern='^[a-f0-9]{32}$')
+        request_id:str=Field(min_length=8,max_length=100)
+        paths:list[str]=Field(min_length=1,max_length=10)
+        tests:list[str]=Field(min_length=1,max_length=30)
+        model:str|None=Field(default=None,max_length=160)
+        max_attempts:int=Field(default=1,ge=1,le=3,strict=True)
+        director_mode:str='gpt'
+        deploy_after_review:bool=False
+
+    @routes.post('/selfdevelop/objective/run')
+    async def objective_run(body:ObjectiveRun):
+        from .selfdevelop import SelfDevelop
+        dev=provider()
+        return await asyncio.to_thread(SelfDevelop(dev.store).authorize_objective,
+            body.chat_id,body.task_id,body.request_id,body.paths,body.tests,
+            body.model,body.max_attempts,body.director_mode,body.deploy_after_review)
+
+    class ObjectiveRecovery(BaseModel):
+        model_config=ConfigDict(extra='forbid')
+        chat_id:str=Field(pattern='^[a-f0-9]{32}$')
+        request_id:str=Field(min_length=8,max_length=100)
+        mode:str=Field(pattern='^(narrow|exact)$')
+        reason:str=Field(min_length=1,max_length=1000)
+        expected_candidate_revision:int=Field(ge=0,strict=True)
+        paths:list[str]|None=Field(default=None,min_length=1,max_length=10)
+        tests:list[str]|None=Field(default=None,min_length=1,max_length=30)
+
+    @routes.post('/selfdevelop/objective/recover')
+    async def objective_recover(body:ObjectiveRecovery):
+        """GPT-requested same-chat recovery. Never infer semantic approval."""
+        from .selfdevelop import SelfDevelop
+        dev=provider()
+        return await SelfDevelop(dev.store).recover_objective(
+            body.chat_id,body.request_id,body.mode,body.reason,dev,
+            body.expected_candidate_revision,body.paths,body.tests)
+
+    @routes.get('/selfdevelop/objective/{chat_id}')
+    async def objective_status(chat_id:str):
+        from .selfdevelop import SelfDevelop
+        dev=provider()
+        return await asyncio.to_thread(SelfDevelop(dev.store).objective_status,chat_id)
+
+    @routes.post('/control-plane/prepare')
+    async def prepare_control_plane(body:ReleaseRequest):
+        from ..guardian.control_plane_jobs import ControlPlaneJobs
+        from ..config import ROOT
+        dev,task=bound(body)
+        return await asyncio.to_thread(ControlPlaneJobs(ROOT).prepare,dev,task,body.candidate_id,body.revision)
+    class ControlPlaneActivation(BaseModel):
+        model_config=ConfigDict(extra='forbid')
+        update_id:str=Field(pattern='^[a-f0-9]{32}$')
+        request_id:str=Field(min_length=8,max_length=100)
+        recover:bool=False
+    @routes.post('/control-plane/activate')
+    async def activate_control_plane(body:ControlPlaneActivation):
+        from ..guardian.control_plane_jobs import ControlPlaneJobs
+        from ..config import ROOT
+        return await asyncio.to_thread(ControlPlaneJobs(ROOT).submit,body.update_id,body.request_id,body.recover)
+    @routes.get('/control-plane/status/{update_id}')
+    async def control_plane_status(update_id:str):
+        from ..guardian.control_plane_jobs import ControlPlaneJobs
+        from ..config import ROOT
+        return await asyncio.to_thread(ControlPlaneJobs(ROOT).status,update_id)
     return routes

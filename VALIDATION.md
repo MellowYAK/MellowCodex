@@ -1,3 +1,36 @@
+# 0.18.0 approved preflight recovery bootstrap validation - 2026-11-08
+
+- B approved candidate 5a6d8a40174a4c75989221a2319c0a77 rev14 for EXACTLY five paths: hub/development/selfdevelop.py, hub/development/service.py, hub/development/api.py, hub/development/tools.py, tests/test_selfdevelop_preflight_recovery.py.
+- Focused candidate receipt test-ba7b4ec6e2a34bd5bd591bf0254330d8.json: 30 passed in 15.23s, exit code 0, verified=true, source_changed=[]. No new suite run for this publication.
+- Mellow Guard update 9a4ef1f526904a22b84bd624fd5d8159 reached ACTIVE_VERIFIED. Independently verified all 5/5 installed file SHA-256 values equal Guard manifest and candidate rev14 snapshot.
+- Tested/implemented contracts: explicit GPT narrow/exact recovery, anchored historical worker packet hashes, rejected unanchored legacy runs, refusal on uncertain effects, atomic exact receipt/review state. Narrow/fixture tests and installed bootstrap are NOT proof of a successful positive live recovery.
+- Positive live recovery still NOT PROVEN. The previous guided exact MCP route was separately verified in original chat 8cae5657612a4fbeb390c51a8201fb64 (message_id 83fb81753a474ca38cf77d0417d248d2). The distinct optional automatic selfdevelop_run_objective experiment failed before writing and remained reconcile_required; neither result should be conflated.
+- This publication copies approved source to an isolated Git release worktree. No live code edits, model execution, new tests, restart, merge, or deployment of the full versioned 0.18.0 Git release by C.
+
+# 0.17.1 supervised exact-local-executor follow-up - 2026-11-08
+
+- Candidate 4c9e771fa50c4320b46160fcb02dc821 revision 1, task ffb03fbbf0ea4e9a837ff86ae539ea2e done revision 6; test-019636fd46fe4805ab0a2e9207165119.json: 19 passed in 30.58 seconds, verified=true, source_changed=[]. Approved source scope: hub/development/selfdevelop.py and tests/test_objective_authorization_idempotency.py only (reviewer B).
+- Guard update af565cd45e71443e999b04fd2565aac4: ACTIVE_VERIFIED; both installed source SHA-256 digests independently matched the update journal and candidate rev1 before isolated release preparation.
+- No broad test suite repeated. Only approved bytes, release metadata/hash manifest, and staged diff/content security checks are needed for publication.
+- Separate experimental selfdevelop_run_objective in chat 0f8ac1936e52470ea41ab86a8d60f689 failed at context budget BEFORE writing and remains reconcile_required; this is a failure/limitation, not completed development. Guided exact MCP completion VERIFIED in original chat 8cae5657612a4fbeb390c51a8201fb64: correspondence.messages message_id=83fb81753a474ca38cf77d0417d248d2 (dedupe suffix chatgpt-final-verified-guided-idempotency-install-20261108-001). Root verified the persisted report via MCP get_chat. Guard update af565cd45e71443e999b04fd2565aac4 ACTIVE_VERIFIED; MCP reconnected; 2/2 installed SHA-256 hashes match candidate and journal; receipt test-019636fd46fe4805ab0a2e9207165119.json 19 passed in 30.58s, verified=true, source_changed=[]. Installation task c976f61108eb4270b0b286451392aa18 done revision 6, exit 0; Qwen loaded=false, models=[]. This is a guided GPT-director exact-local-executor success, NOT success of the separate automatic selfdevelop_run_objective experiment (chat 0f8ac1936e52470ea41ab86a8d60f689, context budget exceeded before write, reconcile_required); MCP reconnect did not itself wake ChatGPT.
+- Guard installed patch / service health is distinct from publication. This 0.17.1 source follow-up does not prove a general autonomous local developer and does not merge, re-deploy or restart by the publication director.
+
+# 0.17.0 supervised Objective Driver bootstrap validation - 2026-11-08
+
+- Guard update ID 6e9420b617cf40a19d35e4187256ace9: ACTIVE_VERIFIED; the exact eight installed files were independently checked against the Guard journal and candidate 35531dae6d224810827c8a0f01e63f47 revision 26, all SHA-256 matches.
+- Candidate test receipt test-c9fb1b11e8e84465a1c792cf028a6905.json: 17 passed in 11.54s, verified=true, source_changed=[] (reported and externally approved bootstrap evidence). Earlier rev23 evidence covered previous failures; B reviewed and accepted the rev26 fixes for bootstrap installation.
+- Hub/MCP owned restart and subsequent MCP reconnect verified as part of that Guard update. This verifies bootstrap installation and service reachability only.
+- Remaining acceptance: a separate *live* GPT-supervised objective task must show real candidate repair, exact GPT semantic review, Guard ACTIVE_VERIFIED, approved-vs-installed file hash match and idempotent completion report in the ORIGINAL local chat. A safe rollback/stop is a correctly reported installation failure, NOT a successful live proof.
+- Broad integration suite was not required for publication; separate narrow isolated-release checks are recorded with this commit. Do not count model mocks as a live objective acceptance.
+
+# 0.16.0 isolated publication validation ? 2026-11-08
+
+- Base HEAD b2e68ba891d924dabf66c1258410ac36a1bf2e79, isolated branch release/selfdevelop-guard-0.16.0.
+- python -m compileall -q hub: succeeded in isolated worktree.
+- Existing 17 focused pytest modules: 70 passed in 32.36 seconds; exit code 0. No model/service activation.
+- Live supervised recovery receipts: docs/validation/failed-closure-live-2026-11-08.md. Isolated candidate command guard checks: docs/validation/correct-command-type-2026-11-08.md (21 passed). Neither means release 0.16.0 was deployed.
+- Unverified: new release activation/reconnect, independent autonomous local development, desktop and dependency upgrades.
+
 # Validation — 5 November 2026
 
 ## Independent contract feedback — 2026-11-07
@@ -871,3 +904,18 @@ Final deterministic context bootstrap cleanup deployed by normal shutdown/start.
 2026-11-07 shared director contract clarification: 19 protocol/guidance fixture tests passed in 2.88s. These checks do not constitute a new live transport test or universal enforcement of all generic actions. Existing live map/source acceptance remains the evidence for the bounded deterministic path.
 
 2026-11-07 release check: 68 focused context-mode, project-brief, source-feedback and source-contract fixtures passed in 17.80s. Current production UI displayed 310 indexed/unchanged files, fast mode, and successfully searched `save projects.py` and expanded its original save/revision code. This was read-only UI verification, not an Ember runtime test. git diff --check passed.
+
+## 0.16.0 installed Guard follow-up ? 2026-11-08
+
+Guard update ff437e2351ec4aefaa228a816922a6e4 reported ACTIVE_VERIFIED for five files; actual installed SHA-256 hashes matched the journal. Candidate 18c8d01a043d4b82ad866fd0e3435d10 revision 13 had 21 passed in 13.64 seconds, verified=true, source_changed=[] according to the supervising user; independent isolated release test results must be listed separately. No autonomous local-development proof is claimed.
+
+- Release checkout follow-up focused regression: 17 passed in 12.68 seconds, Python AST parse passed for hub/development/worker.py and runner.py. No models, services or source changes in live were made by this audit.
+
+## Supervised objective input regression (2026-11-08)
+- Candidate 501c3c75efa14db88137b3c1f74dbc7c: first tested revision 1 had 3 failed and 6 passed; GPT-directed feedback led to revision 2 with 9 passed in 1.55s (verified=true, source_changed=[]); revision 3 revalidated 9 passed in 1.54s (verified=true, source_changed=[]).
+- Guard update 6ea9fa502bfb4d0fa17e822134c326ad reported ACTIVE_VERIFIED, and three installed source SHA-256 values matched its update journal before release selection.
+- This is proof of a single bounded supervised local-model repair following explicit failed-test feedback, not general autonomous software-development acceptance; no services or models launched by this publication review.
+
+- Independent isolated release checkout: 9 focused objective acceptance tests passed in 1.34s; Python AST parse of SelfDevelop source succeeded. This was a static/local-test release check only, not a local model autonomy test.
+
+- Independent isolated-release bootstrap check: 33 focused SelfDevelop/Guard tests passed in 14.62 seconds; AST parsing passed for seven changed Python modules. This verifies source integration, not a live Objective Driver completion.

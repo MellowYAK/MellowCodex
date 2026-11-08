@@ -1,3 +1,39 @@
+# 0.18.0 - 2026-11-08
+
+- Added an explicit GPT-requested same-chat preflight recovery API/MCP route with bounded narrow/exact modes and stable request identity; no local autonomous/model director.
+- Anchored failure-time worker packet and source SHA-256 digests; legacy unanchored packets, changed candidate/source hashes, ambiguous history and pending/uncertain effects are rejected instead of replayed.
+- Exact continuation checks the current authorized revision, tests only within existing scope and records verified receipt/state atomically before external GPT semantic review; no autoapproval or automated Guard activation.
+- Candidate 5a6d8a40174a4c75989221a2319c0a77 revision 14, exactly five approved source/test files. Existing focused receipt test-ba7b4ec6e2a34bd5bd591bf0254330d8.json: 30 passed in 15.23s, verified=true, source_changed=[].
+- Guard 9a4ef1f526904a22b84bd624fd5d8159 ACTIVE_VERIFIED; five installed hashes independently matched candidate rev14 and journal. This verifies bootstrap installation only. Positive live recovery is still unproven, and the full versioned Git release metadata has not been deployed from publication.
+- Current acceptance remains GPT sole director via MCP plus exact local executor. Prior guided acceptance is independently verified; the older optional automatic objective experiment failed at preflight and must not be described as successful. No main merge or production restart by the publication task.
+
+# 0.17.1 - 2026-11-08
+
+- Fixed replay idempotency of previously authorized SelfDevelop objective requests after their source-mapping task reaches done. Identical request returns the existing run without repeating actions; changed arguments, fresh unauthorized requests and cross-chat requests are rejected.
+- Added focused regression tests in tests/test_objective_authorization_idempotency.py; only hub/development/selfdevelop.py and this test were modified as source for this patch.
+- Guard af565cd45e71443e999b04fd2565aac4 ACTIVE_VERIFIED, candidate 4c9e771fa50c4320b46160fcb02dc821 revision 1; both installed SHA-256 hashes match the candidate and journal.
+- Focused test receipt test-019636fd46fe4805ab0a2e9207165119.json: 19 passed in 30.58s, verified=true, source_changed=[]. No broad test suite was repeated for this publication.
+- Current user acceptance is GPT director through MCP with exact local executor, NOT a local model planner. The selfdevelop_run_objective context-budget experiment in chat 0f8ac1936e52470ea41ab86a8d60f689 stopped before writing and is reconcile_required. Original guided conversation 8cae5657612a4fbeb390c51a8201fb64 is the destination for its supervised completion report.
+- Source publication is not merge or deployment of the full 0.17.1 Git release. No autonomous/local-director or automatic GPT callback acceptance claimed.
+
+# 0.17.0 - 2026-11-08
+
+- Added GPT-supervised durable SelfDevelop Objective Driver bootstrap with bounded candidate repair/test-feedback, exact artifact review binding and explicit semantic gate. No autonomous/local director support is claimed.
+- Added idempotent same-chat completion reporting for verified activation and rollback/failure states, as well as Guard interrupted-prepare journal reconciliation and lifecycle watcher.
+- Corrected candidate review binding to avoid partially committed task approval if exact-artifact binding fails; added focused driver and resume regression tests.
+- Verified bootstrap installation/reconnection: Mellow Guard update 6e9420b617cf40a19d35e4187256ace9 ACTIVE_VERIFIED; all eight installed files matched candidate revision 26 and Guard journal SHA-256.
+- Candidate 35531dae6d224810827c8a0f01e63f47 revision 26: 17 focused tests passed in 11.54 seconds (receipt test-c9fb1b11e8e84465a1c792cf028a6905.json; verified=true; source_changed=[]), approved for bootstrap installation by independent read-only reviewer B. This is NOT the pending separate live objective-flow acceptance.
+- No main merge or desktop/dependency upgrade; production deployment of the full 0.17.0 Git release is not claimed.
+
+# 0.16.0 ? 2026-11-08
+
+- Added supervised SelfDevelop sessions, exact commands/correction, closure and director review gates; no autonomous success claimed.
+- Added independent Mellow Guard Hub/MCP prepare/activate/status journal and health rollback; desktop/dependency upgrades excluded.
+- Added candidate-only syntax preflight, bounded local repair/test feedback, typed guards and director-worker context preservation. Later isolated worker edits excluded.
+- Added MCP conversation-key correspondence and read-observation receipts; no unrelated UI/delegation/wallpaper changes.
+- Validation in isolated publication worktree: compileall success; 70 focused pytest passed in 32.36 seconds. No activation/reconnect of 0.16.0 performed.
+- Release scope and limitations: docs/release/SELFDEVELOP_GUARD_0.16.0.md.
+
 # 0.15.0 — 2026-11-07
 
 - Added native fast source indexing alongside the separate APC-derived baseline: persisted SHA-256, incremental parsing, paged maps, source search, relationship candidates and explicit parser coverage. No new APC source copied.
@@ -695,3 +731,7 @@ In the connected GPT conversation, three actual MCP calls completed: project_con
 
 ### Supervised execute-return-review contract — 2026-11-07 (Unreleased)
 The shared MCP/PLAY director instructions explicitly require one bounded step, recorded output, director acceptance or exact correction, then the next step. Director disconnection must preserve pending review rather than silently enabling autonomous work. Ordinary director review is distinct from human approval. Deterministic map/source/patch paths enforce their existing waiting_review boundary; this wording change alone does not establish strict execution enforcement for every generic tool or deploy updated instructions into an already connected chat. Native Hub change; no APC code imported.
+
+<!-- 0.16.0 isolated release follow-up: focused worker edits and runner pycache isolation confirmed installed by Guard ff437e2351ec4aefaa228a816922a6e4; no autonomous-development claim. -->
+
+<!-- Release 0.16.0 follow-up, 2026-11-08: SelfDevelop.start now rejects non-string objectives before .strip() while preserving rejection of empty/blank strings. Guard 6ea9fa502bfb4d0fa17e822134c326ad ACTIVE_VERIFIED; candidate rev2 9 passed in 1.55s, rev3 9 passed in 1.54s. One GPT-supervised Qwen feedback repair only, not autonomous development. -->
