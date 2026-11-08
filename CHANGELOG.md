@@ -1,3 +1,12 @@
+# 0.16.0 ? 2026-11-08
+
+- Added supervised SelfDevelop sessions, exact commands/correction, closure and director review gates; no autonomous success claimed.
+- Added independent Mellow Guard Hub/MCP prepare/activate/status journal and health rollback; desktop/dependency upgrades excluded.
+- Added candidate-only syntax preflight, bounded local repair/test feedback, typed guards and director-worker context preservation. Later isolated worker edits excluded.
+- Added MCP conversation-key correspondence and read-observation receipts; no unrelated UI/delegation/wallpaper changes.
+- Validation in isolated publication worktree: compileall success; 70 focused pytest passed in 32.36 seconds. No activation/reconnect of 0.16.0 performed.
+- Release scope and limitations: docs/release/SELFDEVELOP_GUARD_0.16.0.md.
+
 # 0.15.0 — 2026-11-07
 
 - Added native fast source indexing alongside the separate APC-derived baseline: persisted SHA-256, incremental parsing, paged maps, source search, relationship candidates and explicit parser coverage. No new APC source copied.

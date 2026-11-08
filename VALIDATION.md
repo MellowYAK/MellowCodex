@@ -1,3 +1,11 @@
+# 0.16.0 isolated publication validation ? 2026-11-08
+
+- Base HEAD b2e68ba891d924dabf66c1258410ac36a1bf2e79, isolated branch release/selfdevelop-guard-0.16.0.
+- python -m compileall -q hub: succeeded in isolated worktree.
+- Existing 17 focused pytest modules: 70 passed in 32.36 seconds; exit code 0. No model/service activation.
+- Live supervised recovery receipts: docs/validation/failed-closure-live-2026-11-08.md. Isolated candidate command guard checks: docs/validation/correct-command-type-2026-11-08.md (21 passed). Neither means release 0.16.0 was deployed.
+- Unverified: new release activation/reconnect, independent autonomous local development, desktop and dependency upgrades.
+
 # Validation — 5 November 2026
 
 ## Independent contract feedback — 2026-11-07

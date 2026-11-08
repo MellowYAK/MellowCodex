@@ -333,7 +333,7 @@ async def review(task_id: str,body: Review):
     bridge=app.state.bridge
     if body.resume_handoff and (body.decision!='request_changes' or bridge.state.get('task_id')!=task_id or bridge.state.get('pending_outbound_text')):
         raise Conflict('Only the saved handoff task without a pending send can retry in its linked conversation')
-    if task['revision']!=body.expected_revision or task['state']!='waiting_review':
+    if task['revision']!=body.expected_revision or task['state'] not in (('waiting_review','waiting_user') if body.decision=='request_changes' else ('waiting_review',)):
         raise Conflict('Task is not awaiting this revision of review')
     if body.decision=='request_changes' and any(a['state']=='pending' for a in store.actions(task_id)):
         raise Conflict('Reconcile uncertain actions before resuming this task')
@@ -431,13 +431,14 @@ async def project_add(body:ProjectInput):
 
 class ChatInput(BaseModel):
     project_id:str
+    conversation_key:str|None=None
 
 @app.post('/api/chats/{chat_id}/project')
 async def chat_bind_project(chat_id:str,body:ProjectInput):
     return conversations().bind_project(chat_id,body.path)
 
 @app.post('/api/chats')
-async def chat_add(body:ChatInput):return conversations().create(body.project_id)
+async def chat_add(body:ChatInput):return conversations().create(body.project_id,conversation_key=body.conversation_key)
 
 @app.get('/api/chats/{chat_id}')
 async def chat_get(chat_id:str):
@@ -596,6 +597,8 @@ class ChatMessage(BaseModel):
     mode:Literal['code','inspect','desktop','browser']='desktop'
     request_id:str=Field(min_length=8,max_length=200)
     attachments:list[dict]=Field(default_factory=list,max_length=5)
+    user_message:str|None=Field(default=None,max_length=8000)
+    source:Literal['local','mcp']='local'
 
 from .development.guidance import SourceRequirement
 
@@ -603,6 +606,68 @@ class SourceMessage(BaseModel):
     text:str=Field(min_length=1,max_length=8000)
     request_id:str=Field(min_length=8,max_length=100)
     sources:list[SourceRequirement]=Field(min_length=1,max_length=20)
+
+class SelfDevelopStart(BaseModel):
+    objective:str=Field(min_length=1,max_length=8000)
+    conversation_key:str=Field(min_length=8,max_length=512)
+    transport:Literal['mcp','play']='mcp'
+
+class SelfDevelopStep(BaseModel):
+    request_id:str=Field(min_length=8,max_length=100)
+    instruction:str=Field(min_length=1,max_length=8000)
+    allowed_tools:list[str]=Field(min_length=1,max_length=20)
+    required_tools:list[str]=Field(default_factory=list,max_length=20)
+    required_sources:list[SourceRequirement]=Field(default_factory=list,max_length=20)
+    evidence_only:bool=False
+    exact_patch:dict|None=None
+    context_read:dict|None=None
+
+class SelfDevelopCommand(BaseModel):
+    request_id:str=Field(min_length=8,max_length=100)
+    instruction:str=Field(min_length=1,max_length=8000)
+    command:str=Field(min_length=1,max_length=20000)
+    shell:Literal['powershell','cmd']='powershell'
+    timeout:int=Field(default=60,ge=1,le=180)
+
+@app.post('/api/selfdevelop/{chat_id}/command')
+async def selfdevelop_command(chat_id:str,body:SelfDevelopCommand):
+    from .development.commands import dispatch
+    task=dispatch(store,chat_id,**body.model_dump())
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
+
+class SelfDevelopCorrection(BaseModel):
+    task_id:str=Field(pattern='^[a-f0-9]{32}$')
+    expected_revision:int=Field(ge=0)
+    request_id:str=Field(min_length=8,max_length=100)
+    reason:str=Field(min_length=1,max_length=8000)
+    command:str=Field(min_length=1,max_length=20000)
+    shell:Literal['powershell','cmd']='powershell'
+    timeout:int=Field(default=60,ge=1,le=180)
+
+@app.post('/api/selfdevelop/{chat_id}/command/correct')
+async def selfdevelop_command_correct(chat_id:str,body:SelfDevelopCorrection):
+    from .development.commands import correct
+    task=correct(store,chat_id,**body.model_dump())
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
+
+@app.post('/api/selfdevelop/start')
+async def selfdevelop_start(body:SelfDevelopStart):
+    from .development.selfdevelop import SelfDevelop
+    return SelfDevelop(store).start(**body.model_dump())
+
+@app.get('/api/selfdevelop/{chat_id}')
+async def selfdevelop_status(chat_id:str):
+    from .development.selfdevelop import SelfDevelop
+    return SelfDevelop(store).status(chat_id)
+
+@app.post('/api/selfdevelop/{chat_id}/step')
+async def selfdevelop_step(chat_id:str,body:SelfDevelopStep):
+    from .development.selfdevelop import SelfDevelop
+    task=SelfDevelop(store).step(chat_id,**body.model_dump())
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
 
 @app.post('/api/chats/{chat_id}/sources')
 async def chat_sources(chat_id:str,body:SourceMessage):
@@ -618,7 +683,7 @@ async def chat_sources(chat_id:str,body:SourceMessage):
 
 @app.post('/api/chats/{chat_id}/messages')
 async def chat_message(chat_id:str,body:ChatMessage):
-    task=conversations().submit(chat_id,body.text,body.mode,body.request_id,body.attachments)
+    task=conversations().submit(chat_id,body.text,body.mode,body.request_id,body.attachments,presentation={'text':body.user_message or body.text,'source':body.source})
     if task['state']=='queued':engine.enqueue(task['id'])
     return public_task(task)
 
@@ -892,6 +957,34 @@ async def set_input_mode(body:InputPreference):
 @app.get('/api/chats/{chat_id}/correspondence')
 async def correspondence(chat_id:str,after:float=0):
     from datetime import datetime
+class MCPObservation(BaseModel):
+    project_id:str
+    request_id:str
+    operation:str
+    phase:Literal['started','completed','failed']
+    payload:dict
+
+class MCPConversationMessage(BaseModel):
+    project_id:str
+    conversation_key:str
+    message_id:str
+    text:str
+    speaker:Literal['user','chatgpt']
+
+@app.post('/api/mcp/conversation-message')
+async def mcp_conversation_message(body:MCPConversationMessage):
+    if not body.message_id.strip() or not body.text.strip():raise ValueError('Message ID and text are required')
+    chat=conversations().create(body.project_id,title=body.text[:80],conversation_key=body.conversation_key)
+    transcript=app.state.bridge.transcript
+    transcript.configure(chat['id'],transport='mcp')
+    transcript.append(chat['id'],body.speaker,'user_to_chatgpt' if body.speaker=='user' else 'chatgpt_to_agent',body.text,key='mcp-message:'+body.message_id)
+    return {'chat_id':chat['id'],'recorded':True,'continue_in_this_chat':True}
+
+@app.post('/api/chats/{chat_id}/mcp-observation')
+async def mcp_observation(chat_id:str,body:MCPObservation):
+    from .mcp_observation import record_observation
+    return record_observation(conversations(),app.state.bridge.transcript,chat_id,body.model_dump())
+
     messages=app.state.bridge.transcript.list(chat_id,after)
     # Ordinary agent turns and bridge exchanges share the same saved chat timeline.
     if messages:

@@ -34,6 +34,7 @@ class GuidanceRequest(TaskRequest):
     context_read:ContextRead|None=None
 
 class RepairRequest(TestRequest):
+    max_attempts:int=Field(default=1,ge=1,le=3,strict=True)
     paths:list[str]=Field(min_length=1,max_length=10)
     model:str|None=Field(default=None,max_length=160)
 
@@ -101,5 +102,36 @@ def router(provider):
     @routes.post('/repair')
     async def repair(body:RepairRequest):
         dev,task=bound(body)
-        return await dev.repair(task,body.candidate_id,body.revision,body.paths,body.tests,body.model)
+        return await dev.repair(task,body.candidate_id,body.revision,body.paths,body.tests,body.model,body.max_attempts)
+    @routes.post('/selfdevelop/close-failed')
+    async def close_failed_selfdevelop(body:dict):
+        from .selfdevelop import SelfDevelop
+        required=('chat_id','task_id','expected_revision','request_id','reason')
+        if set(body)!=set(required):
+            raise ValueError('Exact closure fields are required')
+        dev=provider()
+        return await asyncio.to_thread(SelfDevelop(dev.store).close_failed,
+                 body['chat_id'],body['task_id'],body['expected_revision'],
+                 body['request_id'],body['reason'])
+    @routes.post('/control-plane/prepare')
+    async def prepare_control_plane(body:ReleaseRequest):
+        from ..guardian.control_plane_jobs import ControlPlaneJobs
+        from ..config import ROOT
+        dev,task=bound(body)
+        return await asyncio.to_thread(ControlPlaneJobs(ROOT).prepare,dev,task,body.candidate_id,body.revision)
+    class ControlPlaneActivation(BaseModel):
+        model_config=ConfigDict(extra='forbid')
+        update_id:str=Field(pattern='^[a-f0-9]{32}$')
+        request_id:str=Field(min_length=8,max_length=100)
+        recover:bool=False
+    @routes.post('/control-plane/activate')
+    async def activate_control_plane(body:ControlPlaneActivation):
+        from ..guardian.control_plane_jobs import ControlPlaneJobs
+        from ..config import ROOT
+        return await asyncio.to_thread(ControlPlaneJobs(ROOT).submit,body.update_id,body.request_id,body.recover)
+    @routes.get('/control-plane/status/{update_id}')
+    async def control_plane_status(update_id:str):
+        from ..guardian.control_plane_jobs import ControlPlaneJobs
+        from ..config import ROOT
+        return await asyncio.to_thread(ControlPlaneJobs(ROOT).status,update_id)
     return routes

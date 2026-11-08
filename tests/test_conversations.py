@@ -26,3 +26,17 @@ def test_legacy_migration_idempotent(tmp_path):
     c=Conversations(s)
     assert len(c.inventory()['chats'])==1
     assert c.get(c.inventory()['chats'][0]['id'])['turns'][0]['id']==t['id']
+
+def test_external_conversation_reuses_chat_but_never_other_thread(tmp_path):
+    c=Conversations(Store(tmp_path/'threads.sqlite3'));p=c.project(str(tmp_path))
+    a=c.create(p['id'],conversation_key='chatgpt:thread-a')
+    task=c.submit(a['id'],'First request','inspect','first-request',presentation={'text':'בקשה פשוטה','source':'mcp'})
+    assert c.page(a['id'])['turns'][0]['presentation']=={'text':'בקשה פשוטה','source':'mcp'}
+    assert c.store.get(task['id'])['goal']=='First request'
+    c.store.update(task['id'],state='done',result='First result')
+    restored=Conversations(Store(c.store.path)).create(p['id'],conversation_key='chatgpt:thread-a')
+    assert restored['id']==a['id'] and restored['turns'][0]['id']==task['id']
+    assert c.create(p['id'],conversation_key='chatgpt:thread-b')['id']!=a['id']
+    assert c.create(p['id'])['id']!=a['id']
+    other=tmp_path/'other';other.mkdir();p2=c.project(str(other))
+    with pytest.raises(Conflict):c.create(p2['id'],conversation_key='chatgpt:thread-a')

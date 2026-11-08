@@ -54,6 +54,11 @@ class Engine:
         self.store.event(task_id,'checkpoint',{'id':str(checkpoint_id),'revision':task['revision']})
 
     def enqueue(self, task_id):
+        if (STATE/'control-plane-admission.json').exists():
+            self.store.update(task_id,state='paused',result='Control-plane update in progress; task preserved for explicit resume.')
+            return
+        from .development.selfdevelop import SelfDevelop
+        SelfDevelop(self.store).guard(task_id)
         if task_id not in self.jobs or self.jobs[task_id].done():
             self.jobs[task_id]=asyncio.create_task(self.run(task_id))
 
@@ -170,6 +175,13 @@ class Engine:
         async with self.lock:  # one GPU request and one desktop owner at a time
             if self.store.get(task_id)['state'] != 'queued':
                 return
+            from .development.selfdevelop import SelfDevelop
+            selfdevelop=SelfDevelop(self.store)
+            try:
+                selfdevelop.guard(task_id)
+            except Conflict as exc:
+                self.store.update(task_id,state='paused',result=str(exc))
+                return
             self.runner.desktop.stopped=False
             task=self.store.update(task_id,state='running')
             initial=[{'role':'system','content':SYSTEM},{'role':'user','content':task['goal']+'\nWorkspace: '+task['workspace']+'\nAcceptance checks: '+json.dumps(task['criteria'],ensure_ascii=False)}]
@@ -264,7 +276,17 @@ class Engine:
                     patch_call=coding_guidance.next_patch_call(task_id,self.store.actions(task_id)) if exact_patch else None
                     context_read=coding_guidance.context_read(task_id) if coding_guidance else None
                     context_call=coding_guidance.next_context_call(task_id,self.store.actions(task_id)) if context_read else None
-                    if context_call:
+                    from .development.commands import next_command, command_receipt
+                    command_call,command_done=next_command(self.store,task_id)
+                    if command_done:
+                        receipt=command_receipt(self.store,task_id)
+                        if receipt['execution_succeeded']:
+                            self.store.event(task_id,'verification',{'checks':self.verify(task),'evidence':self.evidence(task),'scope':'exact command exit status only; director must verify requested effect'})
+                        self.store.update(task_id,state='waiting_review' if receipt['execution_succeeded'] else 'waiting_user',messages=messages,result=json.dumps(receipt,ensure_ascii=False))
+                        await self.checkpoint(task_id);return
+                    if command_call:
+                        message=command_call;metrics={'origin':'director_exact_command','inference':False}
+                    elif context_call:
                         message=context_call;metrics={'origin':'director_context_read','inference':False}
                     elif context_read:
                         record=coding_guidance.status(task_id)['guidance'][-1]
@@ -293,6 +315,8 @@ class Engine:
                                           result=json.dumps(packet,ensure_ascii=False))
                         await self.checkpoint(task_id);return
                     elif step==0 and prior and self.runner.visual_targets.get(task_id):
+                        if packet['retrieval_complete']:
+                            self.store.event(task_id,'verification',{'checks':self.verify(task),'evidence':self.evidence(task),'scope':'source delivery only; director semantic review required'})
                         from .login_navigation import requests_login
                         recovery_tool='find_login' if requests_login(task['goal']) else 'window_inspect'
                         message={'role':'assistant','content':'בודק את הקישורים והפקדים בחלון הקיים.','tool_calls':[{'function':{'name':recovery_tool,'arguments':{'hwnd':self.runner.visual_targets[task_id]}}}]}
@@ -465,7 +489,7 @@ class Engine:
                         checks=self.verify(task)
                         self.store.event(task_id,'verification',{'checks':checks,'evidence':self.evidence(task),'attempt_action_ids':[a['id'] for a in actions if a['id'] not in baseline_actions]})
                         passed=bool(checks) and all(c['passed'] for c in checks)
-                        final='done' if passed and task['mode'] not in ('desktop','browser') else 'waiting_review'
+                        final='done' if passed and task['mode'] not in ('desktop','browser') and not selfdevelop.owns(task_id) else 'waiting_review'
                         summary=message.get('content','')
                         if self.store.latest_event(task_id,'source_review_pending_director'):
                             final='waiting_review'

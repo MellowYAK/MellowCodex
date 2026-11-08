@@ -1,5 +1,10 @@
 # Local Agent Hub
 
+## Release 0.16.0 (2026-11-08)
+
+SelfDevelop supports external-director supervised commands, correction, review and failed-step closure. Mellow Guard manages independent Hub/MCP update journals and rollback. Candidate local repair uses bounded test feedback and syntax preflight; MCP correspondence uses per-chat keys. This is supervised recovery, not autonomous development acceptance. Publishing this source does not deploy version 0.16.0 to the running services. See docs/release/SELFDEVELOP_GUARD_0.16.0.md.
+
+
 For read-only fast-index investigations subsequently resumed with director guidance, source synthesis follows the latest current step instead of regenerating the original broad project plan. Required source ranges are extracted from recorded observations; the overall objective still bounds authorization. This fixes instruction drift, not semantic correctness: the returned draft still requires review.
 
 Measured Python flow distinguishes direct string-key lookups from method calls such as `.get(...)`, retaining branch conditions and original lines. These are syntax observations: a key read may consume an internally produced value and does not by itself prove a required user input.
