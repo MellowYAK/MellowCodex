@@ -1,3 +1,11 @@
+# 0.17.1 supervised exact-local-executor follow-up - 2026-11-08
+
+- Candidate 4c9e771fa50c4320b46160fcb02dc821 revision 1, task ffb03fbbf0ea4e9a837ff86ae539ea2e done revision 6; test-019636fd46fe4805ab0a2e9207165119.json: 19 passed in 30.58 seconds, verified=true, source_changed=[]. Approved source scope: hub/development/selfdevelop.py and tests/test_objective_authorization_idempotency.py only (reviewer B).
+- Guard update af565cd45e71443e999b04fd2565aac4: ACTIVE_VERIFIED; both installed source SHA-256 digests independently matched the update journal and candidate rev1 before isolated release preparation.
+- No broad test suite repeated. Only approved bytes, release metadata/hash manifest, and staged diff/content security checks are needed for publication.
+- Separate experimental selfdevelop_run_objective in chat 0f8ac1936e52470ea41ab86a8d60f689 failed at context budget BEFORE writing and remains reconcile_required; this is a failure/limitation, not completed development. GPT-directed exact local executor path is the present acceptance target, with final guided report belonging to original chat 8cae5657612a4fbeb390c51a8201fb64.
+- Guard installed patch / service health is distinct from publication. This 0.17.1 source follow-up does not prove a general autonomous local developer and does not merge, re-deploy or restart by the publication director.
+
 # 0.17.0 supervised Objective Driver bootstrap validation - 2026-11-08
 
 - Guard update ID 6e9420b617cf40a19d35e4187256ace9: ACTIVE_VERIFIED; the exact eight installed files were independently checked against the Guard journal and candidate 35531dae6d224810827c8a0f01e63f47 revision 26, all SHA-256 matches.

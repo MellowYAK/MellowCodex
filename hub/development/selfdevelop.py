@@ -224,16 +224,21 @@ class SelfDevelop:
                              (chat_id,task_id)).fetchone()
             if not owner:
                 raise Conflict('Task belongs to a different chat')
-            task=db.execute('SELECT state FROM tasks WHERE id=?',(task_id,)).fetchone()
-            pending=db.execute("SELECT 1 FROM actions WHERE task_id=? AND state='pending' LIMIT 1",
-                               (task_id,)).fetchone()
-            if pending or not task or task['state']!='waiting_review':
-                raise Conflict('Review mapping or reconcile pending actions before authorizing')
             old=db.execute('SELECT * FROM selfdevelop_objective_runs WHERE chat_id=?',(chat_id,)).fetchone()
             if old:
+                # A byte-for-byte identical authorized replay is read-only,
+                # including after completion or restart. It cannot start repair
+                # or Guard again. Ownership was checked above.
                 if (old['request_id'],old['task_id'],old['plan'])!=(request_id,task_id,plan):
                     raise Conflict('Objective plan already exists with different arguments')
             else:
+                # New authorization still requires the source-mapping review
+                # gate and absence of uncertain pending actions.
+                task=db.execute('SELECT state FROM tasks WHERE id=?',(task_id,)).fetchone()
+                pending=db.execute("SELECT 1 FROM actions WHERE task_id=? AND state='pending' LIMIT 1",
+                                   (task_id,)).fetchone()
+                if pending or not task or task['state']!='waiting_review':
+                    raise Conflict('Review mapping or reconcile pending actions before authorizing')
                 db.execute('INSERT INTO selfdevelop_objective_runs(chat_id,request_id,task_id,phase,plan,updated) VALUES(?,?,?,?,?,?)',
                            (chat_id,request_id,task_id,'repair_queued',plan,now()))
         if not old:

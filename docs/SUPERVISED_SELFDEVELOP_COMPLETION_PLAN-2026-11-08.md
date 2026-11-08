@@ -2,6 +2,15 @@
 
 **Scope:** GPT is the sole director through MCP. The local agent executes bounded instructions, runs tests, maintains durable evidence and reports state. No autonomous/local director implementation or research is authorized. This is a technical planning document, not a release, deployment, or semantic acceptance.
 
+## 0.17.1 current supervised handoff (2026-11-08)
+
+- **Exact required scope:** GPT directs via MCP and the local executor performs EXACT bounded commands and returns source/action/Guard evidence. No local model planner or autonomous/local director is in the current acceptance target. This is the explicitly authorized guided track.
+- **Confirmed patch:** candidate 4c9e771fa50c4320b46160fcb02dc821 rev1, task ffb03fbbf0ea4e9a837ff86ae539ea2e done rev6; receipt test-019636fd46fe4805ab0a2e9207165119.json: 19 passed in 30.58 seconds, verified=true, source_changed=[]. B approved just two paths, hub/development/selfdevelop.py and tests/test_objective_authorization_idempotency.py; they implement idempotent unchanged authorization replay after task done, not new authority to execute.
+- **Verified Guard identity:** update af565cd45e71443e999b04fd2565aac4 is ACTIVE_VERIFIED. Two installed source hashes match the journal and candidate rev1. This is installation of the exact correction, not proof that a separate optional planner experiment succeeded.
+- **Failed/limited optional experiment:** selfdevelop_run_objective in local chat 0f8ac1936e52470ea41ab86a8d60f689 hit context budget BEFORE writing and remains reconcile_required. This is NOT success and not permission to retry without reconciliation; no local model planner is requested.
+- **Original supervised completion:** chat 8cae5657612a4fbeb390c51a8201fb64 is where the GPT-directed local-executor action and its verified evidence/final report belong. MCP reconnect alone cannot wake a finished GPT conversation or create a callback. Check the actual source chat report; do not claim full end-to-end completion solely from a candidate pytest receipt or Guard installation.
+- **Roles:** A handles source/candidate/Guard supervised execution; B reviews exact evidence; C publishes only already approved bytes plus metadata and documentation to existing PR #1. No merge, reset, live source write or restart by C.
+
 ## Evidence boundary
 
 - Live repository: `E:\AI\repos\local-agent-hub`; targeted read-only inspection of `AGENTS.md`, SelfDevelop, service, engine, MCP, Guard and conversation storage. No full-project scan.

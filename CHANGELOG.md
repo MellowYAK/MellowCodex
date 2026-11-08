@@ -1,3 +1,12 @@
+# 0.17.1 - 2026-11-08
+
+- Fixed replay idempotency of previously authorized SelfDevelop objective requests after their source-mapping task reaches done. Identical request returns the existing run without repeating actions; changed arguments, fresh unauthorized requests and cross-chat requests are rejected.
+- Added focused regression tests in tests/test_objective_authorization_idempotency.py; only hub/development/selfdevelop.py and this test were modified as source for this patch.
+- Guard af565cd45e71443e999b04fd2565aac4 ACTIVE_VERIFIED, candidate 4c9e771fa50c4320b46160fcb02dc821 revision 1; both installed SHA-256 hashes match the candidate and journal.
+- Focused test receipt test-019636fd46fe4805ab0a2e9207165119.json: 19 passed in 30.58s, verified=true, source_changed=[]. No broad test suite was repeated for this publication.
+- Current user acceptance is GPT director through MCP with exact local executor, NOT a local model planner. The selfdevelop_run_objective context-budget experiment in chat 0f8ac1936e52470ea41ab86a8d60f689 stopped before writing and is reconcile_required. Original guided conversation 8cae5657612a4fbeb390c51a8201fb64 is the destination for its supervised completion report.
+- Source publication is not merge or deployment of the full 0.17.1 Git release. No autonomous/local-director or automatic GPT callback acceptance claimed.
+
 # 0.17.0 - 2026-11-08
 
 - Added GPT-supervised durable SelfDevelop Objective Driver bootstrap with bounded candidate repair/test-feedback, exact artifact review binding and explicit semantic gate. No autonomous/local director support is claimed.
