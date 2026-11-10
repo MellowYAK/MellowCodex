@@ -717,3 +717,11 @@ The local agent receives controls before long page prose. Use fresh observation 
 
 MCP service controls: see [MCP-SERVICE-CONTROL.md](docs/MCP-SERVICE-CONTROL.md). Desktop shortcuts start, stop, restart and show status without closing tasks or inference.
 
+
+
+### Context & Memory
+Open the conversation memory dialog to inspect local packet accounting, checkpoints and sources, or explicitly pin chat/project decisions. Model settings expose the same persisted context_management (legacy/shadow/bounded) and working_input_tokens controls through UI and MCP. See [context memory](docs/CONTEXT_MEMORY.md).
+
+
+### 0.20.0 installed controls and rollback
+Context & Memory is available in the conversation memory dialog. Final policy: bounded; working input target:12000. UI and MCP use the same persisted settings. Switch context_management to legacy to roll back packet selection while retaining history. No dependency installation is needed. See VALIDATION.md for measured results and limitations; the single-packet58.2% reduction is not a whole-task performance claim.

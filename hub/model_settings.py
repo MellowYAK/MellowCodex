@@ -15,6 +15,8 @@ class ModelSettings(BaseModel):
     temperature: float = Field(default=.1, ge=0, le=1)
     keep_alive_minutes: int = Field(default=30, ge=0, le=1440)
     request_timeout_seconds: int = Field(default=120, ge=30, le=600)
+    context_management: Literal['legacy','shadow','bounded'] = 'shadow'
+    working_input_tokens: int = Field(default=12000, ge=2048, le=262144)
     visual_guidance: bool = True
     visual_policy: Literal['smart','continuous'] = 'smart'
 
@@ -40,6 +42,8 @@ import re
 from pydantic import ValidationError
 
 FIELD_DESCRIPTIONS = {
+    'context_management': ('packet policy: legacy, shadow, bounded; no model allocation change', 'enum', 'next_request'),
+    'working_input_tokens': ('soft estimated input target; mandatory evidence may exceed target but never hard budget', 'tokens', 'next_request'),
     'model': ('installed Ollama model ID', 'name', 'next_request'),
     'coding_model': ('installed coding model ID (empty uses primary)', 'name', 'next_request'),
     'inference_enabled': ('allow inference after manual memory control', 'boolean', 'next_request'),

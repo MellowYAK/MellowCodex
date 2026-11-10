@@ -44,6 +44,31 @@ async def local(path,data=None,timeout=15):
         raise ValueError(f'Local agent returned HTTP {response.status_code}: {response.text[:300]}')
     return response.json()
 
+
+
+@mcp.tool(annotations=READ)
+async def context_memory_pins(chat_id:str,offset:int=0)->dict:
+    """Read explicit chat-only and intentionally shared project source-bound memory pins. Source corrections and hashes are checked before retrieval."""
+    return await local('/api/chats/'+ident(chat_id)+'/context-pins?offset='+str(max(0,offset)))
+
+@mcp.tool(annotations=WRITE)
+async def context_memory_pin(chat_id:str,anchor_id:str,scope:Literal['chat','project'],pinned:bool,expected_revision:int)->dict:
+    """Pin/unpin an existing exact-source conversation anchor, or intentionally share it with the current project. Read pins for revisions first; a new pin uses revision 0. Does not grant execution permissions. Corrections use existing conversation_anchors supersession."""
+    return await local('/api/chats/'+ident(chat_id)+'/context-pins',dict(anchor_id=ident(anchor_id),scope=scope,pinned=pinned,expected_revision=expected_revision))
+
+@mcp.tool(annotations=READ)
+async def context_memory_status(chat_id:str,task_id:str|None=None)->dict:
+    """Read compact per-chat packet accounting, actual last usage, checkpoint and shared persisted context settings. History stored on disk is not all loaded. No inference."""
+    path='/api/chats/'+ident(chat_id)+'/context-memory'
+    if task_id:path+='?task_id='+ident(task_id)
+    return await local(path)
+
+@mcp.tool(annotations=READ)
+async def context_memory_evidence(chat_id:str,task_id:str,message_index:int,sha256:str,offset:int=0,chars:int=3000)->dict:
+    """Expand one source ref returned by context_memory_status, within the original chat. Paginated original evidence; rejects changed hashes. Never authorizes actions."""
+    from urllib.parse import urlencode
+    return await local('/api/chats/'+ident(chat_id)+'/context-evidence?'+urlencode(dict(task_id=ident(task_id),message_index=message_index,sha256=sha256,offset=offset,chars=chars)))
+
 @mcp.tool(annotations=READ)
 async def model_settings_status()->dict:
     """Read persisted local-model settings, supported field metadata and actual Ollama /api/ps context. No model loading or owner permission changes."""

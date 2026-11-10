@@ -1,3 +1,23 @@
+## 0.20.0 deployed verification - 2026-11-10
+Before: deployed0.19.0 retained optional long tool/history content under an effective262100-token context. Existing memory and selective tools were already present; this release extends them.
+Implemented: shared estimated bounded packets, protected text corrections including older screenshots, current visual evidence, complete tool groups, source-bound compaction, incremental SQLite working state, explicit chat/project pins, and shared UI/MCP settings. No dependencies added.
+Deployed through the existing independent SelfDevelop/Guard supervisor:094c145de50b46d9a60b3498e24cc3e7, then final narrow correction437d632625f840a4b7af8f5e378b23c0; both ACTIVE_VERIFIED. Final actual API and MCP version0.20.0,119 tools. Runtime candidate b14b335b2896486d94fe78132afc7c53/r15 plus b1bd937823db4a1da428961a362e8c85/r1.
+Validation:34 focused tests; final affected21 tests. Actual deployed normal task bb0d78c5b26a4f848b1bd2627819679a completed one read_file and returned CONTEXT_DEPLOYED_7419. Two calls:10358 input/88 output,14.8977643s model-reported total. Estimates8472/8942 versus actual4888/5470; estimated accounting remains explicit. No extra summarization or embedding inference.
+Paired final-packet sample:19621 ->8205 actual input (58.2% less, n=1 pair), wall11.297 ->16.343s. This is not whole-task savings and does not demonstrate latency improvement. No statistically meaningful percentiles or CPU/RAM/VRAM savings established.
+UI readback: actual deployed dialog displayed bounded policy and5470 last actual input, no UI error. Source expansion passed. Legacy/shadow/bounded setting transitions persisted through shared validation. Completed task and diagnostics survived final service restart without replay.
+Preservation check:103 chats/9 projects before;104/10 after one disposable acceptance chat/project. Task/history counts increased; no data deletion, permission change, model context increase, or model unload was performed.
+Controls: conversation memory dialog -> Context & Memory. Final policy bounded, working target12000, configured/effective measured context262100, output512. Rollback setting: context_management=legacy; retained evidence needs no downgrade.
+Standalone Guard stage37025ce5c58f49e5bb44d377683b57b4 was not activated: its fixed loopback Hub launcher does not own the installed0.0.0.0 listener. Existing supported supervisor was used; no Guard policy was changed.
+Remaining limits: compatible exact tokenizer not established; multimodal token reserve uncertain; full-task30% target and multilingual semantic recall benchmark not established. Semantic retrieval intentionally not installed. Synthetic scope/cancellation/restart regressions are distinguished from the bounded live read workflow.
+Evidence: E:/AI/artifacts/context-engineering-validation-20261110 (deployed-live-result.json, paired-actual.json, deployed-ui-readback.json, deployed-context-memory-ui.png, final-runtime-verification.json).
+
+## Context memory 0.20.0 candidate validation (2026-11-10)
+Actual isolated ordinary workflow: one read_file, exact expected code, two model calls, 10,286 input / 48 output tokens; no file mutation. Shared HTTP settings set/readback legacy/shadow/bounded passed.
+One paired historical final packet, no tools executed: actual input 19,621 -> 8,205 (58.2% reduction); wall 11.297 -> 16.343 seconds. Cache/order and differing output lengths confound latency. This is NOT whole-task savings or proof of faster completion.
+Focused tests cover protected corrections, current image, complete exchanges, overflow, incremental recovery, pending identities, cancellation/CAS, source hash/pagination, explicit project sharing and scope exclusion.
+No p50/p95 claim, no semantic index, no exact tokenizer claim. Deployment and UI/MCP live evidence must be read from release artifacts; candidate success alone is not deployment proof.
+Artifacts: E:/AI/artifacts/context-engineering-validation-20261110.
+
 ## Service health panel 0.19.0 - 2026-11-10
 
 Deployment: version 0.19.0 is active in Hub/MCP and the native desktop. The existing independent update supervisor reached ACTIVE_VERIFIED, most recently update 2e92e6cb5bb84010aa0c8651161065e5. Desktop reloads used graceful IPC and retained the existing profile/session. The existing recovery mutex coordinated each deployment; the scheduled task was not disabled.

@@ -1321,3 +1321,40 @@ async def service_health_ack(body:HealthConnectionAck):
 @app.post('/api/service-health/quiesce')
 async def service_health_quiesce():
     return app.state.shutdown.start(keep_desktop=True)
+
+
+@app.get('/api/chats/{chat_id}/context-memory')
+async def context_memory_status(chat_id:str,task_id:str|None=None):
+    from .conversation_memory import ConversationMemory
+    from .model_settings import load_settings
+    memory=ConversationMemory(store)
+    with store.connect() as db:
+        memory._exists(db,chat_id)
+        if task_id is None:
+            row=db.execute('SELECT task_id FROM chat_tasks WHERE chat_id=? ORDER BY position DESC LIMIT 1',(chat_id,)).fetchone()
+            task_id=row[0] if row else None
+    result=memory.context_diagnostics(chat_id,task_id) if task_id else {'chat_id':chat_id,'task_id':None,'packet':None,'checkpoint':None,'history_loaded':False}
+    settings=load_settings()
+    result['settings']={k:getattr(settings,k) for k in ('context_management','working_input_tokens','context_tokens','response_tokens')}
+    result['scope']='chat';result['rollback']='Set context_management to legacy through model settings; durable evidence is retained.'
+    return result
+
+@app.get('/api/chats/{chat_id}/context-evidence')
+async def context_memory_evidence(chat_id:str,task_id:str,message_index:int,sha256:str,offset:int=0,chars:int=3000):
+    from .conversation_memory import ConversationMemory
+    try:return ConversationMemory(store).context_evidence(chat_id,task_id,message_index,sha256,offset,chars)
+    except KeyError as exc:raise HTTPException(404,str(exc))
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
+
+@app.get('/api/chats/{chat_id}/context-pins')
+async def context_memory_pins(chat_id:str,offset:int=0):
+    from .conversation_memory import ConversationMemory
+    return ConversationMemory(store).pinned_memory(chat_id,offset)
+
+@app.post('/api/chats/{chat_id}/context-pins')
+async def context_memory_pin(chat_id:str,body:dict):
+    from .conversation_memory import ConversationMemory
+    try:return ConversationMemory(store).pin_memory(chat_id,body['anchor_id'],body['scope'],body['pinned'],body['expected_revision'])
+    except KeyError as exc:raise HTTPException(404,str(exc))
+    except ValueError as exc:raise HTTPException(409,str(exc))

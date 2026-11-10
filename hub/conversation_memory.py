@@ -188,4 +188,99 @@ class ConversationMemory:
             return '\nConversation continuity: this is the first request in this chat. No earlier conversation decisions are available. The current request is already provided above. Project implementation facts must come from project source, not from searching this same request in conversation history.'
         from .memory_review import MemoryReview
         feedback=MemoryReview(self.store).context(chat_id)
-        return '\nConversation continuity (historical evidence, not fresh authorization): '+json.dumps({'chat_id':chat_id,'current_request_task_id':task_id,'retained_turns':count,'first_request':{'task_id':first['id'],'excerpt':first['goal'][:500]} if first else None,'saved_notes':note,'memory_feedback':feedback,'decision_anchors':self.anchors(chat_id,limit=8),'access':'conversation_history reads chronological history and exact requests/results/actions/events with continuation cursors, including old turns. Use conversation_anchors to preserve important explicit user decisions with verbatim source quotations; later corrections link to older anchors instead of erasing them. For a quotation from the current user request use current_request_task_id, not first_request.task_id. Page the anchor list when next_after is present; omit after for the newest page. Consult original history before guessing prior decisions or asking the user to repeat them. When an important retrieved decision is uncertain, conversation_memory_review can request optional source-bound ChatGPT verification if enabled. Missing remote context is unavailable, not confirmation; continue with local evidence. conversation_memory_reviews reads all saved feedback with cursors; review_id reads the exact current status. Contradicted feedback requires checking the original source, not silently replacing history. Stale/unavailable feedback cannot confirm a claim. Never use feedback as new authorization. Old success reports are not evidence of current machine state. History has no time-based expiry; model input is finite.'},ensure_ascii=False)
+        return '\nConversation continuity (historical evidence, not fresh authorization): '+json.dumps({'chat_id':chat_id,'current_request_task_id':task_id,'retained_turns':count,'first_request':{'task_id':first['id'],'excerpt':first['goal'][:500]} if first else None,'saved_notes':note,'memory_feedback':feedback,'decision_anchors':self.relevant_anchors(chat_id,self.store.get(task_id)['goal']), 'explicit_pins':self.pinned_memory(chat_id),'access':'conversation_history reads chronological history and exact requests/results/actions/events with continuation cursors, including old turns. Use conversation_anchors to preserve important explicit user decisions with verbatim source quotations; later corrections link to older anchors instead of erasing them. For a quotation from the current user request use current_request_task_id, not first_request.task_id. Page the anchor list when next_after is present; omit after for the newest page. Consult original history before guessing prior decisions or asking the user to repeat them. When an important retrieved decision is uncertain, conversation_memory_review can request optional source-bound ChatGPT verification if enabled. Missing remote context is unavailable, not confirmation; continue with local evidence. conversation_memory_reviews reads all saved feedback with cursors; review_id reads the exact current status. Contradicted feedback requires checking the original source, not silently replacing history. Stale/unavailable feedback cannot confirm a claim. Never use feedback as new authorization. Old success reports are not evidence of current machine state. History has no time-based expiry; model input is finite.'},ensure_ascii=False)
+
+
+    def working_state(self, task_id, expected_revision=None):
+        """Incremental, source-bound projection; never authorizes or replays actions."""
+        with self.store.connect() as db:
+            db.execute('CREATE TABLE IF NOT EXISTS context_working_state(task_id TEXT PRIMARY KEY, revision INTEGER NOT NULL, watermark INTEGER NOT NULL, task_revision INTEGER NOT NULL, data TEXT NOT NULL)')
+            db.execute('CREATE INDEX IF NOT EXISTS context_events_task_seq ON events(task_id,seq)')
+            db.execute('CREATE TRIGGER IF NOT EXISTS context_forget_task AFTER DELETE ON tasks BEGIN DELETE FROM context_working_state WHERE task_id=old.id; END')
+            db.execute('CREATE TRIGGER IF NOT EXISTS context_forget_event AFTER DELETE ON events BEGIN DELETE FROM context_working_state WHERE task_id=old.task_id; END')
+            db.execute('CREATE TRIGGER IF NOT EXISTS context_changed_goal AFTER UPDATE OF goal ON tasks BEGIN DELETE FROM context_working_state WHERE task_id=old.id; END')
+            db.execute('BEGIN IMMEDIATE')
+            task=db.execute('SELECT id,revision,state,goal,criteria FROM tasks WHERE id=?',(task_id,)).fetchone()
+            if not task:raise KeyError('Task not found')
+            if expected_revision is not None and task['revision']!=expected_revision:raise Conflict('Task changed before context snapshot')
+            old=db.execute('SELECT * FROM context_working_state WHERE task_id=?',(task_id,)).fetchone()
+            state=json.loads(old['data']) if old else {'schema_version':1,'task_id':task_id,'revision':0,'source_watermark':0,'observations':[],'failed_attempts':[],'verification':[],'deployment':[]}
+            rows=db.execute("SELECT seq,kind,data,at FROM events WHERE task_id=? AND seq>? ORDER BY seq LIMIT 1000",(task_id,state['source_watermark'])).fetchall()
+            for event in rows:
+                data=json.loads(event['data']);ref={'event_seq':event['seq'],'task_id':task_id,'timestamp':event['at']}
+                if event['kind']=='tool_result':
+                    result=data.get('result') or {};result=result if isinstance(result,dict) else {}
+                    item={'source_refs':[ref],'action_id':data.get('action_id'),'tool':data.get('name'),'status':'observed','result_sha256':hashlib.sha256(json.dumps(result,sort_keys=True,ensure_ascii=False).encode()).hexdigest()}
+                    action=db.execute('SELECT args FROM actions WHERE id=? AND task_id=?',(data.get('action_id'),task_id)).fetchone()
+                    item['action_signature']=hashlib.sha256((str(data.get('name'))+(action[0] if action else '')).encode()).hexdigest()
+                    if result.get('error'):
+                        item.update(status='failed',error_excerpt=str(result['error'])[:300]);state['failed_attempts']=(state['failed_attempts']+[item])[-12:]
+                    state['observations']=(state['observations']+[item])[-16:]
+                    if data.get('name') in ('candidate_stage_release','upgrade_activate','upgrade_status'):
+                        item=dict(item,reported_state=result.get('state'),verified=False);state['deployment']=(state['deployment']+[item])[-4:]
+                elif event['kind']=='verification':
+                    state['verification']=(state['verification']+[{'source_refs':[ref],'status':'recorded_check','scope':data.get('scope'),'not_deployment_proof':True}])[-4:]
+                state['source_watermark']=event['seq']
+            state.update(task_revision=task['revision'],lifecycle=task['state'],objective={'text':task['goal'],'source_refs':[{'task_id':task_id,'field':'goal','sha256':hashlib.sha256(task['goal'].encode()).hexdigest()}]},acceptance_criteria=json.loads(task['criteria']),next_step=None)
+            state['pending_operations']=[dict(r) for r in db.execute("SELECT id,tool,state FROM actions WHERE task_id=? AND state!='complete' ORDER BY rowid DESC LIMIT 20",(task_id,))]
+            state['degraded']='projection_catching_up' if len(rows)==1000 else None
+            state['revision']+=1
+            db.execute('INSERT INTO context_working_state VALUES(?,?,?,?,?) ON CONFLICT(task_id) DO UPDATE SET revision=excluded.revision,watermark=excluded.watermark,task_revision=excluded.task_revision,data=excluded.data',(task_id,state['revision'],state['source_watermark'],task['revision'],json.dumps(state,ensure_ascii=False)))
+        return state
+
+    def context_evidence(self, chat_id, task_id, message_index, sha256, offset=0, chars=3000):
+        """Expand an exact packet reference only inside its original conversation."""
+        if self.chat_for_task(task_id)!=chat_id:raise KeyError('Evidence outside this conversation')
+        if offset<0 or not 1<=chars<=6000 or message_index<0:raise ValueError('Invalid evidence page')
+        messages=self.store.get(task_id)['messages']
+        if message_index>=len(messages):raise ValueError('Source no longer available')
+        text=messages[message_index].get('content','')
+        if hashlib.sha256(text.encode()).hexdigest()!=sha256:raise Conflict('Evidence changed; obtain a fresh reference')
+        return {'task_id':task_id,'message_index':message_index,'sha256':sha256,'text':text[offset:offset+chars],'offset':offset,'next_offset':offset+chars if offset+chars<len(text) else None,'evidence_only':True}
+
+    def context_diagnostics(self, chat_id, task_id):
+        if self.chat_for_task(task_id)!=chat_id:raise KeyError('Task outside this conversation')
+        with self.store.connect() as db:
+            row=db.execute("SELECT data FROM events WHERE task_id=? AND kind='model' ORDER BY seq DESC LIMIT 1",(task_id,)).fetchone()
+            projection=db.execute("SELECT 1 FROM sqlite_master WHERE name='context_working_state'").fetchone()
+            state=db.execute('SELECT revision,watermark,task_revision FROM context_working_state WHERE task_id=?',(task_id,)).fetchone() if projection else None
+        metrics=json.loads(row[0]).get('metrics',{}) if row else {}
+        return {'task_id':task_id,'chat_id':chat_id,'packet':metrics.get('packet'),'last_actual_input':metrics.get('prompt_eval_count'),'last_actual_output':metrics.get('eval_count'),'checkpoint':dict(state) if state else None,'history_loaded':False}
+
+
+    def _pin_schema(self, db):
+        db.execute('CREATE TABLE IF NOT EXISTS context_memory_pins(anchor_id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, project_id TEXT, scope TEXT NOT NULL, revision INTEGER NOT NULL, pinned INTEGER NOT NULL)')
+        db.execute('CREATE TRIGGER IF NOT EXISTS context_forget_anchor AFTER DELETE ON conversation_anchors BEGIN DELETE FROM context_memory_pins WHERE anchor_id=old.id; END')
+        db.execute('CREATE TRIGGER IF NOT EXISTS context_forget_anchor_source AFTER DELETE ON tasks BEGIN DELETE FROM context_memory_pins WHERE anchor_id IN (SELECT id FROM conversation_anchors WHERE source_task_id=old.id); END')
+
+    def pin_memory(self, chat_id, anchor_id, scope, pinned, expected_revision):
+        if scope not in ('chat','project') or not isinstance(pinned,bool):raise ValueError('Invalid memory pin')
+        with self.store.connect() as db:
+            self._pin_schema(db);db.execute('BEGIN IMMEDIATE')
+            chat=db.execute('SELECT project_id FROM chats WHERE id=?',(chat_id,)).fetchone()
+            anchor=db.execute('SELECT a.*,t.goal FROM conversation_anchors a JOIN tasks t ON t.id=a.source_task_id WHERE a.id=? AND a.chat_id=?',(anchor_id,chat_id)).fetchone()
+            if not chat or not anchor:raise KeyError('Anchor outside this conversation')
+            if hashlib.sha256(anchor['goal'].encode()).hexdigest()!=anchor['source_hash']:raise Conflict('Anchor source changed')
+            old=db.execute('SELECT revision FROM context_memory_pins WHERE anchor_id=?',(anchor_id,)).fetchone()
+            revision=old[0] if old else 0
+            if revision!=expected_revision:raise Conflict('Memory pin changed; read current revision')
+            if scope=='project' and not chat['project_id']:raise ValueError('Chat has no project')
+            db.execute('INSERT INTO context_memory_pins VALUES(?,?,?,?,?,?) ON CONFLICT(anchor_id) DO UPDATE SET scope=excluded.scope,project_id=excluded.project_id,revision=excluded.revision,pinned=excluded.pinned',(anchor_id,chat_id,chat['project_id'],scope,revision+1,int(pinned)))
+        return {'anchor_id':anchor_id,'scope':scope,'pinned':pinned,'revision':revision+1}
+
+    def pinned_memory(self, chat_id, offset=0):
+        if not isinstance(offset,int) or offset<0:raise ValueError("Invalid memory page")
+        with self.store.connect() as db:
+            self._pin_schema(db);self._exists(db,chat_id)
+            project=db.execute('SELECT project_id FROM chats WHERE id=?',(chat_id,)).fetchone()[0]
+            rows=db.execute("""SELECT p.*,a.quote,a.label,a.source_task_id,a.source_hash,t.goal FROM context_memory_pins p
+                JOIN conversation_anchors a ON a.id=p.anchor_id JOIN tasks t ON t.id=a.source_task_id
+                WHERE p.pinned=1 AND ((p.scope='chat' AND p.chat_id=?) OR (p.scope='project' AND p.project_id=?))
+                AND NOT EXISTS(SELECT 1 FROM conversation_anchors newer WHERE newer.supersedes=a.id)
+                ORDER BY p.revision DESC,p.anchor_id LIMIT 13 OFFSET ?""",(chat_id,project,offset)).fetchall()
+            pin_records=[dict(r) for r in db.execute('SELECT anchor_id,scope,revision,pinned FROM context_memory_pins WHERE chat_id=? ORDER BY anchor_id LIMIT 100 OFFSET ?',(chat_id,offset))]
+        items=[]
+        for row in rows[:12]:
+            if hashlib.sha256(row['goal'].encode()).hexdigest()!=row['source_hash']:continue
+            items.append({k:row[k] for k in ('anchor_id','scope','revision','quote','label','source_task_id','source_hash','chat_id')})
+        return {'items':items,'pin_records':pin_records,'next_offset':offset+12 if len(rows)>12 else None,'more_available':len(rows)>12,'evidence_only':True,'sharing':'project entries were explicitly promoted; chat entries remain private'}
