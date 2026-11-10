@@ -217,3 +217,12 @@ $('health').onclick=()=>safe(async()=>{
 async function loadScreenshotSettings(){const s=await api('/settings/screenshots');$('shot-enabled').checked=s.enabled;$('shot-edge').value=s.max_edge;$('shot-quality').value=s.quality;$('shot-gpt-edge').value=s.chatgpt_max_edge;$('shot-gpt-quality').value=s.chatgpt_quality;$('shot-ocr').checked=s.ocr_assistance;}
 $('settings').addEventListener('click',()=>safe(loadScreenshotSettings));
 $('shot-save').onclick=()=>safe(async()=>{await api('/settings/screenshots',{enabled:$('shot-enabled').checked,max_edge:Number($('shot-edge').value),quality:Number($('shot-quality').value),chatgpt_max_edge:Number($('shot-gpt-edge').value),chatgpt_quality:Number($('shot-gpt-quality').value),ocr_assistance:$('shot-ocr').checked});$('shot-status').textContent='נשמר — יחול על הצילום הבא';});
+
+window.attachBrowserAnnotation=payload=>{
+  if(!payload||!Array.isArray(payload.files)||payload.files.length!==2||attachments.length+2>5)return false;
+  if(payload.files.some(f=>!f.file_id||!f.name))return false;
+  attachments.push(...payload.files);renderAttachments();
+  $('goal').value=[$('goal').value.trim(),payload.instruction].filter(Boolean).join('\n\n');
+  $('goal').dispatchEvent(new Event('input',{bubbles:true}));$('goal').focus();
+  return true;
+};

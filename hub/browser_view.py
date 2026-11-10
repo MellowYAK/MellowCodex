@@ -77,6 +77,7 @@ class BrowserView(QWidget):
         menu.addAction('ניהול תוספים',lambda:self.extensions.show(self))
         more.setMenu(menu);more.setPopupMode(QToolButton.InstantPopup);bar.addWidget(more)
         self.hide_button=QToolButton();self.hide_button.setText('הסתר דפדפן ×');self.hide_button.setAccessibleName('הסתר דפדפן');self.hide_button.setToolTip('הסתר את התצוגה; הלשוניות והחיבור ממשיכים ברקע');bar.addWidget(self.hide_button)
+        self.annotate_button=QToolButton();self.annotate_button.setText('בחר רכיב');self.annotate_button.setObjectName('browserAnnotate');self.annotate_button.setAccessibleName('בחר רכיב או אזור');bar.addWidget(self.annotate_button)
         layout.addLayout(bar)
         self.tabs=QTabWidget();self.tabs.setTabsClosable(True);self.tabs.tabCloseRequested.connect(self.close_tab);self.tabs.currentChanged.connect(self.changed);layout.addWidget(self.tabs,1)
         self.tabs.tabBar().setExpanding(False);self.tabs.tabBar().setElideMode(Qt.ElideRight);self.tabs.tabBar().setUsesScrollButtons(True)
@@ -92,6 +93,9 @@ class BrowserView(QWidget):
         self.metadata_timer=QTimer(self);self.metadata_timer.timeout.connect(self.publish_tabs);self.metadata_timer.start(1500)
         endpoint={'url':f'http://127.0.0.1:{CDP_PORT}','pid':os.getpid(),'profile':str(STATE/'browser-profile'),'instance':uuid.uuid4().hex}
         (STATE/'browser-endpoint.json').write_text(json.dumps(endpoint),encoding='utf-8')
+
+        from .browser_annotation import BrowserAnnotation
+        self.annotation=BrowserAnnotation(self,self.annotate_button)
 
     def publish_tabs(self):
         if self.shutting_down:return

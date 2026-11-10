@@ -1,3 +1,11 @@
+## 0.17.0 - 2026-11-10
+
+- Add internal-browser Select element toolbar mode with hover highlight, click selection, drag-region capture and Escape cancellation. Selection clicks do not activate page links/buttons.
+- Add native screenshot/DOM/CSS preview and instruction entry. Explicit attach prepares a conversation draft with two library-backed files; it never automatically submits a task.
+- Add read-only MCP browser_annotations discovery of saved selection artifacts, retrievable with get_file.
+- Keep bounded metadata, omit form values/query/fragment and document viewport/iframe/shadow-root limits. Preserve existing renderer, profile, tasks, 23 skills and 100 capabilities.
+- Actual native toolbar, element preview, instruction/attachment handoff, region preview and Escape tested; existing attachment tests passed. Source version metadata loads at next normal service restart.
+
 ## 0.16.0 - 2026-11-10
 
 - Skill Shops: repair eight damaged display titles and invalid categories without changing installed packages or capability mappings.

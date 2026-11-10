@@ -1,3 +1,15 @@
+## Browser annotation 0.17.0 - 2026-11-10
+
+Candidate7fda11af464c40e7874675b578ee774e revision1: both changed JavaScript modules compiled in the actual Qt renderer. A temporary fixture in the existing IAB verified element click capture without executing its click handler, drag rectangle120x60 and Escape cleanup. Fixture removed afterwards. Existing attachment regression tests:2passed in0.12s.
+
+Deployment402af61f51184d05948399d2acacff5b reached ACTIVE_VERIFIED. Desktop-only graceful restart preserved selected conversation, draft, attachments and IAB scroll; both actual Qt views remained GraphicsApi.Software. No Hub/Ollama task was stopped for the desktop restart.
+
+Native acceptance used the actual UIA toolbar checkbox, CDP mouse events in the existing IAB, the native preview, UIA instruction entry and the native Attach button. Picking a real page link did not navigate. PNG and JSON appeared in the draft; prepare_attachments decoded one image and2083characters including CSS. The deployed MCP adapter listed both artifact IDs. Original draft restored; no agent task was submitted. Native preview screenshot05872dc9916047019e3bf4624e10e5ac was visually reviewed. A second native-toolbar drag produced a200x100region preview; cancelling the preview and Escape in picker mode left no overlay. Registry remained23skills/100capabilities.
+
+One inspection script failed because a UIA automation_id was None; the feature preview was already open. The corrected script continued from that preview and passed; the pick was not repeated. Earlier model-authored implementation attempts stopped without useful code and were replaced with exact commands.
+
+Limits: no arbitrary-site/iframe/closed-shadow-root compatibility claim; no end-to-end model execution was submitted because attachment must remain an explicit user action. The existing attachment preparation path was exercised. MCP adapter discovery passed locally, but new-tool discovery in an existing external ChatGPT session was not tested. This feature does not claim to fix intermittent physical rendering artifacts. Source0.17.0 is synchronized; runtime API version metadata awaits next normal restart.
+
 ## Skill Shops presentation 0.16.0 - 2026-11-10
 
 The original title/icon candidate passed four catalog tests. Read-only comparison found eight repaired titles, no damaged categories, 23 packages and 100 capability IDs; versions, capability data and integrity results were unchanged. Search returned three Windows matches and category filtering returned two, then restored all 23 cards in the actual Qt shell.

@@ -346,6 +346,11 @@ def main():
         shell.page().runJavaScript("typeof selected==='string'?selected:''",launch_for_chat)
     owner_action.triggered.connect(open_owner_control)
     browser=BrowserView();browser.request=window.request
+    def attach_annotation(payload,done):
+        shell.show();browser.show();split.setSizes([850,850])
+        expression="typeof window.attachBrowserAnnotation==='function' && window.attachBrowserAnnotation("+json.dumps(payload)+")"
+        shell.page().runJavaScript(expression,lambda ok:done(ok is True))
+    browser.attach_annotation=attach_annotation
     window.live=True
     app.aboutToQuit.connect(browser.shutdown)
     split=QSplitter(Qt.Horizontal);split.setLayoutDirection(Qt.LeftToRight)
