@@ -1,3 +1,11 @@
+## 0.15.4 - 2026-11-10
+
+- Avoid rebuilding unchanged project/chat navigation on every 2.5-second poll; preserve existing controls when displayed state is unchanged. Search, selection, project expansion, pinned and archived state remain part of the rendering signature.
+- Avoid constructing hidden activity log bodies every 1.5 seconds. Keep summary updates, activity events and server polling; populate details when expanded. Avoid identical context/title text writes.
+- Deployed app.js through the existing independent supervisor and verified the loaded code in the real Qt shell. Search, list identity, activity expansion, modal scroll and resize/minimize/restore checked. Three-minute native idle sequence and final AI/category/focus/wheel checks passed in captured evidence; physical user confirmation remains pending.
+- Intermittent physical display corruption remains unresolved pending longer/user observation. OpenGL is an actual verified but temporary process trial; software rendering was reported slow. This release does not claim a proven GPU root cause.
+- Version metadata synchronized in source without another service restart; runtime metadata may retain 0.15.3 until next normal restart.
+
 ## חנות סקילים — 2026-11-10
 
 Local Skill Shops: installed and verified through the UI for installation, execution, update and quarantine removal. Existing 23 packages and 100 mapped capabilities preserved. Remote marketplaces are not connected.

@@ -1,3 +1,13 @@
+## UI refresh 0.15.4 - 2026-11-10
+
+Deployment b03fa049052e4552b5af6613fc0216b6 returned ACTIVE_VERIFIED; only hub/static/app.js was activated. Real Qt shell reload confirmed newCode=true. Before patch, identical sidebar refresh replaced chat nodes; after patch, chat/project nodes were retained. Search filtered and restored. Collapsed activity summary retained identity; opening populated 9 children. Settings/Skill Shops modal was open and scroll 400 remained 400 after 3 seconds. Native resize to 1180x850, minimize and restore completed. Captured frames showed no corruption but do not rule out presentation artifacts documented by phone. Three-minute OpenGL observation and final interaction checks are recorded separately after completion.
+
+Candidate JavaScript parsed using Runtime.compileScript in the actual Qt renderer. Syntax-preflight regression module: 3 passed; this is tool regression evidence, not proof of UI performance or artifact resolution.
+
+OpenGL actual rendererInterface reports GraphicsApi.OpenGL in both views; no sandbox disable, driver change or persisted rendering setting. This trial is separate from the deployed UI refresh optimization. Source version metadata 0.15.4 is synchronized; no extra restart for metadata.
+
+Final native validation: 180.09 seconds, six scheduled screenshots, all foreground, zero input events, 2693 DOM mutations. All six frames and the AI dialog capture were visually reviewed with no visible corruption. Captures may not reveal physical presentation faults. Summed shell/child CPU averaged 15.42% of one logical core (not whole-machine percentage); this is not a controlled speed ratio against the earlier software trial. Skill Shops Windows category retained focus after three seconds; native wheel scroll 500 remained 500 across polling. AI dialog opened as a modal; Settings opened/closed; returned to selected chat with empty draft. Split view remained usable, and earlier resize/minimize/restore passed. Catalog confirms 23 installed packages and 100 mapped capabilities. User confirmation of physical artifacts and perceived scrolling speed remains pending.
+
 ## Skill Shops live completion — 2026-11-10
 
 Guard activation and actual UI install/run/update/remove succeeded. Original 23 packages and100 mapped capabilities preserved. See docs/validation/skill-shops-live-2026-11-10.md for evidence and scope.
