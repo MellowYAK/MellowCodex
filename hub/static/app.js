@@ -219,7 +219,7 @@ $('settings').addEventListener('click',()=>safe(loadScreenshotSettings));
 $('shot-save').onclick=()=>safe(async()=>{await api('/settings/screenshots',{enabled:$('shot-enabled').checked,max_edge:Number($('shot-edge').value),quality:Number($('shot-quality').value),chatgpt_max_edge:Number($('shot-gpt-edge').value),chatgpt_quality:Number($('shot-gpt-quality').value),ocr_assistance:$('shot-ocr').checked});$('shot-status').textContent='נשמר — יחול על הצילום הבא';});
 
 window.attachBrowserAnnotation=payload=>{
-  if(!payload||!Array.isArray(payload.files)||payload.files.length!==2||attachments.length+2>5)return false;
+  if(!payload||!Array.isArray(payload.files)||![0,2].includes(payload.files.length)||attachments.length+payload.files.length>5)return false;
   if(payload.files.some(f=>!f.file_id||!f.name))return false;
   attachments.push(...payload.files);renderAttachments();
   $('goal').value=[$('goal').value.trim(),payload.instruction].filter(Boolean).join('\n\n');

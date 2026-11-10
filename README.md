@@ -1,4 +1,14 @@
-## Browser element annotations (Hub 0.17.0)
+## Named browser elements (Hub 0.18.0)
+
+Use Select element in the internal browser, give the preview an optional unique name, then Save element and select more. Each saved element/region gets a permanent automatic number. The Elements toolbar opens the shared list: rename, select multiple entries and attach references to the current draft. Saving or attaching never sends a task automatically.
+
+In local chat use explicit references such as 'element 1', '#2', the Hebrew equivalent, or the exact saved name in a natural-language instruction. The task receives saved DOM/CSS context and screenshot references automatically. Numbers are global across this local installation and persist across chats/restarts; renaming preserves the number. Unknown explicit numbers and duplicate names are rejected. Limits: 500 saved entries, 80-character names, eight references per request, and five total model images. Reference-only draft handoff does not consume attachment slots.
+
+MCP browser_selections lists entries or resolves the same natural-language references; browser_selection_rename updates names with immediate readback. Existing ChatGPT connections need tool discovery refreshed before these new tools appear. Registered adapters were tested against the live service; external ChatGPT invocation after discovery refresh remains unverified. The registry is stored in browser-selections.sqlite3 under the existing state directory; PNG/JSON remain in the existing file library.
+
+Saved elements are snapshots, not permanent live DOM identities. Re-observe the current page before acting, especially after navigation or layout changes. Arbitrary-site, iframe and closed-shadow-root compatibility is not guaranteed. No renderer, owner policy or package change is included.
+
+## Browser element annotations (Hub 0.18.0)
 
 In the internal browser toolbar, choose Select element. Hover to highlight, click an element or drag a visible region; Escape cancels. The click is intercepted instead of activating the page control. A native preview shows the cropped screenshot and bounded element DOM/computed CSS. Enter an instruction and choose Attach to conversation draft. Two local library files (PNG and JSON) and the instruction are added to the existing draft, preserving other attachments up to the five-file limit. Press Send in the conversation when ready; picking/attaching never starts a task automatically.
 
@@ -6,7 +16,7 @@ The saved JSON includes page URL without query/fragment, title, element tag and 
 
 MCP browser_annotations lists recent saved selection files; use get_file with the returned IDs. This is the same library used by the conversation attachment pipeline, not separate state. Existing connector sessions may need tool discovery refreshed. No new persistent setting or renderer change is introduced.
 
-## Skill Shops icons (Hub 0.17.0)
+## Skill Shops icons (Hub 0.18.0)
 
 Each installed skill has a colorful purpose-specific SVG icon. Damaged question-mark titles and categories are repaired for display without editing installed package manifests, code or hashes.
 
@@ -18,17 +28,17 @@ MCP skill_icon_settings uses the same validation and storage: name identifies th
 
 Dialog backdrops retain their shaded overlay without backdrop blur, including Settings, AI connectors and task status. Actual Qt software-renderer scroll callbacks improved from about 5 to 31 per second in the bounded comparison; this is not a physical monitor refresh measurement or proof that intermittent artifacts are fixed.
 
-## UI refresh performance (Hub 0.17.0)
+## UI refresh performance (Hub 0.18.0)
 
 Unchanged project/chat lists retain their DOM nodes across background polling. Collapsed activity logs update only their summary; detailed logs render when opened. Task polling and background execution continue.
 
 The Windows OpenGL trial was reported faster but still produced artifacts. It has been replaced for the current process with a software-rendering trial using the optimized UI and unblurred modal backdrops. This is not a persisted application preference or proven fix for intermittent physical display corruption. No new setting was added. Runtime API version metadata loads at the next normal service restart; source-only metadata updates do not require an extra restart.
 
-## Skill Shops lifecycle (Hub 0.17.0)
+## Skill Shops lifecycle (Hub 0.18.0)
 
 Open Skill Shops with a selected conversation. Local packages under scripts/skills containing tool.py and test_tool.py can be previewed, installed, updated and removed. Confirmation shows the exact plan digest and current-user Python execution permissions. The protected OwnerBroker enforces the existing Full/Ask/Safe policy; this does not grant new permissions. Tests run before atomic activation; failed updates keep the previous version. Removal moves packages to quarantine, and research100 packages are protected. Source hashes and syntax checks are integrity checks, not a malware sandbox. Remote ZIP marketplaces are not supported.
 
-## Service recovery — source version 0.17.0
+## Service recovery — source version 0.18.0
 
 Run `register-service-recovery.ps1` once to install current-user logon and one-minute background recovery. `start.ps1` also invokes `reconcile-services.ps1` with Windows PowerShell 5.1. Missing Ollama, Hub, MCP gateway, installed Guard and owned SSH relay are restored without stopping existing work. Runtime status is in `E:\AI\state\service-reconcile.json`. Repeated launches are serialized. Live nonresponsive processes are reported rather than forcibly terminated. Recovery runs while logged in, including a locked session; actual locked-session and reboot acceptance remain untested. This is not pre-login desktop automation.
 

@@ -470,6 +470,17 @@ async def browser_annotations():
     data=await local('/api/files')
     return {'files':[f for f in data.get('files',[]) if f.get('name','').startswith('browser-selection-')][:20]}
 
+@mcp.tool(annotations=READ)
+async def browser_selections(text:str=''):
+    """Resolve natural-language references to saved browser elements by number or user name: e.g. 'element 1', '#2', or the saved Hebrew/English name. With empty text list persistent numbers/names. Returns the same saved DOM/CSS context and screenshot file IDs as the internal browser Saved elements list. Use get_file for images. Snapshots can be stale: re-observe and verify identity before acting. Never guess unknown numbers."""
+    if text:return await local('/api/browser/selections/resolve',{'text':text})
+    return await local('/api/browser/selections')
+
+@mcp.tool(annotations=WRITE)
+async def browser_selection_rename(number:int,name:str):
+    """Give a saved browser selection a unique descriptive name, up to80characters. Its permanent number remains unchanged. Same persistent registry as internal browser Saved elements. Returns saved value immediately; no restart."""
+    return await local('/api/browser/selections/rename',{'number':number,'name':name})
+
 if __name__=='__main__':
     import uvicorn
     uvicorn.run(app,host='127.0.0.1',port=GATEWAY_PORT,access_log=False)

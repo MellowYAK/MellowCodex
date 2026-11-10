@@ -1265,3 +1265,6 @@ async def screenshot_settings_get():
 async def screenshot_settings_set(body:ScreenshotSettings):
     from .screenshot_settings import save
     return save(body)
+
+from .browser_selections import router as browser_selections_router
+app.include_router(browser_selections_router())

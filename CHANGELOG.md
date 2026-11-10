@@ -1,3 +1,11 @@
+## 0.18.0 - 2026-11-10
+
+- Persist selected browser elements/regions with stable numbers and optional unique names; add native saved-elements list, rename and multi-reference draft handoff.
+- Resolve named/numbered references in local chat into bounded snapshot context and images. Share the same registry with MCP browser_selections and browser_selection_rename.
+- Reference-only handoff works when the draft already contains five attachments.
+- Five focused registry/conversation tests passed. Native save, UI/MCP rename/readback, Hebrew/English two-reference resolution and draft handoff verified. External ChatGPT tool discovery still needs refresh and was not verified.
+- Preserve existing skills, renderer and conversation state. Snapshots require fresh observation before actions. Source metadata takes effect on the next normal process restart.
+
 ## 0.17.0 - 2026-11-10
 
 - Add internal-browser Select element toolbar mode with hover highlight, click selection, drag-region capture and Escape cancellation. Selection clicks do not activate page links/buttons.

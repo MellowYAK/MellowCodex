@@ -75,6 +75,7 @@ class BrowserView(QWidget):
         menu=QMenu(more);menu.setLayoutDirection(Qt.RightToLeft)
         menu.addAction('העברת כניסה מ־Chrome',self.pair)
         menu.addAction('ניהול תוספים',lambda:self.extensions.show(self))
+        menu.addAction('רכיבים שמורים',lambda:self.annotation.show_saved())
         more.setMenu(menu);more.setPopupMode(QToolButton.InstantPopup);bar.addWidget(more)
         self.hide_button=QToolButton();self.hide_button.setText('הסתר דפדפן ×');self.hide_button.setAccessibleName('הסתר דפדפן');self.hide_button.setToolTip('הסתר את התצוגה; הלשוניות והחיבור ממשיכים ברקע');bar.addWidget(self.hide_button)
         self.annotate_button=QToolButton();self.annotate_button.setText('בחר רכיב');self.annotate_button.setObjectName('browserAnnotate');self.annotate_button.setAccessibleName('בחר רכיב או אזור');bar.addWidget(self.annotate_button)
@@ -96,6 +97,7 @@ class BrowserView(QWidget):
 
         from .browser_annotation import BrowserAnnotation
         self.annotation=BrowserAnnotation(self,self.annotate_button)
+        self.selections_button=QToolButton();self.selections_button.setText('רכיבים');self.selections_button.setObjectName('browserSelections');self.selections_button.clicked.connect(self.annotation.show_saved);bar.addWidget(self.selections_button)
 
     def publish_tabs(self):
         if self.shutting_down:return

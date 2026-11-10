@@ -1,3 +1,15 @@
+## Named browser elements 0.18.0 - 2026-11-10
+
+Candidate 6edcc11400104c198f272642a7b60045 revision 2: tests/test_browser_selections.py and tests/test_conversations.py passed (5 tests, 2.16s). Fixtures covered stable numbers, idempotent save, persistence, Hebrew/English/name resolution, unknown-reference and duplicate-name rejection, rename, and real Conversations.submit context/image assembly without changing the user goal or idempotency. Python compilation and app.js compilation in the actual Qt renderer passed.
+
+Deployment dd1b19b1acb649d3ab55372edf568ce7 reached ACTIVE_VERIFIED. Desktop-only restart loaded the native controls while preserving draft, attachments, conversation and browser state; both views retained GraphicsApi.Software.
+
+Local runner task 506494d561cb4ed6b1152d683d66e970 used the real native toolbar/picker and Save buttons to create two clearly labelled Demo selections from the existing IAB. Native rename was read back through the deployed MCP adapter; MCP rename was reflected when reopening the native list. Hebrew and English instructions referencing both numbers returned both contexts. Multi-selection attached both references to the draft without changing existing attachments. Original draft was restored, and no business task was submitted. Native screenshot 3bd3fe16b50a44f599beafac61e6c8e7 was visually reviewed. The two Demo entries remain only in local state; no snapshots or private data are published.
+
+Final review found a reference-only handoff incorrectly reserving two file slots. Candidate 9d5d060b0382480c8534bde4c8dd7f13 revision 1 corrected the count; registry tests passed (2 tests, 1.45s). Static deployment e86035dc56cb4dfbb74196c0c3834099 reached ACTIVE_VERIFIED. Actual shell reload confirmed the corrected function; a temporary five-attachment fixture accepted reference-only handoff and retained all five, then restored the original draft/attachments/scroll.
+
+Limits: native selection/save/rename/draft and live MCP adapter paths were exercised; an autonomous model carrying out arbitrary requested website edits was not tested. New tools are not yet exposed by this existing ChatGPT session's discovery inventory; external invocation remains pending connector refresh. No claim of physical rendering-artifact resolution, arbitrary-site/iframe support, or persistent live DOM identity. No skill packages, capability mappings, renderer settings or owner security settings changed. Source version 0.18.0 is synchronized; no extra service restart for metadata alone.
+
 ## Browser annotation 0.17.0 - 2026-11-10
 
 Candidate7fda11af464c40e7874675b578ee774e revision1: both changed JavaScript modules compiled in the actual Qt renderer. A temporary fixture in the existing IAB verified element click capture without executing its click handler, drag rectangle120x60 and Escape cleanup. Fixture removed afterwards. Existing attachment regression tests:2passed in0.12s.
