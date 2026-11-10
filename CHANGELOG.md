@@ -1,3 +1,10 @@
+## 0.15.5 - 2026-11-10
+
+- Remove backdrop blur from the shared dialog and task-status backdrop, retaining overlay shading and modal behavior.
+- A verified software-renderer comparison measured 189 callbacks in 6.05 seconds without blur, versus 28 in 6.18 seconds after restoring blur. The deployed CSS measured 186 in 6.03 seconds.
+- User reported recurring artifacts in the faster OpenGL trial. Returned only the shell to a temporary software trial; existing UI refresh optimization remains active. No driver, sandbox, owner policy or persisted rendering preference changed.
+- Native Settings/AI, Skill Shops category/focus, wheel scroll and resize/minimize/restore verified; 23 packages and 100 capabilities preserved. Physical artifact resolution remains unverified. Source version metadata loads at next normal service restart.
+
 ## 0.15.4 - 2026-11-10
 
 - Avoid rebuilding unchanged project/chat navigation on every 2.5-second poll; preserve existing controls when displayed state is unchanged. Search, selection, project expansion, pinned and archived state remain part of the rendering signature.

@@ -1,3 +1,13 @@
+## Modal performance 0.15.5 - 2026-11-10
+
+OpenGL user feedback: faster scrolling, but artifacts returned. Clean prior native screenshots did not establish a cure. Current actual shell reports GraphicsApi.Software in both views.
+
+An initial inline no-blur probe was INVALID because computed blur remained 3px. Corrected CDP inspector stylesheet verified computed none: 189 requestAnimationFrame callbacks in 6049.8ms, mean32.01ms. Restoring computed blur3px reduced this to28 callbacks in6183.1ms, mean220.83ms. This supports blur as a software-mode scroll cost, not as the root cause of presentation corruption.
+
+CSS-only deployment aa66bfc169c74da3af95a8d33c927a28 returned ACTIVE_VERIFIED. After real shell reload, computed Settings and AI backdrops were none;186callbacks in6033.1ms, mean32.44ms,p95 49.9ms. Windows category retained focus after3seconds; native wheel500 remained500 after polling. AI remained modal; resize/minimize/restore completed. Native screenshot was reviewed with no visible corruption; not long-duration physical-display proof. Skill catalog23installed/100mapped. Chat draft, selected chat, shell and IAB scroll preserved around shell restart. No new full180second idle sequence was performed after this CSS deployment; user observation remains required.
+
+No new configurable setting added: software mode is process-only and normal startup returns to the previous automatic mode. Source version0.15.5; API metadata awaits normal restart.
+
 ## UI refresh 0.15.4 - 2026-11-10
 
 Deployment b03fa049052e4552b5af6613fc0216b6 returned ACTIVE_VERIFIED; only hub/static/app.js was activated. Real Qt shell reload confirmed newCode=true. Before patch, identical sidebar refresh replaced chat nodes; after patch, chat/project nodes were retained. Search filtered and restored. Collapsed activity summary retained identity; opening populated 9 children. Settings/Skill Shops modal was open and scroll 400 remained 400 after 3 seconds. Native resize to 1180x850, minimize and restore completed. Captured frames showed no corruption but do not rule out presentation artifacts documented by phone. Three-minute OpenGL observation and final interaction checks are recorded separately after completion.
