@@ -1,3 +1,7 @@
+## חנות סקילים — 2026-11-10
+
+Local Skill Shops: installed and verified through the UI for installation, execution, update and quarantine removal. Existing 23 packages and 100 mapped capabilities preserved. Remote marketplaces are not connected.
+
 # Skill Shops lifecycle ? 2026-11-10 (Hub 0.15.3)
 
 - Add local Skill Shops installation, updates and quarantine removal through preview/commit API and Hebrew UI.
