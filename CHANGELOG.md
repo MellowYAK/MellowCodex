@@ -1,3 +1,9 @@
+# Skill Shops lifecycle ? 2026-11-10 (Hub 0.15.3)
+
+- Add local Skill Shops installation, updates and quarantine removal through preview/commit API and Hebrew UI.
+- Bind authorization to chat, source hashes, previous manifest and exact plan using installed OwnerBroker. Preserve prior version on failed validation; reject symlinks/junctions and stale plans.
+- Include a harmless shop-demo package for acceptance. Remote marketplace downloads are not included.
+
 # 0.15.3 — 2026-11-10 (service recovery scripts deployed locally)
 
 - Added idempotent service reconciliation, Windows PowerShell 5.1 Guard launch, archived dead receipts, canonical loopback Hub/gateway launch, and existing owned relay reconciliation. No owner policy changes.
@@ -801,3 +807,5 @@ A real Qwen Coder 7B trial fixed timeout validation but removed existing shell/c
 
 
 Unreleased 2026-11-08: coding-worker packets now include the latest exact-command correction reason and request identity, without executable command payloads, while retaining the original objective. Previously the exact-command correction was recorded but omitted from the worker packet. A focused transport regression verifies latest-reason delivery; real-model correction acceptance remains pending.
+
+Deployment metadata: runtime/package version remains 0.15.3 because the installed updater treats every pyproject edit as an environment replacement. No dependencies were changed.

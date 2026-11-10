@@ -1,3 +1,11 @@
+## Skill Shops live completion — 2026-11-10
+
+Guard activation and actual UI install/run/update/remove succeeded. Original 23 packages and100 mapped capabilities preserved. See docs/validation/skill-shops-live-2026-11-10.md for evidence and scope.
+
+## Skill Shops ? 2026-11-10
+
+Candidate revision 22: 15 focused lifecycle, API, guardrail and native authorization contract tests passed. Real installed OwnerBroker returned a verified matching authorization binding under the existing Full policy; no owner policy was changed. Final deployment and live lifecycle acceptance are recorded separately after execution; these candidate results do not imply activation.
+
 2026-11-07 activity home: node --check hub/static/shell.js passed. On the live Hub via Codex IAB, reloaded assets, opened Home, verified 0 active / 3 requiring attention / 0 done among the latest 8, opened task details and expanded actual recorded event history. Screenshot visually checked. The UI correctly did not animate waiting_review as running. Active animation and stale-network transitions remain unverified with a live task. No service restart or model load required for this static UI change.
 
 <!-- MCP correspondence update, 2026-11-07 -->

@@ -19,7 +19,7 @@ def test_catalog_hash_and_capabilities(tmp_path):
     assert info["installed_skills"]==1 and info["mapped_capabilities"]==2
     assert info["skills"][0]["integrity_verified"] is True
     assert info["skills"][0]["capabilities"][0]["verification"]=="live_isolated_trial"
-    assert not info["install_enabled"] and not info["uninstall_enabled"]
+    assert info["install_enabled"] and info["uninstall_enabled"]
     assert info["fully_verified"]==0
     (folder/version/"tool.py").write_text("tampered",encoding="utf8")
     assert catalog_data(extension_root=root,audit_path=audit)["skills"][0]["integrity_verified"] is False
@@ -41,7 +41,7 @@ def test_real_extensions_read_only_when_present():
     assert len({c["id"] for s in item["skills"] for c in s["capabilities"]})==100
     assert all(s["integrity_verified"] for s in item["skills"])
     assert item["fully_verified"]<100
-    assert not item["install_enabled"] and not item["uninstall_enabled"]
+    assert item["install_enabled"] and item["uninstall_enabled"]
 
 def test_frontend_has_usable_catalog_controls():
     from hub.skill_shops import NAME

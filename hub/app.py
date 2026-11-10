@@ -137,7 +137,8 @@ app.include_router(development_router(development_service))
 app.include_router(model_catalog_router(lambda:model_catalog_service))
 from .guardian.jobs import router as upgrade_router
 app.include_router(upgrade_router(ROOT))
-from .skill_shops import router as skill_shops_router
+from .skill_shops import router as skill_shops_router, action_router as skill_shops_action_router
+app.include_router(skill_shops_action_router())
 app.include_router(skill_shops_router())
 ALLOWED_HOSTS={f'127.0.0.1:{PORT}',f'localhost:{PORT}','testserver'}
 ALLOWED_ORIGINS={f'http://127.0.0.1:{PORT}',f'http://localhost:{PORT}'}

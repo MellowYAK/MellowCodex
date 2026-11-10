@@ -31,7 +31,7 @@
  for(const [key,title] of [['all','כל הסטטוסים'],['live','בוצעה בדיקה חיה'],['limited','חלקי או לא מאומת']]){const o=el('option',title);o.value=key;status.append(o)}
  const reload=button('רענון',()=>safe(loadShop));filterBar.append(search,category,status,reload);ext.append(filterBar);
  const metrics=el('p','טוען קטלוג...'),results=el('div');results.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px';
- const notice=el('p','אין התקנה או הסרה אוטומטית בלי אישור בעלים.');ext.append(metrics,results,notice);
+ const notice=el('p','התקנה והסרה דורשות אישור OwnerBroker מוגן.');const availablePanel=el('div');ext.append(metrics,results,notice,availablePanel);
  let catalog=null;
  const isLive=v=>v.startsWith('live_')||v.startsWith('real_');
  function drawShop(){
@@ -45,15 +45,37 @@
      const detail=el('details');detail.append(el('summary','פירוט יכולות ומגבלות'));
      for(const c of s.capabilities)detail.append(el('p',c.id+' · '+c.verification));
      for(const limit of s.limitations)detail.append(el('p','מגבלה: '+limit));
-     card.append(detail);return card;
+     card.append(detail,button('בקשת הסרה',()=>safe(()=>shopAction('remove',s.name))));return card;
    }));
    if(!skills.length)results.append(el('p','לא נמצאו סקילים מתאימים.'));
  }
+ async function shopAction(action,slug){
+   if(!selected){toast('בחר שיחה לפני ניהול סקילים');return;}
+   const preview=await api('/skill-shops/preview',{action,slug,chat_id:selected});
+   const summary={install:'התקנה',update:'עדכון',remove:'הסרה'}[action]||action;
+   if(!window.confirm('בקשת '+summary+' עבור '+slug+'\nSHA256: '+preview.digest+'\nהפעולה תריץ קוד Python בהרשאות המשתמש, בכפוף למדיניות הבעלים של השיחה. להמשיך?'))return;
+   const result=await api('/skill-shops/commit',{action,slug,expected_digest:preview.digest,chat_id:selected});
+   const labels={installed:'הסקיל הותקן',updated:'הסקיל עודכן',removed_to_quarantine:'הסקיל הוסר ונשמר גיבוי',blocked_in_use:'המתן לסיום המשימות הפעילות',blocked_coverage:'הסקיל נדרש לכיסוי היכולות ולא ניתן להסירו',validation_failed:'בדיקת הסקיל נכשלה; הגרסה הקודמת נשמרה',needs_owner:'נדרש אישור בחלון הרשאות הבעלים. לאחר האישור, נסה שוב'};
+   toast(labels[result.status]||result.status);
+   await loadShop();
+ }
+ function showAvailable(packages){
+   availablePanel.replaceChildren(el('h3','חבילות מקומיות זמינות'));
+   for(const source of packages){
+     const line=el('div');line.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #9993';
+     const label=el('span',source.slug+' · '+source.source_sha256.slice(0,12));
+     const action=source.installed?'update':'install';
+     line.append(label,button(source.installed?'בקשת עדכון':'בקשת התקנה',()=>safe(()=>shopAction(action,source.slug))));
+     availablePanel.append(line);
+   }
+   if(!packages.length)availablePanel.append(el('p','אין כרגע חבילות מקומיות מוכנות להתקנה.'));
+ }
  async function loadShop(){
-   catalog=await api('/skill-shops');notice.textContent=catalog.permission_note;
+   const [currentCatalog,sourceInfo]=await Promise.all([api('/skill-shops'),api('/skill-shops/available')]);
+   catalog=currentCatalog;notice.textContent=catalog.permission_note;
    const current=category.value,cats=['all',...new Set(catalog.skills.flatMap(s=>s.categories))];
    category.replaceChildren(...cats.map(c=>{const o=el('option',c==='all'?'כל הקטגוריות':c);o.value=c;return o}));
-   category.value=cats.includes(current)?current:'all';drawShop();
+   category.value=cats.includes(current)?current:'all';drawShop();showAvailable(sourceInfo.packages||[]);
  }
  search.addEventListener('input',drawShop);category.addEventListener('change',drawShop);status.addEventListener('change',drawShop);
  pages.get('extensions').button.addEventListener('click',()=>safe(loadShop));

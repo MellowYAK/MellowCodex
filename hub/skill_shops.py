@@ -1,4 +1,4 @@
-"""Read-only Skill Shops API. Code hashes checked, never grants permissions."""
+"""Skill Shops catalog and owner-authorized local package lifecycle."""
 import hashlib
 import json
 import re
@@ -63,19 +63,108 @@ def catalog_data(extension_root=None, audit_path=None):
     return {
         "installed_skills": len(items), "mapped_capabilities": len(unique), "original_goal": 100,
         "fully_verified": sum(evidence.get(c, {}).get("full_real_world_acceptance") is True for c in unique),
-        "skills": items, "install_enabled": False, "uninstall_enabled": False,
-        "permission_note": "התקנה והסרה דורשות מסלול אישור בעלים ייעודי; אינן פעילות בקטלוג הקריאה.",
+        "skills": items, "install_enabled": True, "uninstall_enabled": True,
+        "permission_note": "התקנה, עדכון והסרה כפופים להרשאות הבעלים של השיחה. החבילות פועלות בהרשאות המשתמש הנוכחי.",
     }
 
+
+from pydantic import BaseModel
+from .skill_shops_lifecycle import SkillShopsLifecycle
+
+
+class ShopActionRequest(BaseModel):
+    action: str
+    slug: str
+    chat_id: str
+
+
+class ShopCommitRequest(ShopActionRequest):
+    expected_digest: str
+
+
+def _extension_tasks_busy(_name):
+    """Read-only SQLite task gate. Unknown status means no destructive removal."""
+    from .config import STATE
+    import sqlite3
+    from contextlib import closing
+    db = STATE / "hub.sqlite3"
+    if not db.is_file():
+        return True
+    try:
+        address = f"file:{db.as_posix()}?mode=ro"
+        with closing(sqlite3.connect(address, uri=True, timeout=1.0)) as connection:
+            states = connection.execute("SELECT state FROM tasks").fetchall()
+            if any(state not in ("done", "failed", "cancelled", "waiting_review", "waiting_user", "paused")
+                   for (state,) in states):
+                return True
+            pending = connection.execute("SELECT args FROM actions WHERE state='pending'").fetchall()
+        # Historical review cards do not execute code. An unresolved action
+        # referencing this package still prevents moving its files.
+        return any(_name in args or _name.replace("_", "-") in args for (args,) in pending)
+    except (sqlite3.Error, OSError):
+        return True
+
+
+_marketplace = SkillShopsLifecycle(in_use=_extension_tasks_busy)
+
+
 def router():
+    """Legacy read-only catalog. Never mutate or approve through this router."""
     api = APIRouter()
+
     @api.get("/api/skill-shops")
     def list_skills():
         return catalog_data()
+
     @api.get("/api/skill-shops/{name}")
     def detail(name: str):
-        if not NAME.fullmatch(name): raise HTTPException(404)
-        item = next((x for x in catalog_data()["skills"] if x["name"] == name), None)
-        if item is None: raise HTTPException(404)
+        if not NAME.fullmatch(name):
+            raise HTTPException(404, "Unknown skill")
+        item = next(
+            (x for x in catalog_data()["skills"] if x["name"] == name), None
+        )
+        if item is None:
+            raise HTTPException(404, "Unknown skill")
         return item
+
+    return api
+
+
+def _require_chat(chat_id):
+    from .config import STATE
+    import sqlite3
+    from contextlib import closing
+    with closing(sqlite3.connect(f"file:{(STATE / 'hub.sqlite3').as_posix()}?mode=ro", uri=True)) as db:
+        if not db.execute("SELECT 1 FROM chats WHERE id=?", (chat_id,)).fetchone():
+            raise HTTPException(404, "Chat not found")
+
+
+def action_router():
+    """Separately mounted, owner-broker-gated lifecycle endpoints."""
+    api = APIRouter()
+
+    @api.get("/api/skill-shops/available")
+    def local_sources():
+        return {"packages": _marketplace.available_packages(),
+                "remote_zip_install_supported": False,
+                "requires_protected_owner": True}
+
+    @api.post("/api/skill-shops/preview")
+    def preview(payload: ShopActionRequest):
+        _require_chat(payload.chat_id)
+        try:
+            return _marketplace.preview(payload.action, payload.slug, payload.chat_id)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(409, str(exc)[:200]) from exc
+
+    @api.post("/api/skill-shops/commit")
+    async def commit(payload: ShopCommitRequest):
+        _require_chat(payload.chat_id)
+        try:
+            return await _marketplace.commit(
+                payload.action, payload.slug, payload.expected_digest, payload.chat_id
+            )
+        except (ValueError, OSError) as exc:
+            raise HTTPException(409, str(exc)[:200]) from exc
+
     return api
