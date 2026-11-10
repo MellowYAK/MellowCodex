@@ -34,6 +34,45 @@
  const notice=el('p','התקנה והסרה דורשות אישור OwnerBroker מוגן.');const availablePanel=el('div');ext.append(metrics,results,notice,availablePanel);
  let catalog=null;
  const isLive=v=>v.startsWith('live_')||v.startsWith('real_');
+ const skillIconPaths={"form":"M5 3h14v18H5z M8 7h8 M8 11h2 M13 11h3 M8 15h2 M13 15h3","cloud":"M6 18a4 4 0 0 1-1-8 7 7 0 0 1 13-2 5 5 0 0 1 0 10H6 M9 13l3-3 3 3 M12 10v10","sheet":"M4 3h16v18H4z M4 8h16 M4 13h16 M4 17h16 M10 8v13","search":"M4 3h10l4 4v5 M4 3v18h7 M14 4v4h4 M14 14a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M17 21l4 2","folder":"M3 7V4h7l2 3h9v13H3z M8 13h8 M13 10l3 3-3 3","workspace":"M3 4h18v13H3z M3 8h18 M9 17v4 M15 17v4 M7 21h10","image":"M3 3h18v18H3z M3 17l6-6 4 4 3-3 5 5 M15 6h2v2h-2z","network":"M9 3h6v5H9z M3 16h6v5H3z M15 16h6v5h-6z M12 8v4 M6 16v-4h12v4","pdf":"M5 3h9l5 5v13H5z M14 3v5h5 M8 12h8 M8 16h6","folder-search":"M3 7V4h7l2 3h9v6 M3 7v13h8 M15 13a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M18 20l3 3","browser":"M3 3h18v18H3z M3 8h18 M7 5h1 M10 5h1 M9 12l-3 3 3 3 M15 12l3 3-3 3","file-lock":"M4 3h10l4 4v4 M4 3v18h6 M14 3v5h4 M13 16h8v6h-8z M15 16v-3h4v3","download":"M12 3v12 M7 10l5 5 5-5 M4 16v5h16v-5","cloud-lock":"M6 17a4 4 0 0 1-1-8 7 7 0 0 1 13-2 5 5 0 0 1 2 8 M10 16h8v6h-8z M12 16v-3h4v3","shield":"M12 2l8 4v6c0 5-8 10-8 10S4 17 4 12V6z M8 12l3 3 5-6","package":"M3 7l9-5 9 5v10l-9 5-9-5z M3 7l9 5 9-5 M12 12v10 M7 5l9 5","audit":"M6 4h12v18H6z M9 2h6v4H9z M9 10l1 1 2-2 M14 10h2 M9 16l1 1 2-2 M14 16h2","monitor":"M3 3h18v14H3z M8 21h8 M12 17v4 M6 12l3-4 3 5 3-6 3 3","chart":"M4 3v18h17 M8 17v-5 M13 17V7 M18 17V4","app":"M3 3h18v18H3z M3 8h18 M10 11l6 4-6 4z","inspect":"M3 3h18v10 M3 3v17h7 M3 8h18 M15 13a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M18 20l3 3","settings":"M4 5h16 M4 12h16 M4 19h16 M8 2v6 M16 9v6 M10 16v6","archive":"M4 3h16v18H4z M10 3v3h4v3h-4v3h4v3h-4v3h4v3"};
+ const skillIconColors={form:'#2563eb',cloud:'#0284c7',sheet:'#15803d',search:'#7c3aed',folder:'#b45309',workspace:'#0891b2',image:'#db2777',network:'#0f766e',pdf:'#dc2626','folder-search':'#c2410c',browser:'#2563eb','file-lock':'#7c3aed',download:'#059669','cloud-lock':'#4f46e5',shield:'#0f766e',package:'#b45309',audit:'#9333ea',monitor:'#0284c7',chart:'#16a34a',app:'#6366f1',inspect:'#c026d3',settings:'#475569',archive:'#ca8a04'};
+ function skillIcon(key,image){
+   if(image&&/^data:image\/(png|svg\+xml);base64,/.test(image)){
+     const img=el('img');img.className='skill-icon';img.width=44;img.height=44;img.alt='';img.style.cssText='flex:0 0 44px;object-fit:contain;border-radius:10px';
+     img.onerror=()=>img.replaceWith(skillIcon(key));img.src=image;return img;
+   }
+   const color=skillIconColors[key]||skillIconColors.package;
+   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+   for(const [name,value] of Object.entries({viewBox:'-4 -4 32 32',width:'44',height:'44',fill:'none',stroke:color,'stroke-width':'1.6','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))svg.setAttribute(name,value);
+   svg.style.cssText='flex:0 0 44px';svg.classList.add('skill-icon');
+   const tile=document.createElementNS('http://www.w3.org/2000/svg','rect');
+   for(const [k,v] of Object.entries({x:'-4',y:'-4',width:'32',height:'32',rx:'8',fill:color+'18',stroke:'none'}))tile.setAttribute(k,v);
+   const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',skillIconPaths[key]||skillIconPaths.package);
+   const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');dot.setAttribute('cx','22');dot.setAttribute('cy','1');dot.setAttribute('r','2');dot.setAttribute('fill','#fbbf24');dot.setAttribute('stroke','none');
+   svg.append(tile,path,dot);return svg;
+ }
+ function iconControls(s,heading){
+   const controls=el('div');controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px';
+   const file=el('input');file.type='file';file.accept='.png,.jpg,.jpeg,.webp,.gif,.ico,.svg';file.hidden=true;
+   const choose=button('שינוי אייקון',()=>{file.value='';file.click()});choose.classList.add('skill-icon-choose');
+   const reset=button('אייקון מקורי',()=>safe(()=>saveIcon(null,true)));reset.disabled=!s.icon_image;reset.classList.add('skill-icon-reset');
+   async function saveIcon(data_uri,restore=false){
+     choose.disabled=true;reset.disabled=true;
+     try{
+       const saved=await api('/settings/skill-icons',{name:s.name,data_uri,reset:restore});
+       s.icon_image=saved.icon_image;heading.querySelector('.skill-icon').replaceWith(skillIcon(s.icon,s.icon_image));toast('האייקון נשמר');
+     }finally{choose.disabled=false;reset.disabled=!s.icon_image}
+   }
+   file.addEventListener('change',()=>safe(async()=>{
+     const chosen=file.files[0];if(!chosen)return;
+     if(chosen.size>512*1024)throw Error('בחר תמונה עד 512 KB');
+     let uri=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(Error('לא ניתן לקרוא את התמונה'));r.readAsDataURL(chosen)});
+     const ext=chosen.name.split('.').pop().toLowerCase(),mime={png:'png',jpg:'jpeg',jpeg:'jpeg',webp:'webp',gif:'gif',ico:'x-icon',svg:'svg+xml'}[ext];
+     if(!mime)throw Error('בחר PNG, JPG, WebP, GIF, ICO או SVG');
+     uri='data:image/'+mime+';base64,'+uri.split(',')[1];await saveIcon(uri);
+   }));
+   controls.append(choose,reset,file);return controls;
+ }
  function drawShop(){
    if(!catalog)return;const q=search.value.trim().toLocaleLowerCase(),cat=category.value,st=status.value;
    const skills=catalog.skills.filter(s=>(cat==='all'||s.categories.includes(cat))&&(!q||[s.name,s.title,s.description,...s.capabilities.map(c=>c.id)].join(' ').toLocaleLowerCase().includes(q))&&
@@ -41,11 +80,14 @@
    metrics.textContent=catalog.installed_skills+' חבילות · '+catalog.mapped_capabilities+'/'+catalog.original_goal+' יכולות ממופות · '+catalog.fully_verified+' אימותים מלאים';
    results.replaceChildren(...skills.map(s=>{
      const card=el('article');card.style.cssText='border:1px solid #9996;border-radius:10px;padding:12px;min-width:0';
-     card.append(el('h3',s.title),el('p',s.description),el('p','יכולות: '+s.capabilities.length+' · '+(s.integrity_verified?'Hash תקין':'Hash לא אומת')));
+     card.dataset.skill=s.name;
+     const heading=el('div');heading.style.cssText='display:flex;align-items:center;gap:12px;min-height:48px';
+     const title=el('h3',s.title);title.style.margin='0';heading.append(skillIcon(s.icon,s.icon_image),title);
+     card.append(heading,el('p',s.description),el('p','יכולות: '+s.capabilities.length+' · '+(s.integrity_verified?'Hash תקין':'Hash לא אומת')));
      const detail=el('details');detail.append(el('summary','פירוט יכולות ומגבלות'));
      for(const c of s.capabilities)detail.append(el('p',c.id+' · '+c.verification));
      for(const limit of s.limitations)detail.append(el('p','מגבלה: '+limit));
-     card.append(detail,button('בקשת הסרה',()=>safe(()=>shopAction('remove',s.name))));return card;
+     card.append(iconControls(s,heading),detail,button('בקשת הסרה',()=>safe(()=>shopAction('remove',s.name))));return card;
    }));
    if(!skills.length)results.append(el('p','לא נמצאו סקילים מתאימים.'));
  }
@@ -65,7 +107,8 @@
      const line=el('div');line.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #9993';
      const label=el('span',source.slug+' · '+source.source_sha256.slice(0,12));
      const action=source.installed?'update':'install';
-     line.append(label,button(source.installed?'בקשת עדכון':'בקשת התקנה',()=>safe(()=>shopAction(action,source.slug))));
+     const installed=catalog?.skills.find(s=>s.name===source.slug.replaceAll('-','_'));
+     line.append(skillIcon(installed?.icon||'package',installed?.icon_image),label,button(source.installed?'בקשת עדכון':'בקשת התקנה',()=>safe(()=>shopAction(action,source.slug))));
      availablePanel.append(line);
    }
    if(!packages.length)availablePanel.append(el('p','אין כרגע חבילות מקומיות מוכנות להתקנה.'));

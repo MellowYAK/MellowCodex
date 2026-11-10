@@ -456,6 +456,14 @@ register_delegation_mcp(mcp,local,READ,WRITE)
 from .browser_pointer import register_mcp as register_pointer_mcp
 register_pointer_mcp(mcp,local,READ,WRITE)
 
+@mcp.tool(annotations=WRITE)
+async def skill_icon_settings(name:str,data_uri:str|None=None,reset:bool=False):
+    """Read or change an installed skill's icon. Provide a base64 image data URI (PNG, JPEG, WebP, GIF, ICO or static SVG, max 512 KB), or reset=true to restore its colorful purpose-specific icon. Omit both to read. Same persisted setting as Skill Shops > Change icon; active immediately on catalog refresh, no restart. Scripts and external SVG resources are rejected."""
+    if data_uri is None and not reset:
+        from urllib.parse import quote
+        return await local('/api/settings/skill-icons/'+quote(name,safe=''))
+    return await local('/api/settings/skill-icons',{'name':name,'data_uri':data_uri,'reset':reset})
+
 if __name__=='__main__':
     import uvicorn
     uvicorn.run(app,host='127.0.0.1',port=GATEWAY_PORT,access_log=False)

@@ -1,18 +1,26 @@
+## Skill Shops icons (Hub 0.16.0)
+
+Each installed skill has a colorful purpose-specific SVG icon. Damaged question-mark titles and categories are repaired for display without editing installed package manifests, code or hashes.
+
+Use Change icon on a skill card to select PNG, JPEG, WebP, GIF, ICO or static SVG (up to 512 KB); Original icon restores the built-in icon. Raster images are stored as a thumbnail PNG, up to 256 pixels; animated inputs use their first frame. SVG supports static shapes, groups and gradients; scripts, event handlers, style elements and external resources are rejected. Icons render as images, never injected SVG markup. Preferences are stored separately in state/skill-icons.sqlite3 and survive reloads. This is display customization and does not install or execute skill code.
+
+MCP skill_icon_settings uses the same validation and storage: name identifies the installed skill, data_uri sets a base64 image, reset=true restores the default, and omitting both reads the saved value. Responses include icon_image, custom, active and restart_required=false. UI changes appear immediately; changes made through MCP appear on catalog refresh. Existing ChatGPT connector sessions may need a tool-list refresh to discover the newly added tool. Catalog responses retain the built-in icon key and expose optional icon_image.
+
 ## Modal scrolling performance
 
 Dialog backdrops retain their shaded overlay without backdrop blur, including Settings, AI connectors and task status. Actual Qt software-renderer scroll callbacks improved from about 5 to 31 per second in the bounded comparison; this is not a physical monitor refresh measurement or proof that intermittent artifacts are fixed.
 
-## UI refresh performance (Hub 0.15.5)
+## UI refresh performance (Hub 0.16.0)
 
 Unchanged project/chat lists retain their DOM nodes across background polling. Collapsed activity logs update only their summary; detailed logs render when opened. Task polling and background execution continue.
 
 The Windows OpenGL trial was reported faster but still produced artifacts. It has been replaced for the current process with a software-rendering trial using the optimized UI and unblurred modal backdrops. This is not a persisted application preference or proven fix for intermittent physical display corruption. No new setting was added. Runtime API version metadata loads at the next normal service restart; source-only metadata updates do not require an extra restart.
 
-## Skill Shops lifecycle (Hub 0.15.5)
+## Skill Shops lifecycle (Hub 0.16.0)
 
 Open Skill Shops with a selected conversation. Local packages under scripts/skills containing tool.py and test_tool.py can be previewed, installed, updated and removed. Confirmation shows the exact plan digest and current-user Python execution permissions. The protected OwnerBroker enforces the existing Full/Ask/Safe policy; this does not grant new permissions. Tests run before atomic activation; failed updates keep the previous version. Removal moves packages to quarantine, and research100 packages are protected. Source hashes and syntax checks are integrity checks, not a malware sandbox. Remote ZIP marketplaces are not supported.
 
-## Service recovery — source version 0.15.5
+## Service recovery — source version 0.16.0
 
 Run `register-service-recovery.ps1` once to install current-user logon and one-minute background recovery. `start.ps1` also invokes `reconcile-services.ps1` with Windows PowerShell 5.1. Missing Ollama, Hub, MCP gateway, installed Guard and owned SSH relay are restored without stopping existing work. Runtime status is in `E:\AI\state\service-reconcile.json`. Repeated launches are serialized. Live nonresponsive processes are reported rather than forcibly terminated. Recovery runs while logged in, including a locked session; actual locked-session and reboot acceptance remain untested. This is not pre-login desktop automation.
 

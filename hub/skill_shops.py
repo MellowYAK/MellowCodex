@@ -10,6 +10,135 @@ REPORT = Path("E:/AI/candidates/skills-100-20261109/INTEGRATION-AUDIT-VERIFICATI
 NAME = re.compile(r"^[a-z][a-z0-9_]{2,60}$")
 CAP = re.compile(r"^research100\.\d{3}$")
 
+PRESENTATION = {
+    "browser_forms": [
+        "טפסים בדפדפן",
+        "דפדפן",
+        "form"
+    ],
+    "cloud_sync": [
+        "סנכרון ענן",
+        "רשת וענן",
+        "cloud"
+    ],
+    "excel_workbook": [
+        "גיליונות Excel",
+        "Office",
+        "sheet"
+    ],
+    "file_analysis": [
+        "חיפוש וניתוח קבצים",
+        "קבצים",
+        "search"
+    ],
+    "file_operations": [
+        "ניהול קבצים",
+        "קבצים",
+        "folder"
+    ],
+    "file_workspace": [
+        "סביבת עבודה לקבצים",
+        "קבצים",
+        "workspace"
+    ],
+    "image_transfer_finalize": [
+        "העתקת תמונות ואימות",
+        "תמונות",
+        "image"
+    ],
+    "network_probe": [
+        "בדיקת חיבורי רשת",
+        "רשת וענן",
+        "network"
+    ],
+    "pdf_documents": [
+        "מסמכי PDF",
+        "מסמכים",
+        "pdf"
+    ],
+    "rpa_directory_inspect": [
+        "סקירת תיקיות",
+        "קבצים",
+        "folder-search"
+    ],
+    "skills100_browser_ops": [
+        "פעולות דפדפן",
+        "דפדפן",
+        "browser"
+    ],
+    "skills100_file_security": [
+        "קבצים והרשאות",
+        "אבטחה",
+        "file-lock"
+    ],
+    "skills100_http_local": [
+        "הורדות ו־API",
+        "רשת וענן",
+        "download"
+    ],
+    "skills100_office_cloud": [
+        "מסמכי Office וענן מוצפן",
+        "Office",
+        "cloud-lock"
+    ],
+    "skills100_owner_ops": [
+        "פעולות ניהול מוגנות",
+        "ניהול",
+        "shield"
+    ],
+    "skills100_package_inspect": [
+        "חיפוש תוכנות וחבילות",
+        "תוכנות",
+        "package"
+    ],
+    "skills100_policy_trials": [
+        "בדיקת הרשאות וביקורת",
+        "אבטחה",
+        "audit"
+    ],
+    "system_resource_snapshot": [
+        "תמונת מצב משאבי המערכת",
+        "מערכת",
+        "monitor"
+    ],
+    "system_resources": [
+        "ניטור משאבי המערכת",
+        "מערכת",
+        "chart"
+    ],
+    "windows_apps": [
+        "הפעלת יישומי Windows",
+        "מערכת",
+        "app"
+    ],
+    "windows_inspect": [
+        "בדיקת חלונות ובקרות Windows",
+        "מערכת",
+        "inspect"
+    ],
+    "windows_system": [
+        "ניהול Windows ומערכת",
+        "מערכת",
+        "settings"
+    ],
+    "zip_archives": [
+        "ארכיוני ZIP",
+        "קבצים",
+        "archive"
+    ]
+}
+
+def display_metadata(name, title, categories):
+    """Repair damaged display metadata without changing installed package integrity."""
+    fallback, category, icon = PRESENTATION.get(name, (name.replace("_", " ").title(), "Other", "package"))
+    title = safe_text(title or fallback, 100)
+    if "??" in title or "\ufffd" in title:
+        title = fallback
+    clean = [safe_text(x, 32) for x in categories[:8]
+             if isinstance(x, str) and x.strip() and "??" not in x and "\ufffd" not in x]
+    return title, clean or [category], icon
+
+
 def safe_text(value, limit=200):
     return str(value or "")[:limit]
 
@@ -24,6 +153,8 @@ def catalog_data(extension_root=None, audit_path=None):
                         if isinstance(r, dict) and CAP.fullmatch(str(r.get("source_id", "")))}
         except (OSError, ValueError, TypeError):
             evidence = {}
+    from .skill_icons import load_icons
+    icons = load_icons()
     items, unique = [], set()
     for manifest_path in sorted(folder.glob("*/manifest.json")):
         if manifest_path.is_symlink() or manifest_path.parent.is_symlink():
@@ -45,9 +176,12 @@ def catalog_data(extension_root=None, audit_path=None):
             categories = categories if isinstance(categories, list) else []
             limits = m.get("limitations", [])
             limits = limits if isinstance(limits, list) else []
+            title, categories, icon = display_metadata(name, m.get("display_name"), categories)
             items.append({
                 "name": name,
-                "title": safe_text(m.get("display_name") or name.replace("_", " ").title(), 100),
+                "title": title,
+                "icon": icon,
+                "icon_image": icons.get(name),
                 "description": safe_text(m.get("description"), 250),
                 "version": version,
                 "integrity_verified": bool(verified),
@@ -140,8 +274,10 @@ def _require_chat(chat_id):
 
 
 def action_router():
-    """Separately mounted, owner-broker-gated lifecycle endpoints."""
+    """Lifecycle endpoints plus harmless shared presentation preferences."""
     api = APIRouter()
+    from .skill_icons import router as icon_router
+    api.include_router(icon_router())
 
     @api.get("/api/skill-shops/available")
     def local_sources():

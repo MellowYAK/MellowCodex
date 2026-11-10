@@ -1,3 +1,12 @@
+## 0.16.0 - 2026-11-10
+
+- Skill Shops: repair eight damaged display titles and invalid categories without changing installed packages or capability mappings.
+- Add purpose-specific colorful SVG icons for all 23 installed skills, with a built-in fallback for other skills.
+- Add per-skill image selection and restore-default controls; support PNG, JPEG, WebP, GIF, ICO and static SVG with bounded validation and independent persistent storage.
+- Add MCP skill_icon_settings read/change/reset using the same API and persistence as the UI. No restart is required for icon changes.
+- Validation: six focused tests passed; actual Qt shell loaded 23 colored icons and controls. UI PNG/SVG upload handlers, image decoding, reload persistence, reset, and MCP adapter read/write were exercised; all 23 package hashes and 100 capability IDs preserved.
+- Rendering settings were left unchanged. User reports occasional remaining artifacts but accepts current rendering for now. This release does not claim to resolve that issue. Source version metadata takes effect on the next normal service restart; no extra restart for metadata alone.
+
 ## 0.15.5 - 2026-11-10
 
 - Remove backdrop blur from the shared dialog and task-status backdrop, retaining overlay shading and modal behavior.

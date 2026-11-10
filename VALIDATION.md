@@ -1,3 +1,13 @@
+## Skill Shops presentation 0.16.0 - 2026-11-10
+
+The original title/icon candidate passed four catalog tests. Read-only comparison found eight repaired titles, no damaged categories, 23 packages and 100 capability IDs; versions, capability data and integrity results were unchanged. Search returned three Windows matches and category filtering returned two, then restored all 23 cards in the actual Qt shell.
+
+Color/custom-icon candidate revision2 passed six focused tests in1.83s (test_skill_icons.py and test_skill_shops.py). Fixtures covered static SVG and dangerous-content rejection, raster normalization, persistence, API readback/reset and unknown-skill rejection. Candidate JS compiled in the real Qt renderer. Deployment4faa2824a10542e48f6b6c8b2068450d reached ACTIVE_VERIFIED and updated Hub/MCP without restarting desktop PID9608.
+
+Native-shell validation through the local task runner observed23cards,23icons,18distinct main colors,23file inputs and0question-mark titles. Synthetic File objects were delivered to the real UI file-change handlers for PNG and SVG; both decoded and persisted. SVG survived page reload. The registered MCP adapter read the UI-saved SVG, wrote a PNG with HTTP readback, and observed the UI reset. Test icons were removed and all original defaults restored. Native screenshot d4be2e56b5a744d9be742c9ac7298009 was visually reviewed. Registry remained23installed/100mapped with23valid hashes. No installation/removal or rendering setting changes were made.
+
+Limits: native OS file-picker interaction and refreshed external ChatGPT discovery/invocation of the new MCP tool were not tested; MCP adapter invocation used the actual deployed HTTP service. JPEG/WebP/GIF/ICO were not individually exercised in the shell. No claim of physical artifact resolution; user accepts remaining occasional artifacts for now. Version0.16.0 is synchronized in source; runtime version metadata awaits its next normal restart.
+
 ## Modal performance 0.15.5 - 2026-11-10
 
 OpenGL user feedback: faster scrolling, but artifacts returned. Clean prior native screenshots did not establish a cure. Current actual shell reports GraphicsApi.Software in both views.
