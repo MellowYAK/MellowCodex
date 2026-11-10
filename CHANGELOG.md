@@ -1,3 +1,21 @@
+## 0.19.0 - 2026-11-10
+
+- Add native health/rescue panel, top indicator, Tools entry, tray controls and offline desktop shortcut.
+- Extend the existing reconciler and ownership-checked stop helper with per-service actions, durable receipts, shared locks and persistent intentional-stop markers. Explicit actions wait up to 30 seconds for scheduled recovery.
+- Separate process, port, authenticated API, SSH tunnel and expiring remote MCP evidence. Guard healthy=false remains a visible warning even when its authenticated MCP API responds.
+- Fix controller completion blocked by inherited pipes, Windows accepting-PID attribution, and recognition of the existing supervisor's Hub invocation.
+- Preserve tasks, browser/session data, Skill Shops, network settings and owner protections. Whole-agent stop requires task-impact confirmation and graceful quiescence.
+- Deployed and loaded in the Windows shell. Real panel/Tools/tray interactions, MCP Stop under scheduled recovery for 70 seconds, Start/Restart, Hub-offline panel opening/restoration and remote MCP roundtrip verified. Catalog retained 23 skills and 100 capabilities.
+- Twelve focused tests passed; final stop-helper change passed eight relevant tests. No reboot, locked-session or destructive whole-agent shutdown was performed. Existing ChatGPT tool discovery still needs refresh for the new named tools; the shared API was exercised through the existing MCP local runner.
+
+## 0.18.1 - 2026-11-10
+
+- Keep browser control references ahead of page prose in small-model evidence. Report omitted controls and support focused browser_observe(query=...) instead of guessing.
+- Accept a unique exact accessible name from the current observation when a model supplies it as ref. Ambiguous names, stale observations, covered/detached controls still fail before input; no fuzzy matching or action replay.
+- Bound page text to visible text nodes and expose bounded select options; preserve observed link URLs.
+- Validation before activation: 26 focused browser/context tests passed, three Node-dependent fixtures skipped because Node is unavailable. Actual Qt snapshot retained all 22 viewport controls.
+- Agent-owned end-to-end acceptance and deployment are pending; adapter checks do not prove completion. User model context setting is unchanged.
+
 ## 0.18.0 - 2026-11-10
 
 - Persist selected browser elements/regions with stable numbers and optional unique names; add native saved-elements list, rename and multi-reference draft handoff.
@@ -853,3 +871,9 @@ A real Qwen Coder 7B trial fixed timeout validation but removed existing shell/c
 Unreleased 2026-11-08: coding-worker packets now include the latest exact-command correction reason and request identity, without executable command payloads, while retaining the original objective. Previously the exact-command correction was recorded but omitted from the worker packet. A focused transport regression verifies latest-reason delivery; real-model correction acceptance remains pending.
 
 Deployment metadata: runtime/package version remains 0.15.3 because the installed updater treats every pyproject edit as an environment replacement. No dependencies were changed.
+
+Unreleased — 2026-11-10: Added desktop MCP Start/Stop/Restart/Status controls with serialized durable manual stop and exact process ownership. Recovery checks SSH reachability, reports IPv4 Duplicate conflict, preserves relay restart budget while unreachable, and checks post-launch survival. Real Stop/Start restored local services; remote acceptance blocked by Ethernet static IPv4 collision. See docs/MCP-SERVICE-CONTROL.md. No reboot acceptance claimed.
+
+
+2026-11-10 follow-up: Owner approved Ethernet DHCP after confirmed Duplicate static IPv4. Prior configuration backed up locally. New preferred DHCP lease acquired; next automatic scheduled run restored relay (LastTaskResult 0), and real remote MCP model_memory_status succeeded. Model was unloaded; no inference or full reboot test claimed. Installed Start/Stop/Restart/Status shortcuts; Stop/Start exercised. Changes remain Unreleased alongside unrelated concurrent work.
+

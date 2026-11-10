@@ -1,3 +1,29 @@
+## Service health panel 0.19.0 - 2026-11-10
+
+Deployment: version 0.19.0 is active in Hub/MCP and the native desktop. The existing independent update supervisor reached ACTIVE_VERIFIED, most recently update 2e92e6cb5bb84010aa0c8651161065e5. Desktop reloads used graceful IPC and retained the existing profile/session. The existing recovery mutex coordinated each deployment; the scheduled task was not disabled.
+
+Actual native UI: top indicator and Tools > Health and Services opened the same panel. Right-click tray exposed the requested service actions; Check was clicked. Service action buttons disabled while a durable action was active. Technical detail is expandable and Guard warning remains visible.
+
+Actual MCP stop/recovery: Stop receipt fcbd79e44437a33423cf4bf27fa0da1b completed. MCP stayed stopped for 70 seconds while the real scheduled recovery task ran (LastTaskResult 0); Hub and Ollama PIDs remained unchanged. After fixes, actual panel Start receipt 9b8965784d42f6e31c4754f96dfb2fe2 and Restart receipt 91188c276f34b0d2cf809c4af4ac5f8e completed on their first postcondition observation. One launcher/interpreter pair per managed Python service and one Ollama process remained; no duplicate copies or active user tasks were present.
+
+Actual offline rescue: with no active tasks, Hub-only Stop receipt 23e5944df7aaf7ebaed8d19f343f373b completed. Port 8876 was closed, and the native panel was closed and reopened visibly without Hub. Start receipt 5519dad90f5ae43c67991b1c5ca04261 restored Hub; Ollama PID stayed unchanged. hub-offline-acceptance.json ended completed with an empty final active-task list.
+
+Actual remote evidence: a nonce delivered to ChatGPT through MCP was acknowledged in a separate MCP call after recovery; verified=true. This proof expires after 120 seconds and is never inferred from an open local port. New named service tools are registered server-side; this existing ChatGPT session did not rediscover them. Shared endpoints were exercised through the existing authenticated MCP exact-command runner, not claimed as new-tool invocation.
+
+Diagnosed during acceptance: controller output pipes could be inherited by long-lived children and prevent completion; file-backed output fixed this. Windows TCP enumeration sometimes lacked an accepting PID for an idle probe; a bounded partial HTTP header materializes the exact reverse loopback tuple, retaining executable/cwd ownership requirements. Explicit actions now wait at most 30 seconds for scheduled recovery's existing mutex. Hub stop recognizes both existing reconciler and supervisor launch forms. Failed/interrupted receipts remain failed/interrupted; no failed result was relabelled successful.
+
+Guard: authenticated status returned healthy=false with started_pids empty. Its supervisor requires the pair it started, so this warning is distinct from reachable Guard MCP. It is not hidden or repaired by changing owner permissions. Model unloaded is shown idle, not an Ollama failure. Network settings were not changed; no claim of fixing DNS or changing IP addresses.
+
+Tests: the 12-test focused health/controller/integration/retry/shutdown set passed (1.64 seconds); the final Hub stop invocation change passed the eight relevant health/shutdown tests (1.37 seconds). These are fixture/code checks, distinct from the native and service experiments above. Ten candidate probes also returned the actual Guard accepting PID. Catalog readback retained 23 installed packages and 100 mapped capability IDs; this is not proof all capabilities work end-to-end.
+
+Local private evidence stays under E:/AI/artifacts/service-health-panel-20261110, including controlled-stop-start.json, final-runtime-acceptance.json (contains successful MCP stages and the earlier Hub-only failure), hub-offline-acceptance.json (the corrected Hub result), and panel screenshots. Runtime data, logs and screenshots are not published in Git.
+
+Limits: no physical reboot, locked-session test, real network outage, OAuth re-consent, elevated broker mutation or destructive whole-agent shutdown was performed. Whole-agent confirmation/task guards were tested as fixtures; actual acceptance used only idle Hub and MCP transitions. User tasks were preserved, not used as destructive shutdown fixtures. This change does not claim to fix previously reported rendering artifacts.
+
+## 2026-11-10 browser interaction repair (0.18.1)
+
+26 focused regressions passed; three Node fixtures skipped. Actual existing Qt page snapshot evaluated successfully and preserved 22/22 controls including the late control previously omitted. Agent-owned interaction after activation: PENDING. No claim of OAuth completion.
+
 ## Named browser elements 0.18.0 - 2026-11-10
 
 Candidate 6edcc11400104c198f272642a7b60045 revision 2: tests/test_browser_selections.py and tests/test_conversations.py passed (5 tests, 2.16s). Fixtures covered stable numbers, idempotent save, persistence, Hebrew/English/name resolution, unknown-reference and duplicate-name rejection, rename, and real Conversations.submit context/image assembly without changing the user goal or idempotency. Python compilation and app.js compilation in the actual Qt renderer passed.
@@ -1035,4 +1061,10 @@ Unreleased 2026-11-08: coding-worker packets now include the latest exact-comman
 # Service recovery 0.15.3 — 2026-11-10
 
 Real installed scheduled task executed successfully with LastTaskResult 0 and five loopback services reachable. Controlled interruption of the manually launched gateway (exact captured process IDs/command lines) recovered through the scheduled task. Real MCP model_memory_status succeeded afterward with qwen3.5:4b loaded and inference enabled. Repeated scheduled execution retained replacement launcher/child pair, avoiding duplicate launches. Broker readback: Running, Automatic after native approval. No reboot, locked-session, foreign-listener or hung-process termination test; no broad synthetic suite. Existing legacy Hub was not restarted. Git publication remains pending due to concurrent workspace changes.
+
+
+Unreleased — 2026-11-10: Added desktop MCP Start/Stop/Restart/Status controls with serialized durable manual stop and exact process ownership. Recovery checks SSH reachability, reports IPv4 Duplicate conflict, preserves relay restart budget while unreachable, and checks post-launch survival. Real Stop/Start restored local services; remote acceptance blocked by Ethernet static IPv4 collision. See docs/MCP-SERVICE-CONTROL.md. No reboot acceptance claimed.
+
+
+2026-11-10 follow-up: Owner approved Ethernet DHCP after confirmed Duplicate static IPv4. Prior configuration backed up locally. New preferred DHCP lease acquired; next automatic scheduled run restored relay (LastTaskResult 0), and real remote MCP model_memory_status succeeded. Model was unloaded; no inference or full reboot test claimed. Installed Start/Stop/Restart/Status shortcuts; Stop/Start exercised. Changes remain Unreleased alongside unrelated concurrent work.
 

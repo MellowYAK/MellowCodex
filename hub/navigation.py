@@ -22,6 +22,8 @@ def require_observed_navigation(goal,url,actions):
     evidence=[]
     for action in actions:
         result=action.get('result')
+        if action['tool']=='agent_environment' and isinstance(result,dict) and not result.get('error'):
+            evidence.extend((result.get('browser_entry') or {}).get('entries',[]))
         if action['tool'] in ('browser_navigate','browser_observe','browser_act','browser_extract','browser_tabs') and isinstance(result,dict) and not result.get('error'):
             evidence.append(result)
     allowed=requested|set(observed_urls(evidence))

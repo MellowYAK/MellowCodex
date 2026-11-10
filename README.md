@@ -1,4 +1,16 @@
-## Named browser elements (Hub 0.18.0)
+## Health and service rescue (Hub 0.19.0)
+
+The native top health indicator, Tools > Health and Services, tray menu and offline desktop shortcut open the same local panel. It works without Hub or MCP. The panel and MCP service_health tools submit durable actions to the existing reconcile-services.ps1 manager, with per-service selection, shared locks and intentional-stop markers.
+
+Process presence, verified accepting PID, API response, owned SSH tunnel and remote MCP round-trip evidence are separate. Remote evidence expires after two minutes; use connection_challenge then connection_ack only after actually receiving the nonce through MCP. A local port is never remote proof. OAuth renewal must be done through the MellowCodex connection in ChatGPT when required; reconnect does not bypass consent.
+
+Close window hides the shell. Stop MCP leaves Hub, conversation/tasks, Ollama and the desktop running. Stop all requires task-impact confirmation and uses existing graceful shutdown; the rescue window and protected OwnerBroker stay available. OwnerBroker changes still use existing Owner Control/UAC. Model, recovery-task and shell-specific settings remain in their dedicated controls. No network/credential/permission changes are automated.
+
+Intentional MCP/all/service stop markers persist across reboot. Scheduled Reconcile honors them. Explicit Start/Restart clears the relevant markers, starts dependencies and resumes recovery. Start all clears the global all-stop marker; Start MCP alone does not undo a prior all-services recovery pause. Explicit actions wait up to 30 seconds for the existing manager lock; scheduled recovery remains nonblocking and retries on its existing one-minute schedule. Failed/interrupted jobs are visible and are never replayed automatically.
+
+Native UI/deployment and controlled stop/reconnect validation are recorded separately in VALIDATION.md; no reboot claim is implied.
+
+## Named browser elements (Hub 0.18.1)
 
 Use Select element in the internal browser, give the preview an optional unique name, then Save element and select more. Each saved element/region gets a permanent automatic number. The Elements toolbar opens the shared list: rename, select multiple entries and attach references to the current draft. Saving or attaching never sends a task automatically.
 
@@ -8,7 +20,7 @@ MCP browser_selections lists entries or resolves the same natural-language refer
 
 Saved elements are snapshots, not permanent live DOM identities. Re-observe the current page before acting, especially after navigation or layout changes. Arbitrary-site, iframe and closed-shadow-root compatibility is not guaranteed. No renderer, owner policy or package change is included.
 
-## Browser element annotations (Hub 0.18.0)
+## Browser element annotations (Hub 0.18.1)
 
 In the internal browser toolbar, choose Select element. Hover to highlight, click an element or drag a visible region; Escape cancels. The click is intercepted instead of activating the page control. A native preview shows the cropped screenshot and bounded element DOM/computed CSS. Enter an instruction and choose Attach to conversation draft. Two local library files (PNG and JSON) and the instruction are added to the existing draft, preserving other attachments up to the five-file limit. Press Send in the conversation when ready; picking/attaching never starts a task automatically.
 
@@ -16,7 +28,7 @@ The saved JSON includes page URL without query/fragment, title, element tag and 
 
 MCP browser_annotations lists recent saved selection files; use get_file with the returned IDs. This is the same library used by the conversation attachment pipeline, not separate state. Existing connector sessions may need tool discovery refreshed. No new persistent setting or renderer change is introduced.
 
-## Skill Shops icons (Hub 0.18.0)
+## Skill Shops icons (Hub 0.18.1)
 
 Each installed skill has a colorful purpose-specific SVG icon. Damaged question-mark titles and categories are repaired for display without editing installed package manifests, code or hashes.
 
@@ -28,17 +40,17 @@ MCP skill_icon_settings uses the same validation and storage: name identifies th
 
 Dialog backdrops retain their shaded overlay without backdrop blur, including Settings, AI connectors and task status. Actual Qt software-renderer scroll callbacks improved from about 5 to 31 per second in the bounded comparison; this is not a physical monitor refresh measurement or proof that intermittent artifacts are fixed.
 
-## UI refresh performance (Hub 0.18.0)
+## UI refresh performance (Hub 0.18.1)
 
 Unchanged project/chat lists retain their DOM nodes across background polling. Collapsed activity logs update only their summary; detailed logs render when opened. Task polling and background execution continue.
 
 The Windows OpenGL trial was reported faster but still produced artifacts. It has been replaced for the current process with a software-rendering trial using the optimized UI and unblurred modal backdrops. This is not a persisted application preference or proven fix for intermittent physical display corruption. No new setting was added. Runtime API version metadata loads at the next normal service restart; source-only metadata updates do not require an extra restart.
 
-## Skill Shops lifecycle (Hub 0.18.0)
+## Skill Shops lifecycle (Hub 0.18.1)
 
 Open Skill Shops with a selected conversation. Local packages under scripts/skills containing tool.py and test_tool.py can be previewed, installed, updated and removed. Confirmation shows the exact plan digest and current-user Python execution permissions. The protected OwnerBroker enforces the existing Full/Ask/Safe policy; this does not grant new permissions. Tests run before atomic activation; failed updates keep the previous version. Removal moves packages to quarantine, and research100 packages are protected. Source hashes and syntax checks are integrity checks, not a malware sandbox. Remote ZIP marketplaces are not supported.
 
-## Service recovery — source version 0.18.0
+## Service recovery — source version 0.18.1
 
 Run `register-service-recovery.ps1` once to install current-user logon and one-minute background recovery. `start.ps1` also invokes `reconcile-services.ps1` with Windows PowerShell 5.1. Missing Ollama, Hub, MCP gateway, installed Guard and owned SSH relay are restored without stopping existing work. Runtime status is in `E:\AI\state\service-reconcile.json`. Repeated launches are serialized. Live nonresponsive processes are reported rather than forcibly terminated. Recovery runs while logged in, including a locked session; actual locked-session and reboot acceptance remain untested. This is not pre-login desktop automation.
 
@@ -699,3 +711,9 @@ A real Qwen Coder 7B trial fixed timeout validation but removed existing shell/c
 
 
 Unreleased 2026-11-08: coding-worker packets now include the latest exact-command correction reason and request identity, without executable command payloads, while retaining the original objective. Previously the exact-command correction was recorded but omitted from the worker packet. A focused transport regression verifies latest-reason delivery; real-model correction acceptance remains pending.
+
+### Browser interaction evidence (0.18.1)
+The local agent receives controls before long page prose. Use fresh observation IDs and element refs; an exact unique observed name is accepted, but ambiguous/stale controls are rejected. browser_observe accepts an optional accessible-name query for omitted controls. This uses the existing tool/API path and adds no global configuration. Input acknowledgement alone is not proof of completion. Browser login/password and verification prompts can still require the user.
+
+MCP service controls: see [MCP-SERVICE-CONTROL.md](docs/MCP-SERVICE-CONTROL.md). Desktop shortcuts start, stop, restart and show status without closing tasks or inference.
+

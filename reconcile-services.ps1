@@ -1,12 +1,62 @@
 [CmdletBinding()]
-param()
+param([ValidateSet('Start','Stop','Restart','Status','Reconcile')][string]$Action='Reconcile',[ValidateSet('mcp','all','hub','gateway','guard','guard_gateway','relay','ollama')][string]$Service='mcp',[switch]$ConfirmTasks)
 $ErrorActionPreference = 'Stop'
 # Run with Windows PowerShell 5.1: the installed Guard validates Windows ACLs.
 $mutex = New-Object Threading.Mutex($false, 'Local\MellowCodexServiceReconcile')
-if (!$mutex.WaitOne(0)) { $mutex.Dispose(); exit 0 }
+$lockWaitMs = if ($Action -eq 'Reconcile') { 0 } else { 30000 }
+if (!$mutex.WaitOne($lockWaitMs)) { $mutex.Dispose(); if ($Action -eq 'Reconcile') { exit 75 }; throw 'Another service operation is active' }
 try {
   $root = 'E:\AI'
   $guardRoot = 'C:\ProgramData\MellowGuard'
+  $pauseFile = "$root\state\mcp-manual-stop"
+  $servicePause = "$root\state\service-manual-stop-$Service"
+  if ($Action -eq 'Status') {
+    & "$root\tools\hub-venv\Scripts\python.exe" -m hub.service_health --status
+    if ($LASTEXITCODE -ne 0) { throw 'Health inspection failed' }
+    return
+  }
+  if ($Action -eq 'Reconcile' -and ((Test-Path $pauseFile) -or (Test-Path "$root\state\agent-manual-stop"))) { return }
+  $confirmed = if ($ConfirmTasks) { 'true' } else { 'false' }
+  Push-Location $PSScriptRoot
+  try {
+    & "$root\tools\hub-venv\Scripts\python.exe" -m hub.service_health --preflight $Action $Service $confirmed
+    if ($LASTEXITCODE -ne 0) { throw 'Preflight rejected; no service changed' }
+  } finally { Pop-Location }
+  $dependents = switch ($Service) {
+    'guard' { @('guard','guard_gateway','relay') }
+    'guard_gateway' { @('guard_gateway','relay') }
+    default { @($Service) }
+  }
+  $wanted = switch ($Service) {
+    'mcp' { @('hub','gateway','guard','guard_gateway','relay','ollama') }
+    'all' { @('hub','gateway','guard','guard_gateway','relay','ollama') }
+    'relay' { @('hub','gateway','guard','guard_gateway','relay') }
+    'guard_gateway' { @('guard','guard_gateway') }
+    'gateway' { @('hub','gateway') }
+    default { @($Service) }
+  }
+  if ($Action -in @('Stop','Restart')) {
+    if ($Service -in @('mcp','all')) { Set-Content $pauseFile 'MCP intentionally stopped by owner' }
+    if ($Service -eq 'all') { Set-Content "$root\state\agent-manual-stop" 'All agent services intentionally stopped' }
+    if ($Service -notin @('mcp','all')) { foreach($item in $dependents) { Set-Content "$root\state\service-manual-stop-$item" 'Service intentionally stopped by owner' } }
+    $stopArgs=@("$PSScriptRoot\scripts\stop-mcp-transports.py",'--service',$Service)
+    if($ConfirmTasks){$stopArgs+='--confirm-tasks'}
+    & "$root\tools\hub-venv\Scripts\python.exe" @stopArgs
+    if ($LASTEXITCODE -ne 0) { throw 'MCP stop incomplete; automatic restart remains paused. See output.' }
+    if ($Action -eq 'Stop') {
+      @{time=(Get-Date).ToUniversalTime().ToString('o');state='stopped_by_owner';service=$Service} | ConvertTo-Json | Set-Content "$root\state\service-reconcile.json"
+      return
+    }
+  }
+  if ($Action -in @('Start','Restart')) {
+    if ($Service -in @('mcp','all') -and (Test-Path $pauseFile)) { Remove-Item -LiteralPath $pauseFile }
+    foreach($item in @($wanted)+@($dependents)) { Remove-Item "$root\state\service-manual-stop-$item" -ErrorAction SilentlyContinue }
+    if ($Service -eq 'all') {
+      Remove-Item "$root\state\agent-manual-stop" -ErrorAction SilentlyContinue
+      Get-ChildItem "$root\state\service-manual-stop-*" -ErrorAction SilentlyContinue | Remove-Item
+    }
+  }
+
   $env:LOCAL_AGENT_ROOT = $root
   $env:PYTHONUTF8 = '1'
   $env:OLLAMA_MODELS = "$root\models"
@@ -40,6 +90,8 @@ try {
     @{port=8897;exe="$root\tools\hub-venv\Scripts\python.exe";argv=@('-m','uvicorn','hub.mcp_gateway:app','--host','127.0.0.1','--port','8897','--no-access-log');name='gateway'}
   )
   foreach ($component in $components) {
+    if ($component.name -notin $wanted) { continue }
+    if (Test-Path "$root\state\service-manual-stop-$($component.name)") { continue }
     try {
       if (!(Listening $component.port)) {
         # A live process may still be starting; never create a second copy.
@@ -59,32 +111,46 @@ try {
     . "$releasePath\scripts\common.ps1"
     $verifiedRelease = Read-GuardRelease $guardRoot
     $cfg = $verifiedRelease.config
-    if (!(Listening ([int]$cfg.port))) {
+    if ('guard' -in $wanted -and !(Test-Path "$root\state\service-manual-stop-guard") -and !(Listening ([int]$cfg.port))) {
+      if ((Test-Path "$root\state\service-manual-stop-guard_gateway") -or (Test-Path "$root\state\service-manual-stop-relay")) { throw 'Guard dependency intentionally stopped; explicit Start required' }
       Archive-DeadReceipt "$guardRoot\state\process.json" ([int]$cfg.port)
       # start.ps1 also tries the gateway. An existing gateway is retained.
       try { & "$releasePath\scripts\start.ps1" -GuardHome $guardRoot } catch {
         if (!(Test-Path "$guardRoot\state\process.json")) { throw }
       }
     }
-    if ($cfg.gateway_enabled -and !(Listening 8896)) {
+    if ('guard_gateway' -in $wanted -and $cfg.gateway_enabled -and !(Test-Path "$root\state\service-manual-stop-guard_gateway") -and !(Listening 8896)) {
       Archive-DeadReceipt "$guardRoot\state\gateway-process.json" 8896
       & "$releasePath\scripts\start-gateway.ps1" -GuardHome $guardRoot
     }
-    if ($cfg.relay_enabled) {
+    if ('relay' -in $wanted -and $cfg.relay_enabled -and !(Test-Path "$root\state\service-manual-stop-relay")) {
       $env:MELLOW_GUARD_HOME = $guardRoot
       $env:MELLOW_GUARD_AUTH_FILE = [string]$cfg.auth_file
       Set-GuardRelayEnvironment -Config $cfg
       Push-Location $releasePath
       try {
+        $probe = New-Object Net.Sockets.TcpClient
+        try {
+          $connect = $probe.BeginConnect([string]$cfg.relay.host,22,$null,$null)
+          if (!$connect.AsyncWaitHandle.WaitOne(5000)) {
+            $duplicates = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object AddressState -eq 'Duplicate')
+            if ($duplicates.Count) { throw 'IPv4 address conflict detected by Windows (Duplicate); fix network address. Services are local-only; will retry automatically.' }
+            throw 'SSH relay unreachable on port 22; retrying next scheduled run'
+          }
+          $probe.EndConnect($connect)
+        } finally { $probe.Dispose() }
         $relay = (& "$releasePath\venv\Scripts\python.exe" -m mellow_guard.relay reconcile | Out-String) | ConvertFrom-Json
-        if ($LASTEXITCODE -ne 0 -or !$relay.owned -or $relay.state -ne 'running') { throw 'Relay is not owned/running' }
+        if ($LASTEXITCODE -ne 0 -or !$relay.owned -or $relay.state -ne 'running') { throw ('Relay: '+$relay.state+'; '+$relay.reason) }
+        Start-Sleep -Seconds 2
+        $relay = (& "$releasePath\venv\Scripts\python.exe" -m mellow_guard.relay status | Out-String) | ConvertFrom-Json
+        if (!$relay.owned -or $relay.state -ne 'running') { throw ('Relay exited after launch: '+$relay.state+'; '+$relay.reason) }
       } finally { Pop-Location }
     }
   } catch { $failures += $_.Exception.Message }
   $report = @{time=(Get-Date).ToUniversalTime().ToString('o');listeners=@{};errors=@($failures)}
   foreach ($port in @(11434,8876,8897,8898,8896)) {
     $report.listeners["$port"] = Listening $port
-    if (!$report.listeners["$port"]) { $failures += "Port $port is unavailable" }
+    # Missing listeners are reported individually; intentionally stopped components are not overall failures.
   }
   $report.errors = @($failures)
   $report | ConvertTo-Json -Depth 5 | Set-Content "$root\state\service-reconcile.json" -Encoding UTF8

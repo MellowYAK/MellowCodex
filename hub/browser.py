@@ -11,13 +11,14 @@ import psutil
 from PIL import Image
 from .config import STATE,CDP_PORT
 from .errors import ObservationError
+from .browser_evidence import resolve_ref
 
 SNAPSHOT_JS='''token => {
  const visible=e=>{const r=e.getBoundingClientRect(); const s=getComputedStyle(e);return r.width>0&&r.height>0&&r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth&&s.visibility!=='hidden'&&s.display!=='none'};
  const els=Array.from(document.querySelectorAll('a,button,input,textarea,select,img,video,audio,[role="button"],[role="link"],[contenteditable="true"]')).filter(e=>visible(e)||e.type==='file').slice(0,200);
- const elements=els.map((e,i)=>{const ref='e'+(i+1);e.setAttribute('data-local-agent-ref',token+'-'+ref); const r=e.getBoundingClientRect();return {ref,tag:e.tagName.toLowerCase(),role:e.getAttribute('role')||'',type:e.type||'',name:(e.getAttribute('aria-label')||e.labels?.[0]?.innerText||e.innerText||e.getAttribute('placeholder')||e.getAttribute('name')||'').trim().slice(0,200),value:e.type==='password'?'[private]':String(e.value||'').slice(0,150),href:e.tagName==='A'?e.href:undefined,x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}});
+ const elements=els.map((e,i)=>{const ref='e'+(i+1);e.setAttribute('data-local-agent-ref',token+'-'+ref); const r=e.getBoundingClientRect();return {ref,tag:e.tagName.toLowerCase(),role:e.getAttribute('role')||'',type:e.type||'',name:(e.getAttribute('aria-label')||e.labels?.[0]?.innerText?.split(String.fromCharCode(10))[0]||(e.tagName==='SELECT'?'':e.innerText)||e.getAttribute('placeholder')||e.getAttribute('name')||'').trim().slice(0,200),enabled:!e.disabled&&e.getAttribute('aria-disabled')!=='true',options:e.tagName==='SELECT'?Array.from(e.options).slice(0,20).map(o=>({label:o.label,value:o.value,selected:o.selected})):undefined,options_truncated:e.tagName==='SELECT'&&e.options.length>20,value:e.type==='password'?'[private]':String(e.value||'').slice(0,150),href:e.tagName==='A'?e.href:undefined,x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}});
  const links=Array.from(document.querySelectorAll('a[href]')).filter(e=>e.querySelector('h1,h2,h3,h4')||e.closest('main,article,[role="main"]')).map(e=>({name:(e.innerText||e.getAttribute('aria-label')||'').trim().slice(0,180),href:e.href})).filter(e=>e.name&&/^https?:/.test(e.href)).filter((e,i,a)=>a.findIndex(x=>x.href===e.href)===i).slice(0,60);
- return {url:location.href,title:document.title,links,text:(document.querySelector('main,[role="main"]')?.innerText||document.body?.innerText||'').slice(0,14000),elements,width:innerWidth,height:innerHeight};
+ return {url:location.href,title:document.title,links,notices:Array.from(document.querySelectorAll('[role=alert],[role=status],[aria-live=assertive]')).filter(visible).map(e=>e.innerText.trim()).filter(Boolean).slice(0,8),text:(()=>{const root=document.querySelector('main,[role="main"]')||document.body;if(!document.createTreeWalker)return root?.innerText?.slice(0,4000)||'';const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let out='',n;while((n=w.nextNode())&&out.length<4000){const p=n.parentElement;if(p&&!p.closest('select,script,style')&&visible(p)){const r=document.createRange();r.selectNodeContents(n);const b=r.getBoundingClientRect();if(b.bottom>0&&b.top<innerHeight&&b.right>0&&b.left<innerWidth)out+=n.textContent.trim()+' ';}}return out.slice(0,4000);})(),elements,width:innerWidth,height:innerHeight};
 }'''
 
 CLICK_JS='''e => {
@@ -287,13 +288,15 @@ class Browser:
         encoded=json.dumps(result,ensure_ascii=False)
         return {'result':result if len(encoded)<=60000 else None,'truncated':len(encoded)>60000,'url':page.url,'note':'Script ran once. Observe again and verify its effects.'}
 
-    async def observe(self,folder):
+    async def observe(self,folder,query=""):
         page=await self.connect()
         token=uuid.uuid4().hex
         try:state=await asyncio.wait_for(page.evaluate(SNAPSHOT_JS,token),8)
         except Exception as exc:
             if ('crash' not in str(exc).lower() and not isinstance(exc,TimeoutError)) or not self.target_id:raise
             await self.recover_target(self.target_id,type(exc).__name__+': '+str(exc));return await self.observe(folder)
+        from .browser_evidence import filter_controls
+        state=filter_controls(state,query)
         folder=Path(folder);folder.mkdir(parents=True,exist_ok=True)
         path=folder/('browser-'+token+'.png')
         capture={}
@@ -303,7 +306,7 @@ class Browser:
             capture={'path':str(path),'width':width,'height':height}
         except Exception:
             capture={'screenshot_available':False,'observation_source':'live DOM','note':'Background renderer did not supply a screenshot. Use the observed DOM controls; do not infer visual details.'}
-        self.observation={'id':token,'url':page.url,'at':time.monotonic(),'refs':{e['ref'] for e in state['elements']},'page':page}
+        self.observation={'id':token,'url':page.url,'at':time.monotonic(),'refs':{e['ref'] for e in state['elements']},'elements':state['elements'],'text':state['text'],'notices':state.get('notices',[]),'page':page}
         recovery=self.last_recovery;self.last_recovery=None
         return {**state,**capture,'recovery':recovery,'source':'Local Agent embedded Qt WebEngine (NOT Chrome, Edge, or another Windows app)','id':token,'left':0,'top':0}
 
@@ -503,7 +506,9 @@ class Browser:
         action=args['action'];ref=args.get('ref')
         target=None
         if action in ('click','fill','press','select','check'):
-            if ref not in obs['refs']:raise ObservationError('Unknown element reference. Observe again.')
+            ref=resolve_ref(obs,ref)
+            from .browser_workflow import retry_guard
+            retry_guard(obs,ref)
             target=page.locator(f'[data-local-agent-ref="{obs["id"]}-{ref}"]')
             if await target.count()!=1 or not await target.is_visible():raise ObservationError('Element changed. Observe again.')
         self.observation=None

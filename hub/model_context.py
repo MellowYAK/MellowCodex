@@ -10,6 +10,10 @@ def token_estimate(text):
 
 def compact_result(value, limit=7000):
     """Keep valid JSON, identities, errors and observed links instead of slicing JSON."""
+    from .browser_evidence import compact_browser
+    browser=compact_browser(value,limit)
+    if browser is not None:
+        return json.dumps(browser,ensure_ascii=False)
     if isinstance(value,dict) and value.get('evidence_only') and 'next_after' in value:
         key='turns' if 'turns' in value else 'items'
         cursor_key='position' if key=='turns' else 'cursor'
