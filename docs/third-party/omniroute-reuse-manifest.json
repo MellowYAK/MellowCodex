@@ -1,0 +1,54 @@
+{
+  "source": "https://github.com/ChrisCompton/omniroute",
+  "commit": "515674b6cf7cc29b3db027c9119e9b2ef12e0ba7",
+  "license": "MIT",
+  "download_directory": "E:\\AI\\audits\\omniroute-review-20261107",
+  "scope": "Source review only; provider metadata extracted; no executable upstream code integrated or services installed.",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "ee15249b90d01049db993bc5eb9eaf24a80c1750dc265d01be9a114111893f35",
+      "reuse": "reviewed, not copied"
+    },
+    {
+      "path": "src/shared/constants/providers.ts",
+      "sha256": "f886da42fc09a551a3ecbd3b927bc5fe6dd5e5e4a452cecb7a65c690cfaf101f",
+      "reuse": "metadata extracted"
+    },
+    {
+      "path": "open-sse/config/providerRegistry.ts",
+      "sha256": "c2859ef375890cef27565ac08bfc763deb83a59076a068c31f395aa7700c938c",
+      "reuse": "reviewed, not copied"
+    },
+    {
+      "path": "open-sse/services/combo.ts",
+      "sha256": "301d3c8cf0ac0b4324149c1d2404f9833dc0f1981ff026e78774c06bdec7d3e1",
+      "reuse": "reviewed, not copied"
+    },
+    {
+      "path": "open-sse/services/comboAgentMiddleware.ts",
+      "sha256": "6fd270d41a1c0de67f0b801f26bd25f89b762c5c77c7fffb545703e334113e42",
+      "reuse": "reviewed, not copied"
+    },
+    {
+      "path": "src/shared/utils/circuitBreaker.ts",
+      "sha256": "e5f4bf492440625882f873ddc4cde9d40858b32a0467b8da6185a95b63c4db99",
+      "reuse": "reviewed, not copied"
+    },
+    {
+      "path": "src/lib/a2a/taskManager.ts",
+      "sha256": "08c1378802d5fa25b36ca88f4f1935602b394a0d6f25e32cd367beb427d42d49",
+      "reuse": "reviewed, not copied"
+    },
+    {
+      "path": "src/lib/a2a/taskExecution.ts",
+      "sha256": "3f06905814514390ea4b3a3a14106590dcaa12714fc6adc9d48b872330062253",
+      "reuse": "reviewed, not copied"
+    },
+    {
+      "path": "src/lib/skills/a2a.ts",
+      "sha256": "726afc19ef31b30af53ef3b8dedc1b34b2880f7d2b2bc92a4a95bd9285264261",
+      "reuse": "reviewed, not copied"
+    }
+  ]
+}

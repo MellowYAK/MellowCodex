@@ -147,7 +147,8 @@ CREATE TABLE IF NOT EXISTS development_guidance(task_id TEXT NOT NULL,revision I
             rows=db.execute('SELECT * FROM development_guidance WHERE task_id=? ORDER BY revision',(task_id,)).fetchall()
         return {'task_id':task_id,'task_revision':task['revision'],'task_state':task['state'],'human_request_original':task['goal'],'consumer_epoch':consumer['epoch'] if consumer else '', 'guidance_revision':len(rows),'guidance':[dict(r) for r in rows]}
 
-    def submit(self,task_id,expected_task_revision,expected_revision,consumer_epoch,request_id,text,required_tools=None,required_sources=None,allowed_tools=None,evidence_only=False,exact_patch=None,context_read=None):
+    @staticmethod
+    def validate_request(request_id,text,required_tools=None,required_sources=None,allowed_tools=None,evidence_only=False,exact_patch=None,context_read=None):
         if context_read is not None:
             context_read=ContextRead.model_validate(context_read).model_dump()
             if required_sources or required_tools or exact_patch or evidence_only:raise ValueError('Context retrieval is a separate bounded step')
@@ -175,6 +176,17 @@ CREATE TABLE IF NOT EXISTS development_guidance(task_id TEXT NOT NULL,revision I
             allowed_tools=sorted(set(allowed_tools))
         if len(required_tools)>20 or any(not re.fullmatch('[a-z][a-z0-9_]{0,79}',n) for n in required_tools):raise ValueError('Invalid required tool names')
         if not text.strip() or len(text)>8000 or not 1<=len(request_id)<=100:raise ValueError('Invalid guidance text or request identity')
+        needed=set(required_tools)|({'context_expand'} if required_sources else set())|({'candidate_patch','candidate_diff'} if exact_patch else set())|({ContextRead.model_validate(context_read).call()[0]} if context_read else set())
+        if allowed_tools is not None and not needed<=set(allowed_tools):
+            raise ValueError('Required evidence tools conflict with allowed tools')
+        return dict(required_tools=required_tools,required_sources=required_sources,allowed_tools=allowed_tools,
+                    evidence_only=evidence_only,exact_patch=exact_patch,context_read=context_read)
+
+    def submit(self,task_id,expected_task_revision,expected_revision,consumer_epoch,request_id,text,required_tools=None,required_sources=None,allowed_tools=None,evidence_only=False,exact_patch=None,context_read=None):
+        validated=self.validate_request(request_id,text,required_tools,required_sources,allowed_tools,evidence_only,exact_patch,context_read)
+        required_tools=validated['required_tools'];required_sources=validated['required_sources']
+        allowed_tools=validated['allowed_tools'];evidence_only=validated['evidence_only']
+        exact_patch=validated['exact_patch'];context_read=validated['context_read']
         with self.store.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             task=db.execute('SELECT * FROM tasks WHERE id=?',(task_id,)).fetchone()
@@ -186,7 +198,10 @@ CREATE TABLE IF NOT EXISTS development_guidance(task_id TEXT NOT NULL,revision I
             consumer=db.execute('SELECT epoch FROM development_consumers WHERE task_id=?',(task_id,)).fetchone()
             epoch=consumer['epoch'] if consumer else ''
             count,size=db.execute('SELECT COUNT(*),COALESCE(SUM(LENGTH(text)),0) FROM development_guidance WHERE task_id=?',(task_id,)).fetchone()
-            if task['mode']!='code' or task['state'] in ('done','cancelled'):raise Conflict('Task does not accept coding guidance')
+            if task['mode'] not in ('code','desktop','browser') or task['state'] in ('done','cancelled'):raise Conflict('Task is not eligible for supervised guidance')
+            # Browser/desktop correction cannot introduce code-patching privileges.
+            if task['mode']!='code' and (exact_patch is not None or required_sources or evidence_only):
+                raise Conflict('Source/patch guidance is restricted to code tasks')
             if task['revision']!=expected_task_revision or count!=expected_revision or epoch!=consumer_epoch:raise Conflict('Stale task, guidance revision or consumer epoch; read current guidance status')
             if size+len(text)>20000:raise Conflict('Mandatory guidance budget exceeded; split the task')
             scopes=[set(json.loads(r[0])) for r in db.execute("SELECT allowed_tools FROM development_guidance WHERE task_id=? AND allowed_tools!='null'",(task_id,))]

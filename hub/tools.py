@@ -146,6 +146,8 @@ class ToolRunner:
                 # PLAY uses desktop dispatch, but coding does not need every UI
                 # schema in each inference packet. Explicit groups restore them.
                 core={'tools_enable','agent_environment','run_shell','read_file','list_files','project_context','recovery_context'}
+            # Shared tested tools are discoverable/reusable without opening installer scope.
+            core|={'extensions_list','extension_run'}
             for n in names:
                 if ('browser' in groups and (n.startswith('browser_') or n=='chatgpt_ask')
                     or 'desktop' in groups and (n.startswith(('app_','window_','desktop_','capture_','observe_','focus_','list_windows','session_','inspect_accessibility')))
@@ -183,7 +185,7 @@ class ToolRunner:
             else:
                 self.process.kill()
 
-    async def execute(self, task, name, args):
+    async def execute(self, task, name, args, *, action_id=None):
         import jsonschema
         if getattr(self,'context_store',None):
             from .development.guidance import Guidance
@@ -207,6 +209,33 @@ class ToolRunner:
                 from .i18n import CapabilityError
                 raise CapabilityError('context.arguments',detail=exc.message) from exc
             raise ObservationError('Invalid tool arguments; no action was sent. '+exc.message+'. Correct the arguments to match this tool schema and retry. Reading conversation history does not require desktop input or window focus.') from exc
+        # Shared owner policy gate AFTER per-task scope + schema validation,
+        # BEFORE all native tool execution. Never accept Hub/MCP consent tokens.
+        from .owner_policy_adapter import check_native_action
+        denial = await asyncio.to_thread(check_native_action, task, name, args, spec,
+                  action_id=action_id,
+                  context_store=getattr(self, 'context_store', None),
+                  allowed_tools=allowed)
+        if denial is not None and denial.get('waiting_owner'):
+            # Same durable pending action; never ask the model to replay an effect.
+            import time
+            deadline=time.monotonic()+180
+            if getattr(self,'context_store',None):
+                self.context_store.event(task['id'],'waiting_owner',
+                    {'action_id':action_id,'request_id':denial.get('owner_request_id'),
+                     'message':'Approve this exact action in the native Owner permissions window within 180 seconds.'})
+            while denial is not None and denial.get('waiting_owner') and time.monotonic()<deadline:
+                await asyncio.sleep(2)
+                if getattr(self,'context_store',None):
+                    current=self.context_store.get(task['id'])
+                    if current['state'] in ('paused','cancelled'):
+                        return {'error':'Task stopped while awaiting owner','input_sent':False,'effect_started':False}
+                denial=await asyncio.to_thread(check_native_action,task,name,args,spec,action_id=action_id,
+                    context_store=getattr(self,'context_store',None),allowed_tools=allowed)
+            if denial is not None:
+                denial={**denial,'waiting_owner':False,'owner_wait_ended':True}
+        if denial is not None:
+            return denial
         if self.desktop.stopped:
             raise RuntimeError('Execution stopped')
         folder=ARTIFACTS / task['id']
@@ -306,7 +335,7 @@ class ToolRunner:
             if name=='candidate_inspect':return await asyncio.to_thread(dev.inspect,task,args['candidate_id'])
             if name=='candidate_diff':return await asyncio.to_thread(dev.diff,task,args['candidate_id'])
             if name=='candidate_test':return await dev.test(task,args['candidate_id'],args['revision'],args['tests'],args.get('timeout',120))
-            if name=='candidate_repair':return await dev.repair(task,args['candidate_id'],args['revision'],args['paths'],args['tests'],args.get('model'))
+            if name=='candidate_repair':return await dev.repair(task,args['candidate_id'],args['revision'],args['paths'],args['tests'],args.get('model'),args.get('max_attempts',1))
             return await asyncio.to_thread(dev.patch,task,args)
         if name in {'project_index','project_index_status','project_index_settings'}:
             from .context.api import service_for_task

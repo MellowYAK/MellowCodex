@@ -6,6 +6,16 @@ from .workspaces import Workspaces
 from .contracts import PatchProposal
 from .ownership import candidate_owner
 
+
+def worker_guidance(snapshot):
+    """Keep director instructions and constraints; omit archived executable payloads."""
+    keys=('revision','request_id','text','required_sources','required_tools','allowed_tools')
+    return {
+        'guidance_revision':snapshot.get('guidance_revision',0),
+        'instructions':[{key:row[key] for key in keys if key in row}
+                        for row in snapshot.get('guidance',[])],
+    }
+
 class Development:
     # In-process ordering plus an OS-owned cross-process candidate writer lock.
     # Activation ownership remains separate from these source/test operations.
@@ -113,7 +123,10 @@ class Development:
                 original=manifest.get('base_files',{}).get(rel)
                 if original and manifest['files'].get(rel)!=original:
                     raise ValueError('Existing acceptance test was changed; cannot certify original test: '+rel)
-        result=await run_pytest(directory,tests,timeout)
+        from .syntax import python_errors
+        errors=python_errors({rel:safe_path(directory,rel).read_bytes() for rel in manifest['files'] if rel.endswith('.py')})
+        result=({'exit_code':1,'output':'Python syntax preflight failed: '+json.dumps(errors),'timed_out':False,'truncated':False,'syntax_errors':errors}
+                if errors else await run_pytest(directory,tests,timeout))
         result.update(candidate_id=identifier,revision=revision)
         with self._lock:
             current=self.inspect(task,identifier)
@@ -125,7 +138,40 @@ class Development:
             result['evidence']=str(evidence)
             return result
 
-    async def repair(self,task,identifier,revision,paths,tests,model=None):
+    async def repair(self,task,identifier,revision,paths,tests,model=None,max_attempts=1):
+        """Optional local test-feedback loop; never activates or approves its own patch."""
+        if isinstance(max_attempts,bool) or not isinstance(max_attempts,int) or not 1<=max_attempts<=3:
+            raise ValueError('Choose 1..3 repair attempts')
+        from .guidance import Guidance
+        baseline=self.store.get(task['id'])
+        directive=Guidance(self.store).status(task['id'])
+        attempts=[];feedback=None;seen=set()
+        for number in range(1,max_attempts+1):
+            current=self.store.get(task['id'])
+            if current['state'] in ('paused','cancelled') or current['revision']!=baseline['revision'] or Guidance(self.store).status(task['id'])!=directive:
+                raise ValueError('Task or director guidance changed; repair loop stopped')
+            manifest=self.inspect(task,identifier)
+            signature=tuple((p,manifest['files'].get(p)) for p in sorted(paths))
+            if signature in seen:
+                result.update(attempts=attempts,stop_reason='repeated_source_state')
+                return result
+            seen.add(signature)
+            result=await self._repair_once(task,identifier,revision,paths,tests,model,feedback)
+            evidence=result['test']
+            attempts.append({'attempt':number,'revision':result['revision'],'verified':evidence['verified'],'evidence':evidence.get('evidence')})
+            result.update(attempts=list(attempts),stop_reason='tests_passed' if evidence['verified'] else 'attempt_limit')
+            if evidence['verified']:return result
+            if evidence.get('timed_out') or evidence.get('source_changed'):
+                result['stop_reason']='uncertain_test_effects';return result
+            revision=result['revision']
+            feedback={'previous_attempt':number,'exit_code':evidence.get('exit_code'),
+                      'output':str(evidence.get('output',''))[-8000:],
+                      'instruction':'The prior patch failed these tests. Diagnose the observed failure and correct the current permitted source. Preserve the original goal and read-only tests. Do not repeat the same patch.'}
+            if number<max_attempts:
+                self.store.event(task['id'],'coding_worker_test_feedback',{'candidate_id':identifier,'revision':revision,'next_attempt':number+1,'evidence':evidence.get('evidence')})
+        return result
+
+    async def _repair_once(self,task,identifier,revision,paths,tests,model=None,test_feedback=None):
         from .worker_runner import run
         from .worker import WorkerPatch
         from .workspaces import sha
@@ -149,19 +195,41 @@ class Development:
                 sources[rel]={'sha256':sha(data),'text':data.decode('utf-8-sig'),'writable':rel in paths}
             context,project_id=service_for_task(task,self.store)
             from .guidance import Guidance
+            guidance_snapshot=Guidance(self.store).status(task['id'])
+            command_event=self.store.latest_event(task['id'],'director_exact_command')
+            director_correction=({key:command_event['data'].get(key) for key in ('request_id','reason')}
+                                 if command_event and command_event['data'].get('reason') else None)
             packet={'schema':'mellow.worker-packet.v1','task_id':task['id'],'human_request_original':task['goal'],
                     'task_revision':task['revision'],'candidate_id':identifier,'candidate_revision':revision,
                     'model':model or settings.coding_model or settings.model,'allowed_paths':paths,'sources':sources,
                     'acceptance_tests':tests,'constraints':context.overview(project_id)['required_constraints'],
-                    'guidance':Guidance(self.store).status(task['id']),'activation_requested':False}
+                    'guidance':worker_guidance(guidance_snapshot),'activation_requested':False,
+                    'test_feedback':test_feedback,'director_correction':director_correction}
             packet_path=self.workspaces.candidate(identifier)/('worker-packet-'+__import__('uuid').uuid4().hex+'.json')
             packet_path.write_text(json.dumps(packet,ensure_ascii=False,indent=2),encoding='utf-8')
-            self.store.event(task['id'],'coding_worker_started',{'candidate_id':identifier,'revision':revision,'packet':str(packet_path),'model':packet['model']})
+            self.store.event(task['id'],'coding_worker_started',{'candidate_id':identifier,'revision':revision,'packet':str(packet_path),'packet_sha256':sha(packet_path.read_bytes()),'source_sha256':{rel:entry['sha256'] for rel,entry in sources.items()},'model':packet['model']})
             # Reject syntactically broken Python before touching the candidate.
             # Give the patch-only worker one bounded correction opportunity with
             # the actual parser error; do not ask the executor to rediscover it.
             for attempt in range(2):
-                response=await run(packet,settings.request_timeout_seconds+15)
+                try:
+                    response=await run(packet,settings.request_timeout_seconds+15)
+                except ValueError as exc:
+                    # This exact worker exception is raised by the context
+                    # preflight before inference or patch proposal parsing.
+                    if str(exc)=='ValueError: Scoped work packet exceeds selected context budget; narrow source files':
+                        current=self.inspect(task,identifier)
+                        unchanged=(current['revision']==revision
+                            and current['files']==manifest['files']
+                            and all(sha(safe_path(directory,rel).read_bytes())==item['sha256']
+                                    for rel,item in sources.items()))
+                        if unchanged:
+                            self.store.event(task['id'],'coding_worker_preflight_rejected',
+                                {'candidate_id':identifier,'revision':revision,
+                                 'packet_sha256':sha(packet_path.read_bytes()),
+                                 'source_sha256':{rel:item['sha256'] for rel,item in sources.items()},
+                                 'candidate_changed':False,'stage':'context_budget_before_inference'})
+                    raise
                 proposed=WorkerPatch.model_validate(response['proposal'])
                 syntax_errors=[]
                 for change in proposed.changes:
@@ -174,10 +242,10 @@ class Development:
                 if attempt==1:raise ValueError('Coding worker returned invalid Python twice; candidate was not changed: '+json.dumps(syntax_errors))
                 packet['correction_feedback']={'parser_errors':syntax_errors,'instruction':'Your previous proposal failed Python parsing and was not applied. Regenerate the requested small change from the original sources, with valid syntax and all unrelated source preserved. Return full corrected contents for permitted paths only.'}
                 current_task=self.store.get(task['id'])
-                if current_task['revision']!=packet['task_revision'] or Guidance(self.store).status(task['id'])!=packet['guidance']:
+                if current_task['revision']!=packet['task_revision'] or Guidance(self.store).status(task['id'])!=guidance_snapshot:
                     raise ValueError('Task or director guidance changed; correction was not requested')
             current_task=self.store.get(task['id']);current_guidance=Guidance(self.store).status(task['id'])
-            if current_task['revision']!=packet['task_revision'] or current_guidance!=packet['guidance']:
+            if current_task['revision']!=packet['task_revision'] or current_guidance!=guidance_snapshot:
                 raise ValueError('Task or director guidance changed while worker ran; proposal was not applied. Rebuild the work packet.')
             proposal=WorkerPatch.model_validate(response['proposal'])
             if any(c.path not in paths for c in proposal.changes):raise ValueError('Worker proposed a path outside its authorized scope')

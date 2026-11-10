@@ -4,6 +4,9 @@ from ..i18n import t
 
 async def prepare(engine,task,messages):
     if task['mode']!='code':return
+    if engine.store.latest_event(task['id'],'director_exact_command'):
+        engine.store.event(task['id'],'source_navigation_delegated',{'basis':'Exact director command; no autonomous discovery'})
+        return
     from ..development.guidance import Guidance
     if Guidance(engine.store).context_read(task['id']):
         # Deterministic read executes exactly the director-selected index tool.

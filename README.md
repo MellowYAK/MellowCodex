@@ -1,3 +1,21 @@
+## Service recovery — source version 0.15.3
+
+Run `register-service-recovery.ps1` once to install current-user logon and one-minute background recovery. `start.ps1` also invokes `reconcile-services.ps1` with Windows PowerShell 5.1. Missing Ollama, Hub, MCP gateway, installed Guard and owned SSH relay are restored without stopping existing work. Runtime status is in `E:\AI\state\service-reconcile.json`. Repeated launches are serialized. Live nonresponsive processes are reported rather than forcibly terminated. Recovery runs while logged in, including a locked session; actual locked-session and reboot acceptance remain untested. This is not pre-login desktop automation.
+
+`enable-broker-startup.ps1` requires native Windows administrator approval once to configure the existing broker service Automatic and start it. It does not change owner policy or disable UAC. No new user-configurable application setting was added.
+
+<!-- SelfDevelop isolated candidate, 2026-11-08 -->
+The isolated SelfDevelop candidate fixes `correct()` non-string `command` validation before `.strip()` while preserving shell, blank, length and timeout guards. A new regression test checks `None`, `123` and `True` raise `ValueError` without task mutation. Three focused test modules passed (21 passed in 8.20s). Candidate only; no production activation, MCP reconnection or autonomous development acceptance is implied.
+
+Activity home: choose דף הבית in the sidebar for current/recent tasks. Counts explicitly cover the eight tasks returned by the activity API, not lifetime totals. The header status button remains available above chat scrolling; full stages, controls and technical event logs open in a dialog. A pulsing blue indicator represents fresh queued/running/verifying state, not proof of progress. Stale updates stop the pulse.
+
+<!-- MCP correspondence update, 2026-11-07 -->
+Direct MCP project reads now require the linked chat_id and record start/result/error correspondence. sync_conversation_message mirrors the actual user request and visible assistant reply, creating one chat using a retained conversation_key. The provider must call it: MCP cannot automatically see unsent ChatGPT messages or infer external conversation identity. Existing connectors need refreshed tool schemas after the next service restart.
+
+## Conversation activity display (in development)
+
+Task cards display execution state, current operation/wait and elapsed phase time. A rotating indicator means a running/queued/verifying task has recent status observations, not proof of forward progress. After 15 seconds without that task’s status, animation stops and a stale-update notice appears. Clicking the indicator opens retained technical logs. Review, pause, failure and completion remain distinct states. Reload the interface to receive updated static assets; live acceptance is still pending.
+
 # Local Agent Hub
 
 For read-only fast-index investigations subsequently resumed with director guidance, source synthesis follows the latest current step instead of regenerating the original broad project plan. Required source ranges are extracted from recorded observations; the overall objective still bounds authorization. This fixes instruction drift, not semantic correctness: the returned draft still requires review.
@@ -573,3 +591,71 @@ database (`context_access`), without copying source bodies into the audit table.
 
 ### 2026-11-07 direct MCP mapping acceptance
 In the connected GPT conversation, three actual MCP calls completed: project_context, context_search (project storage/versioning), context_expand (ember_video/projects.py lines 120-206). Server context_access receipts confirm all three HTTP-backed calls; GPT described save/revision/current/history behavior and explicitly separated source verification from runtime execution. No Git access, media execution or local inference was requested. Receipt evidence is stored outside the repository at E:/AI/audits/recovery-directed-20261107/mcp-map-access-receipts.json. PLAY separately completed brief -> related -> exact source -> director review automatically. All five returned PLAY source hashes independently match current files. New convenience MCP wrappers may remain absent from existing client catalogs; the existing direct context tools were the tested route. Publication and the final bootstrap cleanup deployment remain pending.
+
+### SelfDevelop and additional MCP clients (development)
+SelfDevelop starts a persistent chat bound to this Hub repository. `selfdevelop_start`, `selfdevelop_status`, `selfdevelop_step`, and `selfdevelop_review` expose director-controlled steps through MCP. Explicit tool scope is installed before execution; unscoped work is rejected and results await external review. Existing candidate/patch/guidance services are reused. This is not full server self-deployment: Guardian still handles patch-worker releases only. PLAY sessions can use existing structured guidance after binding to this chat; automatic PLAY startup for SelfDevelop is not yet validated.
+AI connections now offer the same OAuth MCP endpoint for Claude, DeepSeek and other compatible clients. This means server setup is available, not that each provider supports it or is authenticated. Browser PLAY adapters for those providers remain unavailable.
+
+## Provider expansion research
+
+The pinned OmniRoute source review and native integration decisions are recorded in [the review](docs/OMNIROUTE_REVIEW-2026-11-07.md). The extracted provider catalog is research metadata, not 72 working connections. No OmniRoute runtime is required or installed. Work Delegation remains in development.
+
+### Work Delegation (development, 2026-11-07)
+Native durable director/worker runs are shared by the UI and delegation_* MCP tools. Provider profiles appear as cards with identity marks, transport, model, edit action and an explicit unverified-connection label. Saving a profile does not authenticate it. API workers use configured OpenAI-compatible chat-completions endpoints and return proposals only; up to three eligible workers may run together. External directors review proposals and supply exact context-read or candidate-patch instructions to the existing local runner. Results still require review. MCP/PLAY profile records do not create new provider browser adapters or autonomous director sessions. OmniRoute supplied attributed catalog metadata only; orchestration is native code.
+
+
+## APC and SelfDevelop technical audit
+
+[APC integration and supervised SelfDevelop plan](docs/APC_SELFDEVELOP_IMPLEMENTATION_PLAN-2026-11-07.md) records actual reuse, remaining contracts and ordered acceptance. Existing native indexing remains in use. All 24 pinned manifest sources matched. Full control-plane self-update is not yet implemented; current Guardian deploys patch workers only.
+
+### SelfDevelop pause checkpoint
+
+SelfDevelop is not yet accepted for full production self-update/restart. The MCP-driven isolated repair, exact test failures and remaining activation work are saved in [the SelfDevelop handoff](docs/SELFDEVELOP_HANDOFF-2026-11-07.md). Candidate revision 4 has not been deployed.
+
+
+## Unreleased — 2026-11-08: SelfDevelop exact commands
+
+Added selfdevelop_command (MCP) and POST /api/selfdevelop/{chat_id}/command. The director supplies one explicit command, shell and timeout in an existing SelfDevelop chat. The local task runner executes it without local-model rewriting, records the action/output, and waits for director review. Reused request IDs return the original task; conflicting content is rejected. Pending/failed commands are not automatically replayed. Guidance is validated before new task creation; unresolved SelfDevelop turns block orphan followups. Same-task request_changes accepts waiting_user while preserving revision and uncertain-action guards.
+
+Validation: recovery/guidance suite 28 passed at isolated candidate revision 1; six exact-command tests passed at revision 4, including real PowerShell execution through Engine with model calls forbidden. After user-authorized one-time bootstrap and service restart, live task 90fb9378e5214734963d433f8465048a executed one run_shell and returned SELFDEVELOP_LIVE_EXACT_COMMAND_OK; evidence was inspected through MCP. The new command was submitted via the authenticated local API because this chat cached the earlier MCP tool list. A fresh MCP tool-list/session is needed to expose selfdevelop_command to this client.
+
+Limitations: this is not full autonomous SelfDevelop acceptance. Automatic control-plane deployment, rollback/restart recovery and corrected-command retry remain incomplete. Image transfer and Desktop shortcut repair remain pending. Preserve the current worktree and review changes before Git publication.
+
+
+## Unreleased — 2026-11-08: correction of exact commands
+
+Added selfdevelop_command_correct and POST /api/selfdevelop/{chat_id}/command/correct. A director can submit a corrected command for the current waiting_user/waiting_review task with an exact task revision, stable correction ID and reason. Original goal and previous actions remain intact. Atomic event/queue update records prior action IDs so only the new command runs; uncertain pending effects and stale revisions are rejected. Timeout accepts 1..180 seconds to match the existing executor.
+
+Validation: candidate revision 5 passed all eight command tests, including real Engine/PowerShell failure (exit 7), same-task correction, successful new output, no model calls, idempotency and pending-action rejection. The live agent installed the four changed files using base-hash checks and backups under E:/AI/audits/selfdevelop-correction-v5. Read-back hashes matched the candidate. Automatic scheduling of restart was rejected by approval review with blocked by policy; no retry or bypass was attempted. Live correction acceptance awaits user restart. Full autonomous self-upgrade/recovery remains incomplete.
+
+
+## Unreleased — 2026-11-08: reject syntactically broken self-updates
+
+Corrected a malformed app.py route introduced in revision5. The earlier eight command tests did not import app.py and were insufficient evidence of server startup; the failed deployment was rolled back with user approval. Exact candidate patches now reject malformed Python before publishing a revision; candidate test certification parses every Python source, including modules outside selected tests. Candidate revision6 passed 39 tests including app import, actual command execution/correction, and syntax gate regressions. Agent installs eight reviewed files after all-source parse and hash checks, with backups. Live correction route awaits normal service restart; full control-plane automatic deployment/rollback is still incomplete. Desktop English Start and Stop All Services links were created/read back through agent actions; shutdown was not executed by the director.
+
+
+## SelfDevelop control-plane update (Unreleased, 2026-11-08)
+
+The local executor now has an independently staged Hub/MCP updater. The director prepares a tested candidate using `selfdevelop_prepare_update`, retains its update ID, then explicitly activates it with `selfdevelop_activate_update`; after reconnecting it reads `selfdevelop_update_status`. The copied supervisor runs outside the replaceable source, preserves task data, rejects active work, checks service ownership and HTTP health, and restores changed source files if startup fails. `ACTIVE_VERIFIED`, `ROLLED_BACK`, and `RECOVERY_REQUIRED` are distinct outcomes. Dependencies and the desktop process are not upgraded by this route.
+
+Current deployment: revision12 files installed by the local agent with backup; running services still need to load them. Production restart/reconnect acceptance and refreshed external MCP discovery remain pending. Isolated real-process tests do not establish production deployment. Autonomous local-model development remains unproven; the verified execution path is director-authored commands/patches followed by evidence review.
+
+
+Self-repair model packets retain director instruction text and source/tool constraints but omit archived exact patches and context-read payloads. Full guidance state still fences stale model responses. This prevents redundant payload growth; local-model reasoning acceptance remains pending.
+
+
+## Mellow Guard
+
+Mellow Guard is the user-facing name of the independent MellowCodex control-plane supervisor. It is responsible for staged Hub/MCP update startup, health checking and rollback. Naming does not change deployment status: production activation remains unverified. Existing API/tool identifiers remain compatible.
+
+
+## Mellow Guard live acceptance ? 2026-11-08
+
+The installed control-plane path completed one real source update and restart: staged update 2e6b8031b2ad4e509da4a1e70c80749d reached ACTIVE_VERIFIED. The external MCP connection subsequently returned updated SelfDevelop capabilities in the same persistent chat. This establishes director-guided Hub/MCP activation, not autonomous local-model programming, dependency updates, desktop restart, or production rollback (rollback was tested with isolated processes).
+
+
+### SelfDevelop review safeguards ? 2026-11-08 (Unreleased)
+A real Qwen Coder 7B trial fixed timeout validation but removed existing shell/command guards despite passing 15 scoped tests. Director review rejected that patch. A subsequent model correction returned unchanged source. The coding-worker instruction now explicitly preserves existing guards and requires reviewing unintended deletions; a targeted regression covers invalid shells, blank commands and oversized commands. These are risk reductions, not a guarantee of model correctness or proof of autonomous self-development. The final correction is director-authored and agent-applied in a candidate; production activation remains pending. Candidate regression: 22 tests passed in 10.13 seconds, including preservation of all three command guards.
+
+
+Unreleased 2026-11-08: coding-worker packets now include the latest exact-command correction reason and request identity, without executable command payloads, while retaining the original objective. Previously the exact-command correction was recorded but omitted from the worker packet. A focused transport regression verifies latest-reason delivery; real-model correction acceptance remains pending.

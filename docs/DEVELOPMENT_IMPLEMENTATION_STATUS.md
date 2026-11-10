@@ -254,3 +254,7 @@ Recovery source-contract diagnostic completed — 2026-11-07: all runs were Engl
 
 ## Mapping release checkpoint — 0.15.0, 2026-11-07
 Current mapping acceptance supersedes earlier pending mapping checkpoints above: live automatic PLAY brief/related/source/review and direct public MCP context retrieval succeeded without Git or local inference. Production UI search and source expansion were checked. See MAPPING_ACCEPTANCE-2026-11-07.md for exact evidence, coverage and limits. Native fast mode remains separate from APC-derived baseline. Local-only semantic reasoning and the full original product plan remain incomplete. Publication is being prepared; running version metadata needs its next normal restart.
+
+## User-requested pause — SelfDevelop/APC, 2026-11-07
+
+Not complete or deployed. The actual MCP repair is saved in candidate `4d9dda844bfb477b921375cef1714ce9`, revision 4. Latest run: 8 passed, 1 failed. See [exact handoff and next steps](SELFDEVELOP_HANDOFF-2026-11-07.md). Resume there; do not mark candidate-only evidence as production self-update acceptance.

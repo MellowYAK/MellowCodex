@@ -1,3 +1,33 @@
+# 0.15.3 — 2026-11-10 (service recovery scripts deployed locally)
+
+- Added idempotent service reconciliation, Windows PowerShell 5.1 Guard launch, archived dead receipts, canonical loopback Hub/gateway launch, and existing owned relay reconciliation. No owner policy changes.
+- Installed MellowCodex Service Recovery: current-user logon and every minute while logged in. Serialized execution; live nonresponsive processes are preserved and reported rather than killed.
+- Owner approved native elevation to set MellowOwnerBroker Automatic and start it; verified Running/Automatic.
+- Real acceptance: stopped the exact manually launched MCP gateway pair; scheduled recovery started its canonical replacement and a real MCP model_memory_status returned loaded/inference_enabled true. Subsequent scheduled run returned zero with all five ports reachable. Existing Hub and desktop preserved.
+- No reboot, logged-out or locked-desktop test performed. Logon task requires a logged-in user; broker is a Windows service. Existing legacy Hub ownership is not migrated by killing it. Live hung processes and foreign listeners require diagnosis. Metadata loads on next normal Hub restart. Publication pending; workspace contains unrelated concurrent edits.
+
+# 0.15.1 — 2026-11-09 (local installed Hub release)
+
+- Hub runtime version updated from 0.15.0 to 0.15.1 after the separately owner-approved MellowOwnerBroker native duration package installation. Previously integrated desktop owner button SHA pin matches new native helper. No administrator shell or owner-policy write capability was added.
+- Installed native Control, Service, Client SHA checks passed; service Running as LocalSystem. Owner-approved installation receipt confirms service_updated_running and policy/config preserved. Normal client status reports server_identity_verified true, policy_revision 1 and global Full as the owner's previous choice.
+- Protected native form source supports chat override duration selection in minutes, hours and days with planned expiry preview. Actual visual appearance, a new owner-applied override and expiry runtime were NOT independently exercised; owner policy was not changed.
+- Guard-owned Hub update 106f7adff4ef417ba8b442992b1786f6 is ACTIVE_VERIFIED and Hub healthy. Guard focused test_task_recovery.py: seven tests executed, verified true, exit 0. No broad test suites.
+- Background file/service inspection and Guard update succeeded without using desktop capture. Execution while Windows is actually locked, generic unattended elevated native maintenance and public release publication remain unverified or unsupported. Windows UAC stays owner controlled.
+- This is local release metadata, not a public release. Earlier Unreleased notes below are retained intact.
+
+Unreleased — 2026-11-08: isolated SelfDevelop candidate fixes non-string `command` validation in `correct()` before `.strip()`, retaining shell/blank/length/timeout guards and module docstring. Added three non-string regression cases (`None`, `123`, `True`) verifying `ValueError` and unchanged task state/revision/result. Original three focused modules: 21 passed in 8.20s (candidate revision 1). Production activation, MCP reconnection and autonomous development not yet verified.
+
+Unreleased — 2026-11-07: moved large task status cards out of the conversation into a header-accessible dialog; added recent-activity dashboard, task/chat navigation and fresh-state pulse. Prevent dashboard refresh from rebuilding unchanged rows and disrupting clicks. IAB verified dashboard, details dialog and technical event expansion; no active execution animation was exercised because no task was running.
+
+<!-- MCP correspondence update, 2026-11-07 -->
+MCP direct context reads now persist in the explicitly linked local chat, including read-only questions. Added sync_conversation_message for automatic stable-key chat creation and visible-message mirroring. Compact operation summaries expand into technical details. Development validation: four focused fixture tests passed; public ChatGPT flow not yet verified.
+
+# Unreleased
+
+- Conversation task cards now expose a prominent animated activity indicator, current wait reason and phase elapsed time. Clicking or keyboard-activating the indicator expands technical evidence. Freshness is tracked per task; stale updates stop motion. Reduced-motion preference is respected.
+- Added stable external conversation bindings, request presentation/attachments, light/dark task cards and native browser hide control. Added repeated successful-read detection returning incomplete work to director review.
+- Validation: five focused conversation/progress-guard tests passed; JavaScript syntax check passed. Live animation acceptance and image transfer end-to-end remain pending; no completion or release claimed.
+
 # 0.15.0 — 2026-11-07
 
 - Added native fast source indexing alongside the separate APC-derived baseline: persisted SHA-256, incremental parsing, paged maps, source search, relationship candidates and explicit parser coverage. No new APC source copied.
@@ -695,3 +725,79 @@ In the connected GPT conversation, three actual MCP calls completed: project_con
 
 ### Supervised execute-return-review contract — 2026-11-07 (Unreleased)
 The shared MCP/PLAY director instructions explicitly require one bounded step, recorded output, director acceptance or exact correction, then the next step. Director disconnection must preserve pending review rather than silently enabling autonomous work. Ordinary director review is distinct from human approval. Deterministic map/source/patch paths enforce their existing waiting_review boundary; this wording change alone does not establish strict execution enforcement for every generic tool or deploy updated instructions into an already connected chat. Native Hub change; no APC code imported.
+
+### Unreleased — SelfDevelop and generic MCP setup
+- Added persistent director/executor SelfDevelop sessions and scoped steps using existing guidance and task runner; external review gates subsequent steps.
+- Exposed shared OAuth MCP setup for additional compatible AI clients without falsely marking provider connections active.
+- MCP chat reads now include saved correspondence alongside tasks.
+- Full control-plane restart/rollback and live provider compatibility remain unverified/incomplete.
+
+## Unreleased — OmniRoute source review, 2026-11-07
+
+- Downloaded and inspected pinned upstream source; recorded selective reuse decisions and source hashes. Preserved MIT notice and extracted 72 unique provider metadata entries as a documentation seed. No upstream executable code integrated; additional connections and Work Delegation are not claimed complete.
+
+## Unreleased — native delegation and provider cards
+- Added durable director/worker proposals, dependency review gates, API proposal batches, same-chat records and exact-instruction local dispatch. UI and MCP share stored profiles.
+- Provider profiles now use visual cards with identity marks, transport/model labels and edit controls. API-only fields are hidden for other transports. Connection status is explicitly unverified, not inferred from a saved profile.
+- Shared UI HTTP handling now reports status/route for non-JSON responses rather than leaking a JSON parser error or raw server response.
+- Fixed the isolated QA server bootstrap (outside product source) to initialize BridgeController; missing test initialization caused the reported HTTP 500. Production was not restarted.
+- Development validation and remaining external-client acceptance are recorded in VALIDATION.md; no complete multi-provider release claimed.
+
+
+## Unreleased — APC/SelfDevelop source audit
+
+Added a source-grounded APC integration plan and reconciled historical manifest checkpoints with current supervised mapping evidence. Verified 24/24 pinned source hashes. No new APC executable code copied. A fresh GPT/MCP trial exposed a stale tool catalog and an incorrect free-form dispatch while the model was unloaded; these failures are retained, not reported as acceptance.
+
+### SelfDevelop pause checkpoint (Unreleased, 2026-11-07)
+
+- Saved the APC source audit and real MCP-directed candidate repair handoff before user-requested shutdown. Candidate revision 4 remains isolated and unaccepted; no production source promotion or Git publication.
+- Recorded actual runs: revision 1, 52 passed/1 failed; revision 4, 8 passed/1 failed, both with outdated MCP-fixture signatures. Full control-plane activation/recovery remains outstanding.
+
+
+## Unreleased — 2026-11-08: SelfDevelop exact commands
+
+Added selfdevelop_command (MCP) and POST /api/selfdevelop/{chat_id}/command. The director supplies one explicit command, shell and timeout in an existing SelfDevelop chat. The local task runner executes it without local-model rewriting, records the action/output, and waits for director review. Reused request IDs return the original task; conflicting content is rejected. Pending/failed commands are not automatically replayed. Guidance is validated before new task creation; unresolved SelfDevelop turns block orphan followups. Same-task request_changes accepts waiting_user while preserving revision and uncertain-action guards.
+
+Validation: recovery/guidance suite 28 passed at isolated candidate revision 1; six exact-command tests passed at revision 4, including real PowerShell execution through Engine with model calls forbidden. After user-authorized one-time bootstrap and service restart, live task 90fb9378e5214734963d433f8465048a executed one run_shell and returned SELFDEVELOP_LIVE_EXACT_COMMAND_OK; evidence was inspected through MCP. The new command was submitted via the authenticated local API because this chat cached the earlier MCP tool list. A fresh MCP tool-list/session is needed to expose selfdevelop_command to this client.
+
+Limitations: this is not full autonomous SelfDevelop acceptance. Automatic control-plane deployment, rollback/restart recovery and corrected-command retry remain incomplete. Image transfer and Desktop shortcut repair remain pending. Preserve the current worktree and review changes before Git publication.
+
+
+## Unreleased — 2026-11-08: correction of exact commands
+
+Added selfdevelop_command_correct and POST /api/selfdevelop/{chat_id}/command/correct. A director can submit a corrected command for the current waiting_user/waiting_review task with an exact task revision, stable correction ID and reason. Original goal and previous actions remain intact. Atomic event/queue update records prior action IDs so only the new command runs; uncertain pending effects and stale revisions are rejected. Timeout accepts 1..180 seconds to match the existing executor.
+
+Validation: candidate revision 5 passed all eight command tests, including real Engine/PowerShell failure (exit 7), same-task correction, successful new output, no model calls, idempotency and pending-action rejection. The live agent installed the four changed files using base-hash checks and backups under E:/AI/audits/selfdevelop-correction-v5. Read-back hashes matched the candidate. Automatic scheduling of restart was rejected by approval review with blocked by policy; no retry or bypass was attempted. Live correction acceptance awaits user restart. Full autonomous self-upgrade/recovery remains incomplete.
+
+
+## Unreleased — 2026-11-08: reject syntactically broken self-updates
+
+Corrected a malformed app.py route introduced in revision5. The earlier eight command tests did not import app.py and were insufficient evidence of server startup; the failed deployment was rolled back with user approval. Exact candidate patches now reject malformed Python before publishing a revision; candidate test certification parses every Python source, including modules outside selected tests. Candidate revision6 passed 39 tests including app import, actual command execution/correction, and syntax gate regressions. Agent installs eight reviewed files after all-source parse and hash checks, with backups. Live correction route awaits normal service restart; full control-plane automatic deployment/rollback is still incomplete. Desktop English Start and Stop All Services links were created/read back through agent actions; shutdown was not executed by the director.
+
+
+## Unreleased — SelfDevelop supervisor, 2026-11-08
+
+- Added independent staged Hub/MCP updates with source hashes, rollback copies, durable status, task-admission gate, and prepare/activate/status MCP routes.
+- Corrected Windows venv launcher versus runtime process identification and bound-socket status handling; health still requires owned processes and successful HTTP responses.
+- Local agent installed seven checked files with backup at the local audit location. No production restart performed in this installation.
+- Validation: 10 supervisor tests passed (including real isolated startup and intentional startup-failure recovery); 18 API/command/review tests passed. Production self-upgrade and autonomous-model acceptance remain pending. No completed release claimed.
+
+
+Unreleased 2026-11-08: compact self-repair worker guidance without weakening stale-response detection. Six targeted fixture tests passed; installed by local runner, pending reload and real-model acceptance.
+
+
+## Unreleased — Mellow Guard naming, 2026-11-08
+
+Named the independent control-plane supervisor Mellow Guard at the user request. Documentation-only naming update; no restart or activation performed.
+
+
+## Unreleased ? Mellow Guard live activation, 2026-11-08
+
+Corrected stale SelfDevelop capability status and named its supervisor Mellow Guard. Explicitly report autonomous_development_verified=false. Local agent applied the patch; nine focused status/recovery tests and two updated session-contract checks passed. Mellow Guard then activated the four changed files, restarted Hub/MCP, returned ACTIVE_VERIFIED and external MCP reconnected. The previous negative restart-capability assertion was intentionally updated; other session/idempotency/review checks remained.
+
+
+### SelfDevelop review safeguards ? 2026-11-08 (Unreleased)
+A real Qwen Coder 7B trial fixed timeout validation but removed existing shell/command guards despite passing 15 scoped tests. Director review rejected that patch. A subsequent model correction returned unchanged source. The coding-worker instruction now explicitly preserves existing guards and requires reviewing unintended deletions; a targeted regression covers invalid shells, blank commands and oversized commands. These are risk reductions, not a guarantee of model correctness or proof of autonomous self-development. The final correction is director-authored and agent-applied in a candidate; production activation remains pending. Candidate regression: 22 tests passed in 10.13 seconds, including preservation of all three command guards.
+
+
+Unreleased 2026-11-08: coding-worker packets now include the latest exact-command correction reason and request identity, without executable command payloads, while retaining the original objective. Previously the exact-command correction was recorded but omitted from the worker packet. A focused transport regression verifies latest-reason delivery; real-model correction acceptance remains pending.

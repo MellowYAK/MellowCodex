@@ -314,6 +314,37 @@ def main():
     window.setStyleSheet('QMainWindow {background:#f5f5f5} QSplitter::handle {background:#dedede;width:1px}')
     window.timer.stop() if hasattr(window,'timer') else None
     shell=QWebEngineView();shell.setUrl(QUrl(f'http://127.0.0.1:{PORT}/?desktop=1'))
+
+    # Native entry point only; web/MCP cannot approve a permission change.
+    from PySide6.QtGui import QAction
+    from PySide6.QtWidgets import QMessageBox
+    owner_toolbar=window.addToolBar('Owner permissions')
+    owner_toolbar.setMovable(False)
+    owner_toolbar.setMinimumHeight(48)
+    owner_toolbar.setToolButtonStyle(Qt.ToolButtonTextOnly)
+    owner_toolbar.setStyleSheet('QToolBar {background:#eef4ff;border:0;border-bottom:1px solid #bdd0f5;spacing:8px;padding:5px} QToolButton {color:#ffffff;background:#155be5;border:1px solid #124fc7;border-radius:7px;padding:8px 18px;font:600 14px "Segoe UI"} QToolButton:hover {background:#104bbf}')
+    owner_action=QAction('Owner permissions (UAC)',window)
+    owner_action.setToolTip('Choose global or chat permissions in the protected owner window. Chat override duration is owner-configurable (minutes, hours or days).')
+    owner_toolbar.addAction(owner_action)
+    def open_owner_control():
+        def launch_for_chat(value):
+            import ctypes,re
+            chat_id=value if isinstance(value,str) and re.fullmatch(r'[a-f0-9]{32}',value) else ''
+            # Installed path is fixed; no shell and no executable supplied by web content.
+            executable=Path(r'C:\ProgramData\MellowOwnerBroker\bin\MellowOwnerControl.exe')
+            if not executable.is_file():
+                QMessageBox.information(window,'Owner permissions','The protected owner service is not installed. Permission changes are unavailable.')
+                return
+            import hashlib
+            if hashlib.sha256(executable.read_bytes()).hexdigest() != '6495e6b8b062d34847ac57bb05bdc4054ebe96fb8aa029a4a2456c158f6a76ec':
+                QMessageBox.warning(window,'Owner permissions','Owner helper differs from the reviewed build. No launch.')
+                return
+            params=('--chat '+chat_id) if chat_id else ''
+            result=ctypes.windll.shell32.ShellExecuteW(None,'runas',str(executable),params,str(executable.parent),1)
+            if result<=32:
+                QMessageBox.warning(window,'Owner permissions','The owner window was not started or UAC was cancelled. No permission change was confirmed.')
+        shell.page().runJavaScript("typeof selected==='string'?selected:''",launch_for_chat)
+    owner_action.triggered.connect(open_owner_control)
     browser=BrowserView();browser.request=window.request
     window.live=True
     app.aboutToQuit.connect(browser.shutdown)
@@ -322,8 +353,15 @@ def main():
     window.setCentralWidget(split);window.resize(1480,920)
     def show_window():
         window.showNormal();window.raise_();window.activateWindow()
+    def hide_browser():
+        shell.show();browser.hide()
+        # Hiding the pane must not suspend PLAY or destroy authenticated tabs.
+        for i in range(browser.tabs.count()):browser.tabs.widget(i).page().setVisible(True)
+        split.setSizes([max(1,window.width()),0])
+    browser.hide_button.clicked.connect(hide_browser)
     def apply_presentation(mode):
         if mode not in ('background','split'):raise ValueError('Unknown presentation mode')
+        browser.show()
         shell.setVisible(mode=='split')
         if mode=='split':split.setSizes([850,850])
         browser.mode_button.setText('הצג שיחה' if mode=='background' else 'דפדפן בלבד')
@@ -338,6 +376,7 @@ def main():
             payload=bytes(client.readAll())
             if payload==b'show':show_window()
             elif payload==b'focus-browser':
+                browser.show();shell.show();split.setSizes([850,850])
                 show_window();browser.current().setFocus()
             elif payload==b'quit':app.quit()
             elif payload.startswith(b'{'):

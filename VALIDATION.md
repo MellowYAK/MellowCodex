@@ -1,3 +1,14 @@
+2026-11-07 activity home: node --check hub/static/shell.js passed. On the live Hub via Codex IAB, reloaded assets, opened Home, verified 0 active / 3 requiring attention / 0 done among the latest 8, opened task details and expanded actual recorded event history. Screenshot visually checked. The UI correctly did not animate waiting_review as running. Active animation and stale-network transitions remain unverified with a live task. No service restart or model load required for this static UI change.
+
+<!-- MCP correspondence update, 2026-11-07 -->
+MCP correspondence development: tests/test_mcp_observation.py and tests/test_conversations.py: 4 passed. Tested registered MCP tool functions against persistent fixture transcript: two reads remain in one chat; cross-project binding rejected. node --check hub/static/app.js passed. These are fixture checks, not production/phone acceptance; active services still require the new code and connector schema.
+
+## Activity indicator development — 2026-11-07
+
+- `node --check hub/static/shell.js` passed after prominent indicator and per-task freshness changes.
+- Five focused conversation/progress guard tests passed earlier in this work. These are fixtures, not image integration acceptance.
+- Hub HTTP returned 200. IAB inspection encountered a stale connection-error page blocked by browser URL policy; live animation has not been visually verified in this iteration.
+
 # Validation — 5 November 2026
 
 ## Independent contract feedback — 2026-11-07
@@ -871,3 +882,95 @@ Final deterministic context bootstrap cleanup deployed by normal shutdown/start.
 2026-11-07 shared director contract clarification: 19 protocol/guidance fixture tests passed in 2.88s. These checks do not constitute a new live transport test or universal enforcement of all generic actions. Existing live map/source acceptance remains the evidence for the bounded deterministic path.
 
 2026-11-07 release check: 68 focused context-mode, project-brief, source-feedback and source-contract fixtures passed in 17.80s. Current production UI displayed 310 indexed/unchanged files, fast mode, and successfully searched `save projects.py` and expanded its original save/revision code. This was read-only UI verification, not an Ember runtime test. git diff --check passed.
+
+### 2026-11-07 SelfDevelop development verification
+- Five focused tests passed (session persistence, retry identity, review gate, unscoped execution rejection, MCP correspondence, no-progress regression).
+- Actual Engine/ToolRunner in isolated state read this repository through project_brief in 0.734 seconds and returned waiting_review; no model inference was needed. Evidence: E:/AI/audits/selfdevelop-acceptance-20261107/result.json. This was a locally supplied director instruction, not a live ChatGPT/MCP conversation.
+- JavaScript syntax checked. Additional provider authentication, complete self-restart/rollback and deployment are not validated by these tests.
+
+- Reloaded idle Hub/MCP services. Live routes returned HTTP 200 and all four SelfDevelop tools registered. In Codex IAB, opened AI connections and Claude MCP setup: shared endpoint, OAuth instructions and unverified-provider notice rendered correctly. No provider login was performed.
+
+## OmniRoute research validation — 2026-11-07
+
+- Verified 72 unique provider IDs after excluding authentication-method entries; preserved exact upstream LICENSE bytes and recorded SHA-256 for nine reviewed source files.
+- An initial exact-license assertion detected differing file bytes; replaced the local notice with the upstream bytes and reran successfully.
+- Source inspection only: no provider connection, multi-agent execution, PLAY adapter or production acceptance test performed for this research step. No services restarted or models loaded.
+
+## 2026-11-07 — delegation development verification
+- Five focused delegation/SelfDevelop tests passed (2.46s). Covers durable state, stale revision rejection, review gates, mock parallel workers/dependencies and credential-safe errors.
+- Actual Ollama 0.5B API worker returned a proposal; unloaded immediately. Existing local Engine ran project_brief and stopped at waiting_review with a recorded completed tool action. This fixture had no populated index; it proves routing/execution, not correct project mapping. The director was the test harness, not live GPT. Proposal quality was imperfect and was narrowed by director instructions; no claim of autonomous comprehension.
+- IAB at isolated port 18983 verified provider card rendering, editing and saving a director name. Registered MCP adapter functions then read that UI-saved profile and saved another profile through authenticated test HTTP. This is adapter integration, not public ChatGPT end-to-end acceptance.
+- Reported parser toast traced to missing BridgeController in the lifespan-disabled QA launcher; corrected launcher returned HTTP 200 for chatgpt/status. Node fixture confirmed HTTP 500 plain text gives a readable error without its raw body, and normal JSON still works. app.js/delegation.js syntax checks passed.
+- Screenshot: E:/AI/audits/delegation-acceptance-20261107/provider-cards.png. Runtime fixture evidence remains outside Git. Production activation, public MCP/PLAY director acceptance, interrupted-dispatch recovery and complete multi-provider orchestration remain pending.
+
+
+## APC/SelfDevelop audit — 2026-11-07
+
+Source-only audit: all 24 selected APC files matched pinned hashes. Real ChatGPT MCP task efda4497e65d44d3a278f29e268a4714 failed before any action (local model manually unloaded; free-form inspect submission). Gateway refresh changed its live catalog from 78 to 86 tools; the same ChatGPT chat still reported 68. Client discovery and candidate repair remain in progress. No full self-activation acceptance.
+
+## SelfDevelop pause checkpoint — 2026-11-07
+
+Real ChatGPT/MCP created candidate `4d9dda844bfb477b921375cef1714ce9`; revision 4 is saved, not deployed. Candidate tests: revision 1, 52 passed/1 failed (20.27s); revision 4, 8 passed/1 failed (4.70s). Failures use outdated MCP call signatures lacking a valid chat_id; these are not passing suites. The malformed-guidance and baseline-path regressions passed, but review gaps and full activation acceptance remain. See [handoff](docs/SELFDEVELOP_HANDOFF-2026-11-07.md). At pause: no queued/running/verifying tasks, no loaded Ollama models; temporary test server stopped. No new tests were run for this documentation checkpoint.
+
+
+## Unreleased — 2026-11-08: SelfDevelop exact commands
+
+Added selfdevelop_command (MCP) and POST /api/selfdevelop/{chat_id}/command. The director supplies one explicit command, shell and timeout in an existing SelfDevelop chat. The local task runner executes it without local-model rewriting, records the action/output, and waits for director review. Reused request IDs return the original task; conflicting content is rejected. Pending/failed commands are not automatically replayed. Guidance is validated before new task creation; unresolved SelfDevelop turns block orphan followups. Same-task request_changes accepts waiting_user while preserving revision and uncertain-action guards.
+
+Validation: recovery/guidance suite 28 passed at isolated candidate revision 1; six exact-command tests passed at revision 4, including real PowerShell execution through Engine with model calls forbidden. After user-authorized one-time bootstrap and service restart, live task 90fb9378e5214734963d433f8465048a executed one run_shell and returned SELFDEVELOP_LIVE_EXACT_COMMAND_OK; evidence was inspected through MCP. The new command was submitted via the authenticated local API because this chat cached the earlier MCP tool list. A fresh MCP tool-list/session is needed to expose selfdevelop_command to this client.
+
+Limitations: this is not full autonomous SelfDevelop acceptance. Automatic control-plane deployment, rollback/restart recovery and corrected-command retry remain incomplete. Image transfer and Desktop shortcut repair remain pending. Preserve the current worktree and review changes before Git publication.
+
+
+## Unreleased — 2026-11-08: correction of exact commands
+
+Added selfdevelop_command_correct and POST /api/selfdevelop/{chat_id}/command/correct. A director can submit a corrected command for the current waiting_user/waiting_review task with an exact task revision, stable correction ID and reason. Original goal and previous actions remain intact. Atomic event/queue update records prior action IDs so only the new command runs; uncertain pending effects and stale revisions are rejected. Timeout accepts 1..180 seconds to match the existing executor.
+
+Validation: candidate revision 5 passed all eight command tests, including real Engine/PowerShell failure (exit 7), same-task correction, successful new output, no model calls, idempotency and pending-action rejection. The live agent installed the four changed files using base-hash checks and backups under E:/AI/audits/selfdevelop-correction-v5. Read-back hashes matched the candidate. Automatic scheduling of restart was rejected by approval review with blocked by policy; no retry or bypass was attempted. Live correction acceptance awaits user restart. Full autonomous self-upgrade/recovery remains incomplete.
+
+
+## Unreleased — 2026-11-08: reject syntactically broken self-updates
+
+Corrected a malformed app.py route introduced in revision5. The earlier eight command tests did not import app.py and were insufficient evidence of server startup; the failed deployment was rolled back with user approval. Exact candidate patches now reject malformed Python before publishing a revision; candidate test certification parses every Python source, including modules outside selected tests. Candidate revision6 passed 39 tests including app import, actual command execution/correction, and syntax gate regressions. Agent installs eight reviewed files after all-source parse and hash checks, with backups. Live correction route awaits normal service restart; full control-plane automatic deployment/rollback is still incomplete. Desktop English Start and Stop All Services links were created/read back through agent actions; shutdown was not executed by the director.
+
+
+## SelfDevelop control-plane revision12 — 2026-11-08
+
+The local task runner applied exact director patches in an isolated candidate. Earlier real-process runs failed: Windows venv process identity differed from the launcher and psutil reported bound listening sockets as NONE. Corrections retain exact workspace/module identity, recognize the configured runtime, and require HTTP health from the newly launched process family.
+
+- Candidate revision12: tests/test_control_plane_processes.py and tests/test_control_plane_update.py: 10 passed in 13.87s. Two tests launch real isolated FastAPI service pairs on temporary ports: successful source update and intentional import failure followed by restoration of old source/services. These are isolated process tests, not a production restart.
+- tests/test_development_api.py, tests/test_selfdevelop_commands.py, tests/test_selfdevelop_recovery.py: 18 passed in 7.13s.
+- Local agent installation task e134b565de9b45bfb81cffcbeebc4c15: exact hashes and Python AST checked before seven file replacements; backup and readback completed; restart_performed=false.
+- Failed-run leftover isolated processes were stopped through the local runner; no remaining targeted processes. Production Hub returned HTTP200.
+- Pending: actual production activation, MCP reconnection/status retrieval, external discovery of new tools, autonomous-model self-development, and real requested-image transfer. None is claimed completed by these checks.
+
+
+2026-11-08 candidate revision13: tests/test_worker_guidance_packet.py and tests/test_coding_worker.py: 6 passed in 3.34s. Covers compact payload, changed guidance rejection, source scope, unchanged response and syntax correction. No real inference tested. One historical packet inspected was 54,376 bytes total and 5,139 guidance bytes; this does not prove guidance size caused its failure.
+
+
+2026-11-08 Mellow Guard naming: local runner appended and read back the requested service name in README, CHANGELOG and VALIDATION. No behavior change or additional runtime test; production activation remains pending.
+
+
+## Real Mellow Guard update ? 2026-11-08
+
+Local task e67da81a7a6f4cb0aab3558c83dea4ff applied isolated candidate 44084fdcb7734d9e8fd74e251cde8f62 revision2. Nine status/recovery tests passed in 2.03s. The old negative restart-capability assertion was updated for the new supported behavior; local runner task 779b2c24c71e4d8f818813598a067bda ran that updated file: 2 passed in 0.83s. No claim that the original negative assertion passed.
+
+Product control-plane prepare/activate endpoints staged and launched update 2e6b8031b2ad4e509da4a1e70c80749d. Its independent supervisor PID20444 exited with durable ACTIVE_VERIFIED. A fresh authenticated status request confirmed that state. A subsequent call through the external MellowCodex MCP connector returned supervisor=Mellow Guard and control_plane_restart_supported=true in the same linked chat. This verifies real Hub/MCP source activation and reconnection. Activation used the product HTTP endpoint because this chat's discovered tool catalog still lacks the new wrappers. All-service/desktop restart, dependencies, real production failure rollback, standalone autonomous model development and requested image handoff remain unverified.
+
+
+### SelfDevelop review safeguards ? 2026-11-08 (Unreleased)
+A real Qwen Coder 7B trial fixed timeout validation but removed existing shell/command guards despite passing 15 scoped tests. Director review rejected that patch. A subsequent model correction returned unchanged source. The coding-worker instruction now explicitly preserves existing guards and requires reviewing unintended deletions; a targeted regression covers invalid shells, blank commands and oversized commands. These are risk reductions, not a guarantee of model correctness or proof of autonomous self-development. The final correction is director-authored and agent-applied in a candidate; production activation remains pending. Candidate regression: 22 tests passed in 10.13 seconds, including preservation of all three command guards.
+
+
+Unreleased 2026-11-08: coding-worker packets now include the latest exact-command correction reason and request identity, without executable command payloads, while retaining the original objective. Previously the exact-command correction was recorded but omitted from the worker packet. A focused transport regression verifies latest-reason delivery; real-model correction acceptance remains pending.
+
+## 2026-11-08: SelfDevelop failed-step director closure (isolated candidate)
+
+- A director may explicitly close a terminal failed step after reviewing evidence, requiring owning chat, exact task revision, nonblank reason and stable request ID. The operation atomically enters the existing cancelled state, records an audit event, retains the original goal/result/history and never replays actions.
+- Stale revisions, wrong chats, pending uncertain actions, active states and repeated closures with conflicting request IDs are rejected. Synthetic acceptance creates a failed step, explicitly closes it and completes a new step within that same chat.
+- Candidate 0878dd3533db4547a22cacd2eea9910b revision 8: 30 focused tests passed in 9.97 seconds; verified true, source_changed []. Further edits require retesting the final revision.
+- Refresh tools in ChatGPT resolved missing Mellow Guard prepare/activate/status and exact command tools. This new candidate is not yet deployed; supervised recovery does not constitute autonomous software development.
+# Service recovery 0.15.3 — 2026-11-10
+
+Real installed scheduled task executed successfully with LastTaskResult 0 and five loopback services reachable. Controlled interruption of the manually launched gateway (exact captured process IDs/command lines) recovered through the scheduled task. Real MCP model_memory_status succeeded afterward with qwen3.5:4b loaded and inference enabled. Repeated scheduled execution retained replacement launcher/child pair, avoiding duplicate launches. Broker readback: Running, Automatic after native approval. No reboot, locked-session, foreign-listener or hung-process termination test; no broad synthetic suite. Existing legacy Hub was not restarted. Git publication remains pending due to concurrent workspace changes.
+

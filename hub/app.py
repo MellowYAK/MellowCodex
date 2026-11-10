@@ -59,7 +59,7 @@ async def lifespan(app):
     from .relay import supervise
     relay_monitor=asyncio.create_task(supervise()) if (STATE/'relay.json').exists() else None
     from .shutdown import Shutdown
-    app.state.shutdown = Shutdown(engine, model_catalog_service, [monitor, schedule_monitor, index_monitor, bridge_monitor])
+    objective_monitor=None
     try:
         model_catalog_service.recover()
         store.recover()
@@ -68,8 +68,15 @@ async def lifespan(app):
         for task in store.list():
             if task['state']=='queued':
                 engine.enqueue(task['id'])
+        from .development.selfdevelop import SelfDevelop
+        objective_monitor=asyncio.create_task(SelfDevelop(store).watch_objectives(development_service))
+        app.state.shutdown=Shutdown(engine,model_catalog_service,
+            [monitor,schedule_monitor,index_monitor,bridge_monitor,objective_monitor])
         yield
     finally:
+        if objective_monitor:
+            objective_monitor.cancel()
+            await asyncio.gather(objective_monitor,return_exceptions=True)
         await model_catalog_service.close()
         index_monitor.cancel();await asyncio.gather(index_monitor,return_exceptions=True)
         if relay_monitor:
@@ -89,6 +96,15 @@ async def lifespan(app):
         owner.close()
 
 app=FastAPI(title='Local Agent Hub',version=__version__,lifespan=lifespan,docs_url=None,redoc_url=None)
+
+@app.get('/api/owner-permissions/status')
+async def owner_permission_status(chat_id: str = ''):
+    # STATUS ONLY. MCP/agent/Guard have no permission-write API.
+    from .owner_policy import BrokerReadOnly, public_status
+    from .owner_broker import owner_status, owner_snapshot
+    status = public_status(owner_snapshot(chat_id), chat_id)
+    return {**status, 'broker': owner_status()}
+
 
 @app.post('/api/lifecycle/shutdown')
 async def shutdown_agent():
@@ -121,6 +137,8 @@ app.include_router(development_router(development_service))
 app.include_router(model_catalog_router(lambda:model_catalog_service))
 from .guardian.jobs import router as upgrade_router
 app.include_router(upgrade_router(ROOT))
+from .skill_shops import router as skill_shops_router
+app.include_router(skill_shops_router())
 ALLOWED_HOSTS={f'127.0.0.1:{PORT}',f'localhost:{PORT}','testserver'}
 ALLOWED_ORIGINS={f'http://127.0.0.1:{PORT}',f'http://localhost:{PORT}'}
 ALLOWED_HOSTS.add(f'100.78.233.10:{PORT}')
@@ -186,7 +204,7 @@ async def connect_mobile(code:str):
 
 @app.get('/static/{name}')
 async def static_file(name: str):
-    if name not in ('app.js','app.css','context.js','development.js','models.js','richtext.js','continuity.js','shell.js','product.css'):
+    if name not in ('app.js','app.css','context.js','development.js','models.js','richtext.js','continuity.js','shell.js','product.css','delegation.js','owner-permissions.js'):
         raise HTTPException(404)
     return FileResponse(STATIC/name)
 
@@ -333,7 +351,7 @@ async def review(task_id: str,body: Review):
     bridge=app.state.bridge
     if body.resume_handoff and (body.decision!='request_changes' or bridge.state.get('task_id')!=task_id or bridge.state.get('pending_outbound_text')):
         raise Conflict('Only the saved handoff task without a pending send can retry in its linked conversation')
-    if task['revision']!=body.expected_revision or task['state']!='waiting_review':
+    if task['revision']!=body.expected_revision or task['state'] not in (('waiting_review','waiting_user') if body.decision=='request_changes' else ('waiting_review',)):
         raise Conflict('Task is not awaiting this revision of review')
     if body.decision=='request_changes' and any(a['state']=='pending' for a in store.actions(task_id)):
         raise Conflict('Reconcile uncertain actions before resuming this task')
@@ -344,6 +362,14 @@ async def review(task_id: str,body: Review):
     if body.decision=='approve':
         if not baseline or baseline['data'].get('checks')!=checks or baseline['data'].get('evidence')!=engine.evidence(task):
             raise Conflict('Evidence changed since verification. Request a new check before approval.')
+    if body.decision=='approve':
+        from .development.selfdevelop import SelfDevelop
+        objective=SelfDevelop(store)
+        if objective.has_objective_run(task_id):
+            # Validate and atomically commit the exact artifact review.
+            # A binding failure cannot leave a partially approved task.
+            return public_task(objective.commit_objective_review(
+                task_id,body.expected_revision,body.reason,development_service()))
     state={'approve':'done','request_changes':'queued','reject':'failed'}[body.decision]
     messages=task['messages']
     if body.decision=='request_changes':
@@ -366,12 +392,20 @@ class Reconcile(BaseModel):
 @app.post('/api/tasks/{task_id}/reconcile')
 async def reconcile(task_id: str,body: Reconcile):
     task=store.get(task_id)
-    if task['revision']!=body.expected_revision or task['state'] not in ('paused','waiting_user','failed'):
+    if task['revision']!=body.expected_revision or task['state'] not in ('paused','waiting_user','failed','cancelled'):
         raise Conflict('Task must be stopped at the current revision')
+    job=engine.jobs.get(task_id)
+    if job is not None and not job.done():
+        raise Conflict('Task executor still active; cannot reconcile uncertain action')
     action=next((a for a in store.actions(task_id) if a['id']==body.action_id and a['state']=='pending'),None)
     if not action:
         raise ValueError('No matching uncertain action')
-    store.end_action(body.action_id,{'user_reconciled':body.observation})
+    store.end_action(body.action_id,{'user_reconciled':body.observation,
+                                    'effect_verified':False,'replay_permitted':False,
+                                    'status':'reconciled_unknown'})
+    store.event(task_id,'action_reconciled',{'action_id':body.action_id,
+                'prior_state':task['state'],'effect_verified':False,
+                'observation':body.observation})
     messages=task['messages']+[{'role':'user','content':'Interrupted action '+action['tool']+' was checked by the user: '+body.observation+'. Inspect current state before continuing.'}]
     return public_task(store.update(task_id,expected=body.expected_revision,messages=messages,kind='reconciled'))
 
@@ -431,13 +465,14 @@ async def project_add(body:ProjectInput):
 
 class ChatInput(BaseModel):
     project_id:str
+    conversation_key:str|None=None
 
 @app.post('/api/chats/{chat_id}/project')
 async def chat_bind_project(chat_id:str,body:ProjectInput):
     return conversations().bind_project(chat_id,body.path)
 
 @app.post('/api/chats')
-async def chat_add(body:ChatInput):return conversations().create(body.project_id)
+async def chat_add(body:ChatInput):return conversations().create(body.project_id,conversation_key=body.conversation_key)
 
 @app.get('/api/chats/{chat_id}')
 async def chat_get(chat_id:str):
@@ -591,11 +626,32 @@ async def chat_edit(chat_id:str,body:ChatEdit):
     result['turns']=[public_task(t) for t in result['turns']]
     return result
 
+
+class ChatModeChange(BaseModel):
+    mode:Literal['selfdevelop','normal']
+    expected_revision:int=Field(ge=0)
+    request_id:str=Field(min_length=8,max_length=100)
+    reason:str=Field(min_length=1,max_length=2000)
+
+@app.get('/api/chats/{chat_id}/mode')
+async def chat_mode_status(chat_id:str):
+    return conversations().mode_status(chat_id)
+
+@app.post('/api/chats/{chat_id}/mode')
+async def chat_mode_switch(chat_id:str,body:ChatModeChange):
+    return conversations().switch_mode(chat_id,**body.model_dump())
+
+def require_active_selfdevelop(chat_id):
+    if conversations().mode_status(chat_id)['mode']!='selfdevelop':
+        raise HTTPException(409,'Chat is in normal mode: switch back before a SelfDevelop development command')
+
 class ChatMessage(BaseModel):
     text:str=Field(min_length=1,max_length=30000)
     mode:Literal['code','inspect','desktop','browser']='desktop'
     request_id:str=Field(min_length=8,max_length=200)
     attachments:list[dict]=Field(default_factory=list,max_length=5)
+    user_message:str|None=Field(default=None,max_length=8000)
+    source:Literal['local','mcp']='local'
 
 from .development.guidance import SourceRequirement
 
@@ -603,6 +659,78 @@ class SourceMessage(BaseModel):
     text:str=Field(min_length=1,max_length=8000)
     request_id:str=Field(min_length=8,max_length=100)
     sources:list[SourceRequirement]=Field(min_length=1,max_length=20)
+
+class SelfDevelopStart(BaseModel):
+    objective:str=Field(min_length=1,max_length=8000)
+    conversation_key:str=Field(min_length=8,max_length=512)
+    transport:Literal['mcp','play']='mcp'
+
+class SelfDevelopStep(BaseModel):
+    request_id:str=Field(min_length=8,max_length=100)
+    instruction:str=Field(min_length=1,max_length=8000)
+    allowed_tools:list[str]=Field(min_length=1,max_length=20)
+    required_tools:list[str]=Field(default_factory=list,max_length=20)
+    required_sources:list[SourceRequirement]=Field(default_factory=list,max_length=20)
+    evidence_only:bool=False
+    exact_patch:dict|None=None
+    context_read:dict|None=None
+
+class SelfDevelopCommand(BaseModel):
+    request_id:str=Field(min_length=8,max_length=100)
+    instruction:str=Field(min_length=1,max_length=8000)
+    command:str=Field(min_length=1,max_length=20000)
+    shell:Literal['powershell','cmd']='powershell'
+    timeout:int=Field(default=60,ge=1,le=180)
+
+@app.post('/api/selfdevelop/{chat_id}/command')
+async def selfdevelop_command(chat_id:str,body:SelfDevelopCommand):
+    require_active_selfdevelop(chat_id)
+    from .development.commands import dispatch
+    task=dispatch(store,chat_id,**body.model_dump())
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
+
+class SelfDevelopCorrection(BaseModel):
+    task_id:str=Field(pattern='^[a-f0-9]{32}$')
+    expected_revision:int=Field(ge=0)
+    request_id:str=Field(min_length=8,max_length=100)
+    reason:str=Field(min_length=1,max_length=8000)
+    command:str=Field(min_length=1,max_length=20000)
+    shell:Literal['powershell','cmd']='powershell'
+    timeout:int=Field(default=60,ge=1,le=180)
+
+@app.post('/api/selfdevelop/{chat_id}/command/correct')
+async def selfdevelop_command_correct(chat_id:str,body:SelfDevelopCorrection):
+    require_active_selfdevelop(chat_id)
+    from .development.commands import correct
+    task=correct(store,chat_id,**body.model_dump())
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
+
+@app.post('/api/selfdevelop/start')
+async def selfdevelop_start(body:SelfDevelopStart):
+    from .development.selfdevelop import SelfDevelop
+    return SelfDevelop(store).start(**body.model_dump())
+
+@app.get('/api/selfdevelop/{chat_id}')
+async def selfdevelop_status(chat_id:str):
+    from .development.selfdevelop import SelfDevelop
+    status=SelfDevelop(store).status(chat_id)
+    lifecycle=conversations().mode_status(chat_id)
+    status['mode']=lifecycle['mode']
+    status['mode_revision']=lifecycle['revision']
+    status['history_preserved']=True
+    if lifecycle['mode']=='normal':
+        status['next_action']='SelfDevelop is preserved but suspended. Use chat_mode_switch after review of all active work.'
+    return status
+
+@app.post('/api/selfdevelop/{chat_id}/step')
+async def selfdevelop_step(chat_id:str,body:SelfDevelopStep):
+    require_active_selfdevelop(chat_id)
+    from .development.selfdevelop import SelfDevelop
+    task=SelfDevelop(store).step(chat_id,**body.model_dump())
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
 
 @app.post('/api/chats/{chat_id}/sources')
 async def chat_sources(chat_id:str,body:SourceMessage):
@@ -618,7 +746,12 @@ async def chat_sources(chat_id:str,body:SourceMessage):
 
 @app.post('/api/chats/{chat_id}/messages')
 async def chat_message(chat_id:str,body:ChatMessage):
-    task=conversations().submit(chat_id,body.text,body.mode,body.request_id,body.attachments)
+    from .model_settings import parse_model_command
+    if parse_model_command(body.text) is not None:
+        from .model_preferences import perform
+        outcome=await perform(text=body.text,busy=any(not job.done() for job in engine.jobs.values()))
+        return {'handled_model_command':True,'model_command':outcome}
+    task=conversations().submit(chat_id,body.text,body.mode,body.request_id,body.attachments,presentation={'text':body.user_message or body.text,'source':body.source})
     if task['state']=='queued':engine.enqueue(task['id'])
     return public_task(task)
 
@@ -820,6 +953,9 @@ async def ai_connectors():
     from .ai_connectors import catalog
     return catalog()
 
+from .delegation_api import router as delegation_router
+app.include_router(delegation_router(store,engine))
+
 class ChatConnectionInput(BaseModel):
     transport:Literal['play','mcp']|None=None
     favorite:bool|None=None
@@ -848,6 +984,27 @@ class InputPreference(BaseModel):
     mode:Literal['auto','quiet','physical']
 
 from .model_settings import ModelSettings,load_settings,save_settings,PRESETS
+
+class ModelPreferenceCommand(BaseModel):
+    action:Literal['get','set','reset']='get'
+    field:str|None=None
+    value:str|int|float|bool|None=None
+    scope:str='default'
+    text:str|None=None
+    apply_now:bool=False
+
+@app.get('/api/settings/model/control')
+async def model_preferences_get():
+    from .model_preferences import status
+    return await status()
+
+@app.post('/api/settings/model/control')
+async def model_preferences_control(body:ModelPreferenceCommand):
+    from .model_preferences import perform
+    return await perform(action=body.action,field=body.field,value=body.value,scope=body.scope,
+                         text=body.text,apply_now=body.apply_now,
+                         busy=any(not job.done() for job in engine.jobs.values()))
+
 
 @app.get('/api/settings/model')
 async def get_model_settings():
@@ -888,6 +1045,34 @@ async def set_input_mode(body:InputPreference):
     if any(not job.done() for job in engine.jobs.values()):raise Conflict('Stop or finish the current task before changing input mode')
     save_input_mode(STATE,body.mode)
     return {'mode':body.mode}
+
+class MCPObservation(BaseModel):
+    project_id:str
+    request_id:str
+    operation:str
+    phase:Literal['started','completed','failed']
+    payload:dict
+
+class MCPConversationMessage(BaseModel):
+    project_id:str
+    conversation_key:str
+    message_id:str
+    text:str
+    speaker:Literal['user','chatgpt']
+
+@app.post('/api/mcp/conversation-message')
+async def mcp_conversation_message(body:MCPConversationMessage):
+    if not body.message_id.strip() or not body.text.strip():raise ValueError('Message ID and text are required')
+    chat=conversations().create(body.project_id,title=body.text[:80],conversation_key=body.conversation_key)
+    transcript=app.state.bridge.transcript
+    transcript.configure(chat['id'],transport='mcp')
+    transcript.append(chat['id'],body.speaker,'user_to_chatgpt' if body.speaker=='user' else 'chatgpt_to_agent',body.text,key='mcp-message:'+body.message_id)
+    return {'chat_id':chat['id'],'recorded':True,'continue_in_this_chat':True}
+
+@app.post('/api/chats/{chat_id}/mcp-observation')
+async def mcp_observation(chat_id:str,body:MCPObservation):
+    from .mcp_observation import record_observation
+    return record_observation(conversations(),app.state.bridge.transcript,chat_id,body.model_dump())
 
 @app.get('/api/chats/{chat_id}/correspondence')
 async def correspondence(chat_id:str,after:float=0):

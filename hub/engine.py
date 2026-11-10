@@ -34,6 +34,7 @@ For existing images/documents, use file tools or image_ocr directly; never requi
 For background/locked-screen tasks: shell, file tools and built-in browser continue independently of screen input. Prefer window_inspect and window_act to manipulate compatible application controls through UI Automation without focusing or using the mouse. Use session_status if physical input may be unavailable. Do not claim a visual-only game can run unattended across a locked input desktop.
 Files persist across tasks. Use files_list to find relevant user uploads and browser downloads; wait for status ready before using a file. Browser download buttons save original bytes to the local file library. browser_save_media saves an observed image/audio/video source, not a screenshot. browser_upload selects an original local file on the requested website. file_copy makes it available in the workspace for processing. Audio attachments are files, not automatically transcribed text. Only install or execute a downloaded program when installation/execution was requested, and verify actual installation results. For voice training in Ember Video, use the real application or website and its actual available controls: import audio, prepare dataset, review text, train, register voice and test audio. Uploading alone is never proof of completed training. Do not invent an Ember API, model, training job, or finished audio file.
 For saving an article as PDF: navigate the embedded browser, follow a real observed article link, observe its content, then browser_save_pdf. Do not invent a PDF path. The export registers the file for delivery.
+For requests asking to use an existing saved capability or inspect current local machine resources, invoke the actual extensions_list tool before suggesting a shell command. Inspect its returned catalog metadata and English instructions; if a verified matching capability exists invoke extension_run as a native tool call with arguments derived from the user request. Do not guess skill names, reinstall existing skills, or present tool-call JSON/code blocks as though executed. Use run_shell only when the registry has no suitable capability and the user authorized that fallback.
 When a required capability is missing, first check extensions_list. You may develop a small Python tool and a meaningful separate functional test with write_file/run_shell, then extension_register and extension_run. Optional pinned dependencies install in the tool's own environment. Use coding_ask or chatgpt_ask for implementation guidance. Never claim learning from prose alone: only tested tools in the registry are reusable. Stay inside the user's task; do not modify your core runtime or install unrelated tools. For DOCX/XLSX/PDF use document_read/document_write and preserve originals. Never reverse Hebrew strings.
 If blocked, say what is missing. Keep output concise. Finish with a clear account of changes and tests. Never claim universal control of games or real-time play.''' 
 
@@ -54,6 +55,16 @@ class Engine:
         self.store.event(task_id,'checkpoint',{'id':str(checkpoint_id),'revision':task['revision']})
 
     def enqueue(self, task_id):
+        if (STATE/'control-plane-admission.json').exists():
+            self.store.update(task_id,state='paused',result='Control-plane update in progress; task preserved for explicit resume.')
+            return
+        from .development.selfdevelop import SelfDevelop
+        # Ordinary desktop/browser tasks in a SelfDevelop chat remain normal user-authorized work.
+        # Code tasks retain director guidance and active-work fences.
+        if self.store.get(task_id)['mode']=='code':
+            from .conversations import Conversations
+            if Conversations(self.store).mode_for_task(task_id)=='selfdevelop':
+                SelfDevelop(self.store).guard(task_id)
         if task_id not in self.jobs or self.jobs[task_id].done():
             self.jobs[task_id]=asyncio.create_task(self.run(task_id))
 
@@ -170,6 +181,18 @@ class Engine:
         async with self.lock:  # one GPU request and one desktop owner at a time
             if self.store.get(task_id)['state'] != 'queued':
                 return
+            from .development.selfdevelop import SelfDevelop
+            selfdevelop=SelfDevelop(self.store)
+            try:
+                if self.store.get(task_id)['mode']=='code':
+                    from .conversations import Conversations
+                    if Conversations(self.store).mode_for_task(task_id)=='selfdevelop':
+                        selfdevelop.guard(task_id)
+                from .delegation import Delegation
+                Delegation(self.store).guard(task_id)
+            except Conflict as exc:
+                self.store.update(task_id,state='paused',result=str(exc))
+                return
             self.runner.desktop.stopped=False
             task=self.store.update(task_id,state='running')
             initial=[{'role':'system','content':SYSTEM},{'role':'user','content':task['goal']+'\nWorkspace: '+task['workspace']+'\nAcceptance checks: '+json.dumps(task['criteria'],ensure_ascii=False)}]
@@ -203,7 +226,7 @@ class Engine:
                     'omitted_anchor_ids':retrieved.get('omitted_anchor_ids',[])})
             if memory.has_prior_context(task_id):messages[0]['content']+='\nFor questions about earlier conversation decisions, retrieve evidence about the specific subject in the CURRENT question. Start with conversation_history query using a distinctive short phrase copied from the question in its original language, or page decision anchors. Do not translate literal search terms. Read later corrections and supersession links before identifying the current decision. A chronological page of unrelated turns is not an answer: refine the query or follow next_after until relevant sources are found. Never return a prior assistant acknowledgement as the answer to a new recall question. Explain uncertainty if the sources do not establish an answer.'
             coding_guidance=None
-            if task['mode']=='code':
+            if task['mode'] in ('code','desktop','browser'):
                 from .development.guidance import Guidance
                 coding_guidance=Guidance(self.store)
                 guidance_epoch=coding_guidance.begin(task_id)
@@ -264,7 +287,17 @@ class Engine:
                     patch_call=coding_guidance.next_patch_call(task_id,self.store.actions(task_id)) if exact_patch else None
                     context_read=coding_guidance.context_read(task_id) if coding_guidance else None
                     context_call=coding_guidance.next_context_call(task_id,self.store.actions(task_id)) if context_read else None
-                    if context_call:
+                    from .development.commands import next_command, command_receipt
+                    command_call,command_done=next_command(self.store,task_id)
+                    if command_done:
+                        receipt=command_receipt(self.store,task_id)
+                        if receipt['execution_succeeded']:
+                            self.store.event(task_id,'verification',{'checks':self.verify(task),'evidence':self.evidence(task),'scope':'exact command exit status only; director must verify requested effect'})
+                        self.store.update(task_id,state='waiting_review' if receipt['execution_succeeded'] else 'waiting_user',messages=messages,result=json.dumps(receipt,ensure_ascii=False))
+                        await self.checkpoint(task_id);return
+                    if command_call:
+                        message=command_call;metrics={'origin':'director_exact_command','inference':False}
+                    elif context_call:
                         message=context_call;metrics={'origin':'director_context_read','inference':False}
                     elif context_read:
                         record=coding_guidance.status(task_id)['guidance'][-1]
@@ -273,6 +306,8 @@ class Engine:
                         evidence=[a for a in self.store.actions(task_id) if a['created']>=record['created'] and a['tool']==name]
                         receipt={'status':'awaiting_director_review','model_inference':False,'semantic_verified':False,'actions':evidence}
                         self.store.event(task_id,'director_context_evidence',receipt)
+                        if evidence and all(a['state']=='complete' and not (a.get('result') or {}).get('error') for a in evidence):
+                            self.store.event(task_id,'verification',{'checks':self.verify(task),'evidence':self.evidence(task),'scope':'context retrieval only; director semantic review still required'})
                         self.store.update(task_id,state='waiting_review',messages=messages,result=json.dumps(receipt,ensure_ascii=False))
                         await self.checkpoint(task_id);return
                     elif patch_call:
@@ -282,6 +317,8 @@ class Engine:
                         evidence=[a for a in self.store.actions(task_id) if a.get('created','')>=record['created'] and a['tool'] in ('candidate_patch','candidate_diff')]
                         receipt={'status':'awaiting_director_review','model_inference':False,'semantic_verified':False,'actions':evidence}
                         self.store.event(task_id,'director_patch_evidence',receipt)
+                        if evidence and all(a['state']=='complete' and not (a.get('result') or {}).get('error') for a in evidence):
+                            self.store.event(task_id,'verification',{'checks':self.verify(task),'evidence':self.evidence(task),'scope':'patch application only; director review and tests remain separate'})
                         self.store.update(task_id,state='waiting_review',messages=messages,result=json.dumps(receipt,ensure_ascii=False))
                         await self.checkpoint(task_id);return
                     elif required_source:
@@ -289,6 +326,8 @@ class Engine:
                     elif coding_guidance and coding_guidance.evidence_only(task_id):
                         packet=coding_guidance.source_packet(task_id,self.store.actions(task_id))
                         self.store.event(task_id,'director_source_evidence',packet)
+                        if packet['retrieval_complete']:
+                            self.store.event(task_id,'verification',{'checks':self.verify(task),'evidence':self.evidence(task),'scope':'source delivery only; director semantic review required'})
                         self.store.update(task_id,state='waiting_review',messages=messages,
                                           result=json.dumps(packet,ensure_ascii=False))
                         await self.checkpoint(task_id);return
@@ -465,7 +504,7 @@ class Engine:
                         checks=self.verify(task)
                         self.store.event(task_id,'verification',{'checks':checks,'evidence':self.evidence(task),'attempt_action_ids':[a['id'] for a in actions if a['id'] not in baseline_actions]})
                         passed=bool(checks) and all(c['passed'] for c in checks)
-                        final='done' if passed and task['mode'] not in ('desktop','browser') else 'waiting_review'
+                        final='done' if passed and task['mode'] not in ('desktop','browser') and not selfdevelop.owns(task_id) else 'waiting_review'
                         summary=message.get('content','')
                         if self.store.latest_event(task_id,'source_review_pending_director'):
                             final='waiting_review'
@@ -514,12 +553,12 @@ class Engine:
                             opened=[a for a in self.store.actions(task_id) if a['tool']=='app_open' and a['state']=='complete' and a['args']==args and (a.get('result') or {}).get('opened_verified') and (a.get('result') or {}).get('window')]
                             if name=='app_open' and args.get('url') and opened:
                                 hwnd=opened[-1]['result']['window']['hwnd']
-                                result=await self.runner.execute(task,'window_inspect',{'hwnd':hwnd})
+                                result=await self.runner.execute(task,'window_inspect',{'hwnd':hwnd},action_id=action_id)
                                 result={**result,'reused_existing':True,'note':'This URL was already opened for this task. Fresh window evidence is attached. Continue with its existing tabs; no new tab was opened.'}
                             else:
                                 from .shell_commands import empty_output_guard
                                 result=empty_output_guard(name,args,self.store.actions(task_id))
-                                if result is None:result=await self.runner.execute(task,name,args)
+                                if result is None:result=await self.runner.execute(task,name,args,action_id=action_id)
                             failures=0
                         except asyncio.CancelledError:
                             raise  # action remains pending: never silently replay uncertain side effects
@@ -553,6 +592,16 @@ class Engine:
                         self.store.event(task_id,'tool_result',{'action_id':action_id,'name':name,'result':result})
                         messages.append({'role':'tool','tool_name':name,'content':json.dumps(result,ensure_ascii=False)})
                         if self.store.get(task_id)['state'] in ('paused','cancelled'):return
+                        from .progress_guard import stalled_reads
+                        stalled=stalled_reads(self.store.actions(task_id),baseline_actions)
+                        if stalled:
+                            for skipped in calls[call_index+1:]:
+                                messages.append({'role':'tool','tool_name':skipped['function']['name'],'content':'Not executed: no new evidence; returning to director for a focused next step.'})
+                            self.store.event(task_id,'progress_stalled',stalled)
+                            self.store.update(task_id,state='waiting_review',messages=messages,
+                                result='Execution is incomplete: successful reads are repeating without new evidence.\n'+json.dumps(stalled,ensure_ascii=False))
+                            await self.checkpoint(task_id)
+                            return
                         if name=='candidate_repair' and (handoff or (coding_guidance and coding_guidance.status(task_id)['guidance_revision'])):
                             # Return the measured repair attempt to the director
                             # immediately. Do not let the executor rediscover the

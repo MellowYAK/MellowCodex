@@ -300,5 +300,28 @@
         "status": "source_reviewed_not_integrated"
       }
     ]
+  },
+  "selfdevelop_audit_20261107": {
+    "plan": "docs/APC_SELFDEVELOP_IMPLEMENTATION_PLAN-2026-11-07.md",
+    "evidence": "E:/AI/audits/apc-selfdevelop-review-20261107/source-audit.json",
+    "pinned_sources_checked": 24,
+    "pinned_sources_matching": 24,
+    "new_executable_apc_code_copied": false,
+    "classification": "Existing selected contracts reimplemented in native Python; no full APC runtime port",
+    "historical_remaining_fields": "Retained as dated checkpoints. Current indexing/runner/MCP mapping acceptance supersedes earlier pending statements; advanced entity graph, obligations, delta planner and repair-memory parity are still not ported.",
+    "selfdevelop": "Candidate loop being verified; full Hub/gateway activation not yet implemented."
+  },
+  "selfdevelop_pause_20261107": {
+    "status": "paused_by_user_incomplete",
+    "handoff": "docs/SELFDEVELOP_HANDOFF-2026-11-07.md",
+    "candidate_id": "4d9dda844bfb477b921375cef1714ce9",
+    "revision": 4,
+    "deployed": false,
+    "latest_tests": {
+      "passed": 8,
+      "failed": 1
+    },
+    "new_apc_code_copied_this_audit": false,
+    "full_control_plane_restart_supported": false
   }
 }

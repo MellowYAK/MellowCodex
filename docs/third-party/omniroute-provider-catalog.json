@@ -1,0 +1,441 @@
+{
+  "source": "https://github.com/ChrisCompton/omniroute",
+  "commit": "515674b6cf7cc29b3db027c9119e9b2ef12e0ba7",
+  "source_file": "src/shared/constants/providers.ts",
+  "license": "MIT",
+  "providers": [
+    {
+      "id": "qoder",
+      "name": "Qoder AI",
+      "category": "FREE_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "qwen",
+      "name": "Qwen Code",
+      "category": "FREE_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "category": "FREE_PROVIDERS",
+      "deprecated": true
+    },
+    {
+      "id": "kiro",
+      "name": "Kiro AI",
+      "category": "FREE_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "claude",
+      "name": "Claude Code",
+      "category": "OAUTH_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "antigravity",
+      "name": "Antigravity",
+      "category": "OAUTH_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "codex",
+      "name": "OpenAI Codex",
+      "category": "OAUTH_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "github",
+      "name": "GitHub Copilot",
+      "category": "OAUTH_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor IDE",
+      "category": "OAUTH_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "kimi-coding",
+      "name": "Kimi Coding",
+      "category": "OAUTH_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "kilocode",
+      "name": "Kilo Code",
+      "category": "OAUTH_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "cline",
+      "name": "Cline",
+      "category": "OAUTH_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "glm",
+      "name": "GLM Coding",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "bailian-coding-plan",
+      "name": "Alibaba Coding Plan",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "kimi",
+      "name": "Kimi",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "kimi-coding-apikey",
+      "name": "Kimi Coding (API Key)",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "minimax",
+      "name": "Minimax Coding",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "minimax-cn",
+      "name": "Minimax (China)",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "alicode",
+      "name": "Alibaba",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "alicode-intl",
+      "name": "Alibaba Intl",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini (Google AI Studio)",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "blackbox",
+      "name": "Blackbox AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "xai",
+      "name": "xAI (Grok)",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "together",
+      "name": "Together AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "fireworks",
+      "name": "Fireworks AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA NIM",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "nebius",
+      "name": "Nebius AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "siliconflow",
+      "name": "SiliconFlow",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "hyperbolic",
+      "name": "Hyperbolic",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "deepgram",
+      "name": "Deepgram",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "assemblyai",
+      "name": "AssemblyAI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "nanobanana",
+      "name": "NanoBanana",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "ollama-cloud",
+      "name": "Ollama Cloud",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "elevenlabs",
+      "name": "ElevenLabs",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "cartesia",
+      "name": "Cartesia",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "playht",
+      "name": "PlayHT",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "inworld",
+      "name": "Inworld",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "sdwebui",
+      "name": "SD WebUI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "comfyui",
+      "name": "ComfyUI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "huggingface",
+      "name": "HuggingFace",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "synthetic",
+      "name": "Synthetic",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "kilo-gateway",
+      "name": "Kilo Gateway",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "vertex",
+      "name": "Vertex AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "zai",
+      "name": "Z.AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "perplexity-search",
+      "name": "Perplexity Search",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "serper-search",
+      "name": "Serper Search",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "brave-search",
+      "name": "Brave Search",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "exa-search",
+      "name": "Exa Search",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "tavily-search",
+      "name": "Tavily Search",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "opencode-zen",
+      "name": "OpenCode Zen",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "opencode-go",
+      "name": "OpenCode Go",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "alibaba",
+      "name": "Alibaba Cloud (DashScope)",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "longcat",
+      "name": "LongCat AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "pollinations",
+      "name": "Pollinations AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "puter",
+      "name": "Puter AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "cloudflare-ai",
+      "name": "Cloudflare Workers AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "scaleway",
+      "name": "Scaleway AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "aimlapi",
+      "name": "AI/ML API",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "novita",
+      "name": "Novita AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "piapi",
+      "name": "PiAPI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "getgoapi",
+      "name": "GoAPI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "laozhang",
+      "name": "LaoZhang AI",
+      "category": "APIKEY_PROVIDERS",
+      "deprecated": false
+    },
+    {
+      "id": "cliproxyapi",
+      "name": "CLIProxyAPI",
+      "category": "UPSTREAM_PROXY_PROVIDERS",
+      "deprecated": false
+    }
+  ],
+  "status": "research_seed_not_connected_providers"
+}

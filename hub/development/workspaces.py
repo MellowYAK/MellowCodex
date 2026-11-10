@@ -100,6 +100,10 @@ class Workspaces:
             if actual!=change['base_hash']:raise ValueError('Source hash conflict: '+rel)
             data=change['content'].encode('utf-8')
             if len(data)>1_000_000:raise ValueError('Patch file too large')
+            if rel.endswith('.py'):
+                from .syntax import python_errors
+                errors=python_errors({rel:data})
+                if errors:raise ValueError('Python syntax preflight failed: '+str(errors))
             validated[rel]=data
         directory='revision-'+uuid.uuid4().hex;staged=target/directory
         shutil.copytree(current,staged,symlinks=True)

@@ -22,7 +22,41 @@
  safe(async()=>{const labels=await api('/lifecycle/labels');const shutdown=button(labels.shutdown,async()=>{shutdown.disabled=true;try{await api('/lifecycle/shutdown',{});shutdown.textContent=labels.stopping;const timer=setInterval(async()=>{try{const state=await api('/lifecycle/status');if(state.state==='failed'){clearInterval(timer);shutdown.disabled=false;shutdown.textContent=labels.shutdown;toast(state.errors.map(e=>e.stage+': '+e.error).join('\n'))}}catch(e){clearInterval(timer)}},1000)}catch(e){shutdown.disabled=false;throw e}});shutdown.classList.add('stop-button');general.append(shutdown)});
  for(const node of children){if(node===close||node.tagName==='H2')continue;if(node.tagName==='SECTION'){const h=node.querySelector('h3')?.textContent||'';(node.classList.contains('model-settings')?models:h.includes('דחיסת')?visual:connection).append(node)}else if(node.contains($('project-notes'))||['save-notes','worktree'].includes(node.id))projectPage.append(node);else general.append(node)}
  projectPage.append(button('פתח את זיכרון השיחה',()=>{settings.close();window.openContinuity()}));
- const ext=page('extensions','פלאגינים וסקילים');ext.append(el('p','מרכז ההרחבות של הסוכן'),el('p','חיבור ChatGPT זמין תחת חיבורים. כלים מקומיים רשומים זמינים לסוכן דרך extensions_list. קטלוג התקנה לפלאגינים ולסקילים עדיין בפיתוח; הוא לא מוצג כפעיל לפני אימות.'));
+ const ext=page('extensions','Skill Shops · סקילים והרחבות');
+ const description=el('p','קטלוג סקילים מותקנים. רישום או hash תקין אינם הוכחת פעולה מלאה.');ext.append(description);
+ const filterBar=el('div');filterBar.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin:12px 0';
+ const search=el('input');search.type='search';search.placeholder='חיפוש סקיל או יכולת';search.setAttribute('aria-label','חיפוש סקילים');
+ const category=el('select');category.setAttribute('aria-label','סינון קטגוריה');
+ const status=el('select');status.setAttribute('aria-label','סינון אימות');
+ for(const [key,title] of [['all','כל הסטטוסים'],['live','בוצעה בדיקה חיה'],['limited','חלקי או לא מאומת']]){const o=el('option',title);o.value=key;status.append(o)}
+ const reload=button('רענון',()=>safe(loadShop));filterBar.append(search,category,status,reload);ext.append(filterBar);
+ const metrics=el('p','טוען קטלוג...'),results=el('div');results.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px';
+ const notice=el('p','אין התקנה או הסרה אוטומטית בלי אישור בעלים.');ext.append(metrics,results,notice);
+ let catalog=null;
+ const isLive=v=>v.startsWith('live_')||v.startsWith('real_');
+ function drawShop(){
+   if(!catalog)return;const q=search.value.trim().toLocaleLowerCase(),cat=category.value,st=status.value;
+   const skills=catalog.skills.filter(s=>(cat==='all'||s.categories.includes(cat))&&(!q||[s.name,s.title,s.description,...s.capabilities.map(c=>c.id)].join(' ').toLocaleLowerCase().includes(q))&&
+     (st==='all'||s.capabilities.some(c=>st==='live'?isLive(c.verification):!isLive(c.verification))));
+   metrics.textContent=catalog.installed_skills+' חבילות · '+catalog.mapped_capabilities+'/'+catalog.original_goal+' יכולות ממופות · '+catalog.fully_verified+' אימותים מלאים';
+   results.replaceChildren(...skills.map(s=>{
+     const card=el('article');card.style.cssText='border:1px solid #9996;border-radius:10px;padding:12px;min-width:0';
+     card.append(el('h3',s.title),el('p',s.description),el('p','יכולות: '+s.capabilities.length+' · '+(s.integrity_verified?'Hash תקין':'Hash לא אומת')));
+     const detail=el('details');detail.append(el('summary','פירוט יכולות ומגבלות'));
+     for(const c of s.capabilities)detail.append(el('p',c.id+' · '+c.verification));
+     for(const limit of s.limitations)detail.append(el('p','מגבלה: '+limit));
+     card.append(detail);return card;
+   }));
+   if(!skills.length)results.append(el('p','לא נמצאו סקילים מתאימים.'));
+ }
+ async function loadShop(){
+   catalog=await api('/skill-shops');notice.textContent=catalog.permission_note;
+   const current=category.value,cats=['all',...new Set(catalog.skills.flatMap(s=>s.categories))];
+   category.replaceChildren(...cats.map(c=>{const o=el('option',c==='all'?'כל הקטגוריות':c);o.value=c;return o}));
+   category.value=cats.includes(current)?current:'all';drawShop();
+ }
+ search.addEventListener('input',drawShop);category.addEventListener('change',drawShop);status.addEventListener('change',drawShop);
+ pages.get('extensions').button.addEventListener('click',()=>safe(loadShop));
  const rag=page('knowledge','ידע ו־RAG');rag.append(el('p','מפת הפרויקט והחיפוש בקוד פועלים מקומית. הם נפרדים מזיכרון השיחה הכרונולוגי.'),button('פתח מפת פרויקט וחיפוש',()=>{settings.close();document.querySelector('.context-open')?.click()}));
  layout.append(nav,content);settings.replaceChildren(head,layout);
  const plugins=button('פלאגינים וסקילים',()=>{settings.showModal();pages.get('extensions').button.click()});plugins.id='extensions-nav';$('schedules').after(plugins);
@@ -75,7 +109,58 @@
  const openChatGPT=$('chatgpt-bridge').onclick;
  const connectorNav=button('חיבורי AI',async()=>{connectorDialog.showModal();connectorCards.replaceChildren(el('p','טוען חיבורים…'));const data=await api('/ai-connectors');connectorCards.replaceChildren(...data.items.map(provider=>{
   const card=el('article',undefined,'ai-connector-card'),head=el('div',undefined,'ai-connector-head'),mark=el('span',provider.mark,'ai-connector-mark '+provider.id);mark.setAttribute('aria-hidden','true');head.append(mark,el('h3',provider.name));card.append(head,el('p',provider.description));
-  const methods=el('div',undefined,'ai-connector-methods');for(const route of provider.transports){const b=button(route.name,async()=>{connectorDialog.close();await openChatGPT();chooseTransport(route.id);transportSelect.value=route.id});b.disabled=!route.implemented;b.title=route.requires;methods.append(b)}card.append(methods,el('small',provider.connection_state==='not_implemented'?'בפיתוח · עדיין לא ניתן לחבר':'נדרשת התחברות · בחירת מסלול אינה מחברת אוטומטית'));return card}));});
+  const methods=el('div',undefined,'ai-connector-methods');for(const route of provider.transports){const b=button(route.name,async()=>{connectorDialog.close();if(route.id==='mcp'){const d=el('dialog',undefined,'ai-connectors-dialog');d.dir='rtl';const labels=data.mcp.labels;const url=el('input');url.value=data.mcp.url;url.readOnly=true;url.dir='ltr';url.style.width='100%';url.onclick=()=>url.select();d.append(el('h2',provider.name+' · '+labels.setup),el('p',labels.instructions),url,el('p',route.requires),el('p',labels.status_note),button(labels.approve,()=>{d.close();window.showSettingsPage('connections');safe(remoteStatus)}),button('×',()=>d.close()));document.body.append(d);d.addEventListener('close',()=>d.remove());d.showModal();return}await openChatGPT();chooseTransport(route.id);transportSelect.value=route.id});b.disabled=!route.implemented;b.title=route.requires;methods.append(b)}card.append(methods,el('small',provider.connection_state==='not_implemented'?'בפיתוח · עדיין לא ניתן לחבר':'נדרשת התחברות · בחירת מסלול אינה מחברת אוטומטית'));return card}));});
  connectorNav.id='ai-connectors-nav';$('chatgpt-bridge').before(connectorNav);
  for(const d of document.querySelectorAll('dialog')){d.addEventListener('click',e=>{if(e.target!==d)return;const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()})}
+})();
+
+/* Presentation only: every state and piece of evidence comes from the task API. */
+(()=>{
+ const activity=new Map(),openEvidence=new Set(),activityReceived=new Map();
+ const tools={run_shell:'מריץ פקודה',read_file:'קורא קובץ',write_file:'כותב קובץ',browser_observe:'בודק את הדף',browser_tabs:'בודק לשוניות',context_search:'מחפש בקוד',context_expand:'קורא את המקור',project_context:'קורא את מפת הפרויקט',chatgpt_ask:'ממתין למשוב מהמנחה',candidate_patch:'מעדכן את הקוד',candidate_repair:'מכין תיקון קוד'};
+ const states={queued:'המשימה התקבלה',running:'מבצע את המשימה',verifying:'בודק את התוצאה',waiting_review:'ממתין לבדיקת התוצאה',waiting_user:'נדרשת תשובה כדי להמשיך',waiting_desktop:'ממתין לשולחן עבודה זמין',paused:'המשימה מושהית',cancelled:'המשימה בוטלה',failed:'המשימה נכשלה',done:'המשימה הושלמה'};
+ const phase={model_inference:'ממתין לתשובת המודל',tool_execution:'ממתין לסיום הפעולה',planning_next_step:'בודק את התוצאה ומתכנן את הצעד הבא',executor_queue:'ממתין בתור לביצוע',result_review:'ממתין לבדיקת התוצאה'};
+ const themeButton=button('☀ / ☾',()=>{$('theme').click();themeButton.setAttribute('aria-pressed',String(document.body.classList.contains('dark')))});themeButton.className='theme-shortcut';themeButton.title='החלף מצב בהיר / כהה';themeButton.setAttribute('aria-label',themeButton.title);document.querySelector('.header-actions').prepend(themeButton);
+ const extra=el('details',undefined,'sidebar-extra');extra.append(el('summary','חיבורים וכלים'));$('new-chat').after(extra);for(const id of ['ai-connectors-nav','chatgpt-bridge','schedules','extensions-nav'])if($(id))extra.append($(id));
+ const context=el('div',undefined,'flow-context');context.append(el('span','המשך השיחה הנבחרת'),button('＋ משימה בשיחה חדשה',()=>newChat()));$('composer').prepend(context);
+ function evidence(task){
+  const d=el('details',undefined,'tools');d.open=openEvidence.has(task.id);d.append(el('summary','פרטים טכניים'));const content=el('div');d.append(content);let cursor=0,busy=false,last=0;
+  d.refreshEvidence=async()=>{if(!d.open||busy||Date.now()-last<4000)return;busy=true;try{const events=await api('/tasks/'+task.id+'/events');for(const e of events.slice(cursor)){const row=el('details');row.append(el('summary',new Date(e.at).toLocaleTimeString()+' · '+({tool_start:'פעולה התחילה',tool_result:'תוצאת פעולה',model_start:'בקשה למודל',state:'שינוי מצב',review:'בדיקה',unknown_action:'תוצאה לא ודאית'}[e.kind]||e.kind)));row.append(el('pre',JSON.stringify(e.data,null,2)));content.append(row)}cursor=events.length;last=Date.now()}finally{busy=false}};
+  d.ontoggle=()=>{d.open?openEvidence.add(task.id):openEvidence.delete(task.id);if(d.open)safe(d.refreshEvidence)};return d;
+ }
+ function makeCard(task){const card=el('article',undefined,'flow-card');card.dataset.task=task.id;card.taskSnapshot=task;const h=el('h2');h.dataset.flow='heading';const steps=el('ol',undefined,'flow-steps');for(const label of ['התקבלה','בביצוע','בבדיקה','הושלמה']){const li=el('li');li.append(el('span',''),document.createTextNode(label));steps.append(li)}const now=el('div',undefined,'flow-now');now.dataset.flow='now';const next=el('div',undefined,'flow-next');next.dataset.flow='next';card.append(h,steps,now,next,evidence(task));const actions=el('div',undefined,'turn-actions');for(const [label,command,allowed] of [['השהיה','pause',['running','queued','waiting_desktop']],['המשך','resume',['paused','failed','waiting_user']],['עצירה','cancel',['running','queued','paused','waiting_desktop','waiting_user']]])if(allowed.includes(task.state))actions.append(button(label,async()=>{await api('/tasks/'+task.id+'/control',{command,expected_revision:task.revision});signature='';await refresh()}));if(task.state==='waiting_review')actions.append(button('אשר תוצאה לאחר בדיקה',async()=>{await api('/tasks/'+task.id+'/review',{decision:'approve',reason:'התוצאה נבדקה ואושרה',expected_revision:task.revision});signature='';await refresh()}));if(task.mode==='code')actions.append(button('סקירת שינויים',()=>window.openDevelopment(task.id)));card.append(actions,el('small','הפעולות והתוצאות נשמרות ביומן גם כשהפרטים סגורים.'));updateCard(card,task);return card}
+ function updateCard(card,task){const item=activity.get(task.id),s=item?.state||task.state,x=item?.execution;card.querySelector('[data-flow=heading]').textContent=states[s]||s;const index=s==='done'?3:['verifying','waiting_review'].includes(s)?2:s==='queued'?0:1;[...card.querySelectorAll('.flow-steps li')].forEach((li,i)=>{li.className=i<index||s==='done'?'complete':i===index?'current':'';li.firstChild.textContent=i<index||s==='done'?'✓':''});const tool=x?.current_action?.tool;card.querySelector('[data-flow=now]').textContent='עכשיו: '+(s==='running'?(tool?(tools[tool]||'מבצע פעולה בכלי'):phase[x?.waiting_for]||states[s]):states[s]||s);card.querySelector('[data-flow=next]').textContent=s==='running'?'הבא: בדיקת תוצאת הפעולה לפני המשך':s==='waiting_review'?'הביצוע הסתיים; ההצלחה עדיין ממתינה לאישור':s==='done'?'המשימה סומנה כהושלמה':s==='queued'?'הביצוע יתחיל כשהסוכן יתפנה':task.result?.split('\n')[0]?.slice(0,220)||'';}
+
+ const statusDialog=el('dialog',undefined,'status-dialog');statusDialog.dir='rtl';
+ const statusContent=el('div');const statusHead=el('div',undefined,'status-heading');
+ statusHead.append(el('h2','מצב הסוכן'),button('סגור ×',()=>statusDialog.close()));statusDialog.append(statusHead,statusContent);document.body.append(statusDialog);
+ const statusButton=button('מצב הסוכן',()=>{statusDialog.showModal();updateLiveness()});statusButton.className='top-status';document.querySelector('.header-actions').prepend(statusButton);
+ let latestItems=[],lastUpdate=0;
+ function updateTopStatus(){const active=latestItems.filter(x=>['running','queued','verifying'].includes(x.state));const stale=Date.now()-lastUpdate>15000;statusButton.classList.toggle('is-live',active.length>0&&!stale);const current=latestItems.find(x=>x.chat_id===selected)||latestItems[0];statusButton.textContent=stale?'מצב · אין עדכון חי':active.length?'בפעילות · '+active.length:current?(states[current.state]||current.state):'הסוכן פנוי';statusButton.title='לחץ למצב מפורט וליומן הפעולות';}
+ const dashboard=el('section',undefined,'home-dashboard');dashboard.dir='rtl';dashboard.hidden=true;$('messages').before(dashboard);
+ function showHome(){dashboard.hidden=false;document.body.classList.add('dashboard-open');renderHome();}
+ function hideHome(){dashboard.hidden=true;document.body.classList.remove('dashboard-open');}
+ const homeButton=button('⌂  דף הבית',showHome);homeButton.className='home-navigation';$('new-chat').before(homeButton);
+ const oldSelect=select;select=async function(id){hideHome();return oldSelect(id)};
+ const oldNew=newChat;newChat=function(){hideHome();return oldNew()};$('new-chat').onclick=newChat;
+ let homeSignature='';function renderHome(){if(dashboard.hidden)return;const nextSignature=JSON.stringify([latestItems.map(i=>[i.task_id,i.state,i.execution?.waiting_for,i.execution?.current_action?.tool]),Date.now()-lastUpdate>15000]);if(nextSignature===homeSignature)return;homeSignature=nextSignature;const active=latestItems.filter(x=>['running','queued','verifying'].includes(x.state));const review=latestItems.filter(x=>['failed','waiting_user','waiting_review','waiting_desktop','paused'].includes(x.state));const finished=latestItems.filter(x=>x.state==='done');
+ dashboard.replaceChildren(el('small','MELLOWCODEX · מרכז הפעילות'),el('h1','מה קורה עכשיו?'),el('p',lastUpdate&&Date.now()-lastUpdate<15000?'מתעדכן אוטומטית · הפעולות נשמרות ביומן':'אין עדכון חי כרגע · המידע האחרון נשמר'));
+ const metrics=el('div',undefined,'dashboard-metrics');for(const [n,label] of [[active.length,'בפעילות'],[review.length,'דורשות תשומת לב'],[finished.length,'הושלמו']]){const tile=el('div');tile.append(el('strong',String(n)),el('span',label));metrics.append(tile)}dashboard.append(metrics,el('small','הסיכום מתייחס ל־'+latestItems.length+' המשימות האחרונות שהשרת החזיר.'));
+ for(const [title,items] of [['פועל עכשיו',active],['דורש טיפול או בדיקה',review],['פעילות אחרונה',latestItems.filter(x=>!active.includes(x)&&!review.includes(x))]]){dashboard.append(el('h2',title));if(!items.length){dashboard.append(el('p','אין משימות בקבוצה זו','dashboard-empty'));continue}for(const item of items){const row=el('article',undefined,'dashboard-row');const text=el('div');text.append(el('strong',item.goal||'משימה'),el('p',(states[item.state]||item.state)+' · '+(phase[item.execution?.waiting_for]||item.execution?.current_action?.tool||'')));row.append(text,button('פרטים',async()=>{const task=await api('/tasks/'+item.task_id);statusContent.replaceChildren(makeCard(task));statusDialog.showModal();updateLiveness()}));if(item.chat_id)row.append(button('פתח שיחה',()=>select(item.chat_id)));dashboard.append(row)}}}
+ window.addEventListener('task-activity',event=>{latestItems=event.detail.items;lastUpdate=Date.now();updateTopStatus();renderHome()});
+ setInterval(()=>{updateTopStatus();if(Date.now()-lastUpdate>15000)renderHome()},2000);
+ const original=renderTurns;
+ function message(text,kind,label){const box=el('div',undefined,'message '+kind);box.dir='auto';box.append(el('small',label));if(text.length>600){box.append(el('div',text.slice(0,350)+'…'));const d=el('details',undefined,'flow-full');d.append(el('summary','הצג הודעה מלאה'),el('div',text));box.append(d)}else box.append(renderRichText(text));return box}
+ function files(box,items){for(const f of items||[]){const a=el('a','↧ '+f.name);a.href='/api/files/'+encodeURIComponent(f.id)+'/content';a.download=f.name;box.append(a);if(/\.(png|jpe?g|webp)$/i.test(f.name||'')){const img=el('img');img.src=a.href;img.alt=f.name;img.loading='lazy';box.append(img)}}}
+ renderTurns=async function(turns){
+  const area=$('messages'),atBottom=area.scrollHeight-area.scrollTop-area.clientHeight<120;
+  if(showCorrespondence&&correspondenceMessages.length){await original(turns);for(const row of area.querySelectorAll('.bridge-message')){if(row.classList.contains('agent_status'))row.remove()}const last=turns.at(-1);if(last)statusContent.replaceChildren(makeCard(last));}
+  else if(turns.length){area.replaceChildren();if(chat?.has_older)area.append(button('הודעות קודמות',async()=>{historyBefore=chat.next_before;signature='';await refresh();area.scrollTop=0}));if(historyBefore!==null)area.append(button('חזרה להודעות האחרונות',async()=>{historyBefore=null;signature='';await refresh()}));for(const task of turns){const box=message(task.presentation?.text||task.goal,'user',task.presentation?.source==='mcp'?'בקשה דרך MCP':'הבקשה שלך');files(box,task.attachments);area.append(box);if(task.result)area.append(message(task.result,'assistant','MellowCodex · תוצאת הביצוע'));else area.append(message(task.state==='queued'?'הבקשה התקבלה וממתינה לביצוע.':states[task.state]||task.state,'assistant','MellowCodex · עדכון מצב'));area.append(button("מצב המשימה ופרטים",()=>{statusContent.replaceChildren(makeCard(task));statusDialog.showModal();updateLiveness()}))}}
+  else await original(turns);
+  if(turns.length&&!statusDialog.open)statusContent.replaceChildren(makeCard(turns.at(-1)));updateTopStatus();context.firstChild.textContent=turns.length?'המשך באותה שיחה':'משימה חדשה';if(atBottom||turns.length<2)area.scrollTop=area.scrollHeight;
+ };
+ function updateLiveness(){for(const card of document.querySelectorAll('.flow-card')){const task=card.taskSnapshot||chat?.turns?.find(t=>t.id===card.dataset.task);if(!task)continue;const item=activity.get(task.id),state=item?.state||task.state;const active=['running','queued','verifying'].includes(state);const received=activityReceived.get(task.id)||0;const stale=active&&(!received||Date.now()-received>15000);card.dataset.state=state;card.classList.toggle('flow-active',active&&!stale);card.classList.toggle('flow-stale',stale);let badge=card.querySelector('.flow-heartbeat');if(!badge){badge=el('div',undefined,'flow-heartbeat');badge.setAttribute('role','status');badge.tabIndex=0;badge.title='הצג מה הסוכן עושה כעת';const reveal=()=>{const d=card.querySelector('.tools');d.open=true;safe(d.refreshEvidence)};badge.onclick=reveal;badge.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();reveal()}};card.querySelector('h2').after(badge)}badge.textContent=stale?'עדכוני המצב לא מגיעים — לא ניתן לאמת שהביצוע מתקדם':active?((phase[item?.execution?.waiting_for]||states[state])+' · '+(item?.execution?.phase_elapsed_seconds||0)+' שניות בשלב · לחץ לפרטים'):state==='waiting_review'?'ממתין לבדיקה — אין פעולה שרצה כרגע':states[state]||state;}}
+ window.addEventListener('task-activity',event=>{for(const item of event.detail.items){activity.set(item.task_id,item);activityReceived.set(item.task_id,Date.now())}for(const card of document.querySelectorAll('.flow-card')){const task=card.taskSnapshot||chat?.turns?.find(t=>t.id===card.dataset.task);if(task)updateCard(card,task);const details=card.querySelector('.tools');if(details?.open)safe(details.refreshEvidence)}updateLiveness()});
+ setInterval(updateLiveness,2000);
+ signature='';safe(refresh);
 })();

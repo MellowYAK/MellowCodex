@@ -1,5 +1,7 @@
 param([switch]$WithOpenCode,[switch]$SkipDesktop)
 $ErrorActionPreference = 'Stop'
+& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\reconcile-services.ps1"
+if ($LASTEXITCODE -ne 0) { Write-Warning 'Service reconciliation needs attention; see E:\AI\state\service-reconcile.json' }
 $agentRoot = 'E:\AI'
 $env:LOCAL_AGENT_ROOT = $agentRoot
 $env:OLLAMA_MODELS = "$agentRoot\models"
@@ -36,7 +38,7 @@ if (!(Test-AgentEndpoint 'http://127.0.0.1:11434/api/version')) {
   $process.Id | Set-Content "$agentRoot\state\ollama.pid"
 }
 if (!(Test-AgentEndpoint 'http://127.0.0.1:8876/')) {
-  $process = Start-Process "$agentRoot\tools\hub-venv\Scripts\python.exe" -ArgumentList '-m','uvicorn','hub.app:app','--host','0.0.0.0','--port','8876','--no-access-log' -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput "$agentRoot\state\hub.stdout.log" -RedirectStandardError "$agentRoot\state\hub.stderr.log"
+  $process = Start-Process "$agentRoot\tools\hub-venv\Scripts\python.exe" -ArgumentList '-m','uvicorn','hub.app:app','--host','127.0.0.1','--port','8876','--no-access-log' -WorkingDirectory $PSScriptRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput "$agentRoot\state\hub.stdout.log" -RedirectStandardError "$agentRoot\state\hub.stderr.log"
   $process.Id | Set-Content "$agentRoot\state\hub.pid"
 }
 if ($WithOpenCode -and !(Test-AgentEndpoint 'http://127.0.0.1:4096/global/health')) {

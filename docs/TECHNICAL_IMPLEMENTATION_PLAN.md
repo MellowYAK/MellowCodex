@@ -824,3 +824,8 @@ Implemented measured-map component selection, per-component relationship tracing
 ## 2026-11-07 — Local-model recovery audit checkpoint
 
 Implementation was paused at the user's request for evidence-based diagnosis. The supplementary plan is E:/AI/repos/local-agent-hub/docs/LOCAL_MODEL_RECOVERY_PLAN-2026-11-07.md. It preserves the existing APC/index/runner/feedback work and prioritizes controlled source-packet and directed-step experiments before more implementation. The previous focused suite passed 94 checks; real semantic acceptance remains incomplete. This amendment does not mark the original phases complete or activate any change. This plan and its original copy have diverged; preserve both rather than overwriting either with the other.
+
+
+## APC/SelfDevelop continuation audit — 2026-11-07
+
+See APC_SELFDEVELOP_IMPLEMENTATION_PLAN-2026-11-07.md for a source-grounded update, actual reuse matrix and staged execution through an external MCP director. Preserve previous implementation and historical checkpoints; the new audit distinguishes current tested mapping from unported APC continuity contracts and incomplete control-plane self-update.
