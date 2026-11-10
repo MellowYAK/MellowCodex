@@ -66,9 +66,9 @@ async def list_projects_and_chats()->dict:
     return await local('/api/chats')
 
 @mcp.tool(annotations=WRITE)
-async def agent_shutdown()->dict:
-    """Fully shut down the local agent on explicit user request: stop tasks, unload Hub-managed models, close desktop and owned MCP/relay services. Shared Ollama is preserved. Response means accepted, not completed; connection will close. Model loading remains disabled until explicit load."""
-    return await local('/api/lifecycle/shutdown',{})
+async def agent_shutdown(request_id:str,confirm_tasks:bool=False)->dict:
+    """Stop all agent services using shared durable manager. Read service_health_status and explain active-task impact, then obtain explicit user confirmation before confirm_tasks=true. Keeps rescue shell and protected OwnerBroker; retain action id across disconnect."""
+    return await local('/api/lifecycle/shutdown',{'request_id':request_id,'confirm_tasks':confirm_tasks})
 
 @mcp.tool(annotations=READ)
 async def agent_shutdown_status()->dict:
@@ -485,3 +485,6 @@ if __name__=='__main__':
     import uvicorn
     uvicorn.run(app,host='127.0.0.1',port=GATEWAY_PORT,access_log=False)
 
+
+from .service_health import register_mcp as register_service_health
+register_service_health(mcp,local,READ,WRITE)

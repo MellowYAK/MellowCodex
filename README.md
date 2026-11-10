@@ -1,3 +1,15 @@
+## Health and service rescue (Hub 0.19.0)
+
+The native top health indicator, Tools > Health and Services, tray menu and offline desktop shortcut open the same local panel. It works without Hub or MCP. The panel and MCP service_health tools submit durable actions to the existing reconcile-services.ps1 manager, with per-service selection, shared locks and intentional-stop markers.
+
+Process presence, verified accepting PID, API response, owned SSH tunnel and remote MCP round-trip evidence are separate. Remote evidence expires after two minutes; use connection_challenge then connection_ack only after actually receiving the nonce through MCP. A local port is never remote proof. OAuth renewal must be done through the MellowCodex connection in ChatGPT when required; reconnect does not bypass consent.
+
+Close window hides the shell. Stop MCP leaves Hub, conversation/tasks, Ollama and the desktop running. Stop all requires task-impact confirmation and uses existing graceful shutdown; the rescue window and protected OwnerBroker stay available. OwnerBroker changes still use existing Owner Control/UAC. Model, recovery-task and shell-specific settings remain in their dedicated controls. No network/credential/permission changes are automated.
+
+Intentional MCP/all/service stop markers persist across reboot. Scheduled Reconcile honors them. Explicit Start/Restart clears the relevant markers, starts dependencies and resumes recovery. Start all clears the global all-stop marker; Start MCP alone does not undo a prior all-services recovery pause. Explicit actions wait up to 30 seconds for the existing manager lock; scheduled recovery remains nonblocking and retries on its existing one-minute schedule. Failed/interrupted jobs are visible and are never replayed automatically.
+
+Native UI/deployment and controlled stop/reconnect validation are recorded separately in VALIDATION.md; no reboot claim is implied.
+
 ## Named browser elements (Hub 0.18.0)
 
 Use Select element in the internal browser, give the preview an optional unique name, then Save element and select more. Each saved element/region gets a permanent automatic number. The Elements toolbar opens the shared list: rename, select multiple entries and attach references to the current draft. Saving or attaching never sends a task automatically.

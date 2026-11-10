@@ -107,11 +107,17 @@ async def owner_permission_status(chat_id: str = ''):
 
 
 @app.post('/api/lifecycle/shutdown')
-async def shutdown_agent():
+async def shutdown_agent(body:dict | None=None):
+    from .service_health import submit,active_tasks
+    body=body or {}
+    if not body.get('confirm_tasks'):
+        raise HTTPException(409, {'reason':'Confirm whole-agent task impact in Health and Services first','active_tasks':active_tasks()})
     try:
-        return app.state.shutdown.start()
+        return await asyncio.to_thread(submit,'Stop','all',body.get('request_id',''),True)
+    except ValueError as exc:
+        raise HTTPException(400,str(exc))
     except RuntimeError as exc:
-        raise HTTPException(409, str(exc))
+        raise HTTPException(409,str(exc))
 
 @app.get('/api/lifecycle/status')
 async def shutdown_status():
@@ -1268,3 +1274,50 @@ async def screenshot_settings_set(body:ScreenshotSettings):
 
 from .browser_selections import router as browser_selections_router
 app.include_router(browser_selections_router())
+
+
+# Native rescue and MCP share the same durable service manager.
+@app.get('/api/service-health')
+async def service_health_snapshot():
+    from .service_health import snapshot
+    return await asyncio.to_thread(snapshot)
+
+class ServiceHealthAction(BaseModel):
+    action: str
+    service: str = 'mcp'
+    request_id: str
+    confirm_tasks: bool = False
+
+@app.post('/api/service-health/action')
+async def service_health_action(body: ServiceHealthAction):
+    from .service_health import submit
+    try:
+        return await asyncio.to_thread(submit,body.action,body.service,body.request_id,body.confirm_tasks)
+    except ValueError as exc:
+        raise HTTPException(400,str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(409,str(exc))
+
+@app.get('/api/service-health/action/{action_id}')
+async def service_health_action_result(action_id:str):
+    from .service_health import job_status
+    try:return job_status(action_id)
+    except ValueError as exc:raise HTTPException(404,str(exc))
+
+@app.post('/api/service-health/connection/challenge')
+async def service_health_challenge():
+    from .service_health import challenge
+    return challenge()
+
+class HealthConnectionAck(BaseModel):
+    nonce: str
+
+@app.post('/api/service-health/connection/ack')
+async def service_health_ack(body:HealthConnectionAck):
+    from .service_health import acknowledge
+    try:return acknowledge(body.nonce)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+@app.post('/api/service-health/quiesce')
+async def service_health_quiesce():
+    return app.state.shutdown.start(keep_desktop=True)

@@ -1,3 +1,13 @@
+## 0.19.0 - 2026-11-10
+
+- Add native health/rescue panel, top indicator, Tools entry, tray controls and offline desktop shortcut.
+- Extend the existing reconciler and ownership-checked stop helper with per-service actions, durable receipts, shared locks and persistent intentional-stop markers. Explicit actions wait up to 30 seconds for scheduled recovery.
+- Separate process, port, authenticated API, SSH tunnel and expiring remote MCP evidence. Guard healthy=false remains a visible warning even when its authenticated MCP API responds.
+- Fix controller completion blocked by inherited pipes, Windows accepting-PID attribution, and recognition of the existing supervisor's Hub invocation.
+- Preserve tasks, browser/session data, Skill Shops, network settings and owner protections. Whole-agent stop requires task-impact confirmation and graceful quiescence.
+- Deployed and loaded in the Windows shell. Real panel/Tools/tray interactions, MCP Stop under scheduled recovery for 70 seconds, Start/Restart, Hub-offline panel opening/restoration and remote MCP roundtrip verified. Catalog retained 23 skills and 100 capabilities.
+- Twelve focused tests passed; final stop-helper change passed eight relevant tests. No reboot, locked-session or destructive whole-agent shutdown was performed. Existing ChatGPT tool discovery still needs refresh for the new named tools; the shared API was exercised through the existing MCP local runner.
+
 ## 0.18.0 - 2026-11-10
 
 - Persist selected browser elements/regions with stable numbers and optional unique names; add native saved-elements list, rename and multi-reference draft handoff.

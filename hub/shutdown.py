@@ -16,13 +16,15 @@ class Shutdown:
     def __init__(self, engine, catalog, monitors):
         self.engine, self.catalog, self.monitors = engine, catalog, monitors
         self.task = None
+        self.keep_desktop = False
         self.status = {'state': 'idle', 'steps': [], 'errors': []}
 
-    def start(self):
+    def start(self, keep_desktop=False):
         if self.task and not self.task.done():
             return self.status
         if not callable(signal.getsignal(signal.SIGTERM)):
             raise RuntimeError('Server has no graceful shutdown handler')
+        self.keep_desktop = keep_desktop
         self.status = {'state': 'stopping', 'steps': [], 'errors': []}
         self.task = asyncio.create_task(self.run())
         return self.status
@@ -77,7 +79,8 @@ class Shutdown:
         # Let HTTP/MCP deliver the accepted response before disconnecting transports.
         await asyncio.sleep(2)
         settings = load_settings()
-        save_settings(settings.model_copy(update={'inference_enabled': False}))
+        if not self.keep_desktop:
+            save_settings(settings.model_copy(update={'inference_enabled': False}))
         for monitor in self.monitors:
             if monitor:
                 monitor.cancel()
@@ -88,7 +91,8 @@ class Shutdown:
         await self.step('models_unloaded', self.unload)
         if self.status['errors']:
             self.status['state'] = 'failed'; self.record(); return
-        await self.step('desktop_closed', self.close_desktop)
+        if not self.keep_desktop:
+            await self.step('desktop_closed', self.close_desktop)
         self.status['state'] = 'server_exit_requested'
         self.record()
         signal.raise_signal(signal.SIGTERM)
