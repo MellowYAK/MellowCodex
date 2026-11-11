@@ -1,3 +1,37 @@
+## 0.21.0 — Health & Recovery — deployed 2026-11-11
+
+Task: ef06b2b4072a4ab6ac89fba87e9473ec. Runtime/API/MCP version: 0.21.0 (120 advertised tools). No dependencies added.
+
+### Established causes and changes
+The old panel conflated Guard API availability with supervisor coverage, kept one remote-proof record, skipped Repair postconditions, and did not dispatch CLI --status/--preflight. Windows also intermittently omitted an accepting PID: one missing sample followed by two verified PID samples caused a safe but unnecessary Stop rejection. Read-only ownership observations now retry twice; foreign owners still fail immediately.
+
+The shared native/UI/MCP backend now separates process ownership, local API, IPv4/IPv6, routes/DNS, SSH authentication, forwarded HTTP, connector OAuth/external round trip, supervisor coverage and model inference state. Manual Check uses the installed SSH identity with strict known_hosts and a read-only command; no raw SSH logs or tokens are retained. Background checks do not launch SSH authentication probes. Connector evidence has age/last success and expires as stale, not disconnected. Guard OAuth failure affects Guard only. Restart invalidates affected current proof while preserving last success.
+
+Per-service controls and explicit global controls use existing lifecycle mutexes, dependency management, task-impact checks and durable operation IDs. Duplicate active requests share one operation. Repair reconciles only absent supported services and verifies the result; healthy services and intentional stops are preserved. Reset previews stale operation IDs and removes only the disposable health snapshot; it never deletes application data, credentials, permissions, stop markers or action logs. Reconnect directs the owner to the affected ChatGPT connector; it does not complete consent locally.
+
+### Actual verification
+- 24 focused health checks passed; after the final read-only ownership correction, the 20 affected checks passed. Existing acceptance tests were not rewritten.
+- Four existing independent supervisor activations returned ACTIVE_VERIFIED: 0e2fe9884ba049ea842f92b2276f596e, 523e695155bb49e2972c9369d390b161, 34831643c41d42c68e2de02f9e038b71, febb20281e884291a55b4bedbb46a70b.
+- Controlled MCP Stop 274876342147a5b33d4d27aa167af2c8 and Start a95d5cfb077937c7a911a353400268d7 completed. An actual external MCP call failed while stopped and succeeded after restoration; Guard also answered without reauthentication. Scheduled reconciliation respected the intentional stop. Hub, desktop/browser and Ollama PIDs were unchanged during the exercise.
+- Actual Windows offline panel remained visible/useful during MCP shutdown: 10 rows, 50 row actions, seven columns, unsupported actions disabled. Final native top-indicator/Tools/tray integration and a real Check-all button produced completed operation 5b0085fc9176f1e6460eecb893b5dc24.
+- Registered MCP handlers called the deployed authenticated Hub API successfully; duplicate Check requests shared cd033495a71f6d89d643c2e585925d5f. A direct local MCP attempt using a Hub key was correctly rejected by OAuth and was not bypassed. External MCP transport was verified separately through real connected tools.
+- Deployed Check e982519cfa30644257d210889708ed62 verified SSH authentication. Reset fa975f2bf8e04bf4b22fb2be66b84457 completed without changing stale operations. Final Repair f0b2512bf5974d88235aa1626c15e808 left every service unchanged and requested only fresh external proof after its two-minute expiry.
+- All 104 existing chats, 10 projects and 1,449 prior task IDs remained present. Protected configuration/credential hashes matched. Inference stayed disabled and the model was not loaded. No skill, permission or user-work deletion was performed.
+- Read-only live candidate snapshot: 4.08s. Expanded SSH/DNS/IPv4/IPv6/forwarded-HTTP check: 5.05s (different scopes, not a performance comparison). Public HTTP200 verifies forwarding, not an authenticated MCP round trip.
+
+### OAuth investigation and honest limits
+Guard stores opaque-token hashes and grants in its independent private SQLite file outside release directories. Refresh exchange uses BEGIN IMMEDIATE and single-use tokens. Installed defaults are 900s access and 86400s refresh/grant lifetime; the grant expiry does not become permanent on refresh. Existing expired and current grants were observed. Bounded available logs contained no invalid_grant cause. No evidence proves that reboot erased auth, signing material changed, or a refresh race caused this incident. This controlled normal service restart preserved current external Guard authentication.
+
+No computer/router reboot, locked-desktop acceptance, destructive reset or whole-agent Stop-all with active work was performed. The incident's router-versus-server cause remains unknown. ChatGPT consent cannot be automated. ChatGPT may need to refresh its cached tool catalog to expose newly advertised tool schemas. The existing desktop/browser process was deliberately preserved: its already-imported native panel refreshes to new code when that shell is next reopened. The updated standalone desktop shortcut is available immediately.
+
+### Controls, evidence and rollback
+Open **Mellow Health and Services** on the desktop, or the native health indicator / Tools > Health and Services / tray menu in a newly opened shell. The standalone command is pythonw -m hub.service_health_ui from the repository and works without MCP or Hub.
+
+Evidence: E:/AI/artifacts/health-recovery-20261111 (transport-e2e.json, offline-ui-readback.json, final-ui-readback.json, final-deployed-verification.json, final-repair-readback.json, candidate-final-network.json, oauth-log-inspection.json). The first safely rejected Stop attempt is retained separately.
+
+For rollback, create a fresh isolated candidate from the installed source and restore the pre-task runtime files from E:/AI/candidates/511a3c49563c49fbb39fe89b60a3264b/source; test and activate through the same prepare/activate supervisor while tasks are idle. Its changed-file backups/journals remain available. Do not overwrite live processes, reset the dirty primary checkout or downgrade/delete the task/OAuth databases. New diagnostic evidence can remain on disk. Packaging version-only metadata is synchronized separately because the existing runtime deployment rejects dependency-manifest changes.
+
+
 ## 0.20.0 deployed verification - 2026-11-10
 Before: deployed0.19.0 retained optional long tool/history content under an effective262100-token context. Existing memory and selective tools were already present; this release extends them.
 Implemented: shared estimated bounded packets, protected text corrections including older screenshots, current visual evidence, complete tool groups, source-bound compaction, incremental SQLite working state, explicit chat/project pins, and shared UI/MCP settings. No dependencies added.

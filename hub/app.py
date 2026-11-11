@@ -1278,9 +1278,10 @@ app.include_router(browser_selections_router())
 
 # Native rescue and MCP share the same durable service manager.
 @app.get('/api/service-health')
-async def service_health_snapshot():
-    from .service_health import snapshot
-    return await asyncio.to_thread(snapshot)
+async def service_health_snapshot(compact:bool=False):
+    from .service_health import snapshot,compact_status
+    data=await asyncio.to_thread(snapshot)
+    return compact_status(data) if compact else data
 
 class ServiceHealthAction(BaseModel):
     action: str
@@ -1358,3 +1359,10 @@ async def context_memory_pin(chat_id:str,body:dict):
     try:return ConversationMemory(store).pin_memory(chat_id,body['anchor_id'],body['scope'],body['pinned'],body['expected_revision'])
     except KeyError as exc:raise HTTPException(404,str(exc))
     except ValueError as exc:raise HTTPException(409,str(exc))
+
+@app.post('/api/service-health/connector-observation')
+async def service_health_connector_observation(body:dict):
+    from . import service_health as health
+    try:
+        return health.diagnostics.observe(health,body.get('connector'),body.get('outcome'),body.get('checked_at'))
+    except ValueError as exc:raise HTTPException(400,str(exc))

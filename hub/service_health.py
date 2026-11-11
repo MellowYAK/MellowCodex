@@ -9,6 +9,8 @@ import subprocess
 import sys
 import time
 import uuid
+import threading
+from . import health_diagnostics as diagnostics
 import urllib.request
 import urllib.error
 import psutil
@@ -85,21 +87,7 @@ def port_identity(port):
  finally:client.close()
 
 def network(cfg):
- result={'state':'unknown','reason':'לא נבדק','dns':None,'ssh_reachable':None,'ipv4_conflict':None}
- try:
-  r=ps("$d=@(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop | Where-Object AddressState -eq 'Duplicate');$n=@(Get-NetAdapter -ErrorAction Stop | Where-Object Status -eq 'Up');@{duplicate=($d.Count -gt 0);link_up=($n.Count -gt 0)}|ConvertTo-Json -Compress",8)
-  d=json.loads(r.stdout);result['ipv4_conflict']=d['duplicate']
-  if d['duplicate']:return {**result,'state':'error','reason':'Windows דיווח התנגשות IPv4; נדרש תיקון ידני, ללא שינוי אוטומטי'}
-  if not d['link_up']:return {**result,'state':'error','reason':'אין מתאם רשת פעיל'}
- except Exception:pass
- host=cfg.get('relay',{}).get('host')
- if not host:return {**result,'reason':'שרת תיווך אינו מוגדר'}
- try:socket.getaddrinfo(host,22);result['dns']=True
- except socket.gaierror:return {**result,'state':'error','dns':False,'reason':'פתרון שם שרת התיווך נכשל (DNS)'}
- try:
-  with socket.create_connection((host,22),timeout=3):pass
-  return {**result,'state':'available','ssh_reachable':True,'reason':'שרת SSH נגיש; אין בכך אימות tunnel או MCP'}
- except OSError:return {**result,'state':'error','ssh_reachable':False,'reason':'שרת התיווך אינו נגיש ב־SSH; רשת/נתיב/שרת — סיבה מדויקת לא ידועה'}
+ return diagnostics.network(sys.modules[__name__],cfg)
 
 def guard_status(cfg):
  import asyncio
@@ -127,13 +115,19 @@ def guard_status(cfg):
   return dict(state='verified',checked_at=time.time(),**data,reason='Authenticated Guard status. healthy describes its supervised Hub pair, not Guard transport reachability.')
  except Exception as exc:return dict(state='unknown',checked_at=time.time(),reason='Guard authenticated status unavailable: '+type(exc).__name__)
 
-def snapshot():
- now=time.time();cfg=config();inv=inventory();guard=guard_status(cfg)
+def _snapshot():
+ now=time.time();cfg=config();inv=inventory()
+ probes=concurrent.futures.ThreadPoolExecutor(max_workers=3)
+ guard_future=probes.submit(guard_status,cfg);relay_future=probes.submit(relay_status,cfg);network_future=probes.submit(network,cfg)
+ guard=guard_future.result()
  ports={'hub':int(cfg.get('hub_port',PORT)),'gateway':int(cfg.get('gateway_port',8897)),'guard':int(cfg.get('port',8898)),'guard_gateway':int(cfg.get('gateway',{}).get('port',8896)),'ollama':int(OLLAMA.rsplit(':',1)[1])}
  paths={'hub':'/','gateway':'/health','guard':'/health','guard_gateway':'/health','ollama':'/api/ps'}
  def probe(key):
   port=ports[key]
   opened,listeners=port_identity(port)
+  for attempt in range(2):
+   if not opened or listeners:break
+   time.sleep(.2*(attempt+1));opened,listeners=port_identity(port)
   status,data=api('http://127.0.0.1:'+str(port)+paths[key]) if opened else (None,{})
   processes=inv.get(key,[])
   owned=bool(listeners) and listeners.issubset({p['pid'] for p in processes if p['owned']})
@@ -148,7 +142,7 @@ def snapshot():
  guard_row=next(x for x in services if x['id']=='guard')
  if guard['state']=='verified':
   guard_row['mcp_api_verified']=True;guard_row['supervisor_healthy']=guard.get('healthy')
-  guard_row['state']='available' if guard.get('healthy') is True else 'warning'
+  guard_row['state']='available'
   guard_row['reason']='Guard MCP responds; supervised Hub pair healthy' if guard.get('healthy') is True else 'Guard MCP responds, but healthy=false: no pair started by this supervisor' if guard.get('started_pids')==[] else 'Guard MCP responds, but supervised Hub health check failed'
  modeldata=next(d for k,_,d in probed if k=='ollama')
  def row(key,state,reason,**extra):services.append(dict(id=key,name=LABELS[key][0],description=LABELS[key][1],state=state,reason=reason,checked_at=now,actions=['Check'],**extra))
@@ -161,22 +155,50 @@ def snapshot():
   state=json.loads(rr.stdout)['State'];row('recovery','available' if state in (3,4,'Ready','Running') else 'warning','מצב המשימה המתוזמנת: '+str(state))
  except Exception:row('recovery','unknown','מצב המשימה המתוזמנת אינו זמין')
  row('desktop','available' if inv.get('desktop') else 'stopped','תהליך מעטפת קיים' if inv.get('desktop') else 'המעטפת אינה פועלת',process_exists=bool(inv.get('desktop')))
- relay=relay_status(cfg)
+ relay=relay_future.result()
  row('relay',relay['state'],relay['reason'],owned=relay.get('owned'),process_exists=relay.get('running'),tunnel_verified=relay.get('verified',False))
  services[-1]['actions']=['Check','Start','Stop','Restart','Repair']
  report=read(STATE/'service-reconcile.json');remote=read(STATE/'mcp-remote-proof.json')
  remote_age=now-remote.get('verified_at',0);remote_ok=bool(remote.get('verified_at')) and 0<=remote_age<=120
- return dict(checked_at=now,services=services,network=network(cfg),manual_stop=(STATE/'mcp-manual-stop').exists(),agent_manual_stop=(STATE/'agent-manual-stop').exists(),report={'time':report.get('time'),'state':report.get('state'),'listeners':report.get('listeners'),'error_count':len(report.get('errors',[]))},report_file_mtime=(STATE/'service-reconcile.json').stat().st_mtime if (STATE/'service-reconcile.json').exists() else None,
+ net=network_future.result();probes.shutdown(wait=True)
+ return dict(checked_at=now,services=services,network=net,manual_stop=(STATE/'mcp-manual-stop').exists(),agent_manual_stop=(STATE/'agent-manual-stop').exists(),report={'time':report.get('time'),'state':report.get('state'),'listeners':report.get('listeners'),'error_count':len(report.get('errors',[]))},report_file_mtime=(STATE/'service-reconcile.json').stat().st_mtime if (STATE/'service-reconcile.json').exists() else None,
  remote={'state':'verified' if remote_ok else 'stale' if remote else 'unknown','verified_at':remote.get('verified_at'),'reason':'קריאת MCP וחזרת אישור אושרו' if remote_ok else 'אין אימות MCP מרחוק עדכני; פורט מקומי אינו הוכחה. אם OAuth פג: חבר מחדש את MellowCodex ב־ChatGPT.'},
  guard_supervisor=guard,active_tasks=active_tasks())
+_snapshot_lock=threading.Lock()
+_snapshot_cache=None
+
+def snapshot():
+ global _snapshot_cache
+ requested_at=time.time()
+ # Share one bounded probe per process. Native UI also serializes requests.
+ if not _snapshot_lock.acquire(timeout=45):
+  raise RuntimeError('Health inspection busy; previous check still running')
+ try:
+  if _snapshot_cache and _snapshot_cache['checked_at']>=requested_at:
+   import copy
+   result=copy.deepcopy(_snapshot_cache)
+   result['connectors']={k:diagnostics.connector(sys.modules[__name__],k) for k in diagnostics.CONNECTORS}
+   return result
+  result=diagnostics.enrich(sys.modules[__name__],_snapshot())
+  _snapshot_cache=result
+  write(STATE/'health-snapshot.json',result)
+  return result
+ finally:_snapshot_lock.release()
+
+def compact_status(data):
+ keys=('id','name','status','reason','checked_at','evidence_age_seconds','last_success_at','recommended_action','capabilities')
+ return {**{k:data.get(k) for k in ('schema_version','checked_at','overall_status','connectors','network','guard_supervisor','active_tasks','reset_scope')},
+         'services':[{k:r.get(k) for k in keys} for r in data['services']]}
+
 def job_status(job_id):
  if not isinstance(job_id,str) or len(job_id)!=32 or any(c not in '0123456789abcdef' for c in job_id):raise ValueError('Invalid action id')
  result=read(JOBS/(job_id+'.json'))
  if not result:raise ValueError('Unknown action id')
  return result
 def submit(action,service='mcp',request_id='',confirm_tasks=False):
- if action not in ('Check','Repair','Start','Stop','Restart','Reconnect'):raise ValueError('Unknown service action')
+ if action not in ('Check','Repair','Start','Stop','Restart','Reconnect','Reset'):raise ValueError('Unknown service action')
  if service not in ('mcp','all',*MANAGED):raise ValueError('This component requires its existing dedicated control')
+ if action=='Reset' and service!='all':raise ValueError('Reset applies only to disposable global diagnostic state')
  if not request_id or len(request_id)>120:raise ValueError('Stable request_id required')
  import hashlib
  job_id=hashlib.sha256(request_id.encode()).hexdigest()[:32];JOBS.mkdir(exist_ok=True)
@@ -199,8 +221,12 @@ def submit(action,service='mcp',request_id='',confirm_tasks=False):
    old=read(p)
    if old.get('state') in ('queued','running'):
     pid=old.get('worker_pid')
-    if worker_alive(old):raise RuntimeError('Another service action is active: '+old['id'])
-    if time.time()-old.get('created_at',0)<15:raise RuntimeError('Another service action is starting')
+    if worker_alive(old):
+     if (old.get('action'),old.get('service'),old.get('confirm_tasks',False))==(action,service,confirm_tasks):return old
+     raise RuntimeError('Another service action is active: '+old['id'])
+    if time.time()-old.get('created_at',0)<15:
+     if (old.get('action'),old.get('service'),old.get('confirm_tasks',False))==(action,service,confirm_tasks):return old
+     raise RuntimeError('Another service action is starting')
     old.update(state='interrupted',reason='המחשב או המבצע הופסקו; לא בוצע ניסיון חוזר אוטומטי');write(p,old)
   record=dict(id=job_id,action=action,service=service,confirm_tasks=confirm_tasks,state='queued',created_at=time.time(),reason='ממתין לביצוע מקומי מתמשך')
   write(path,record)
@@ -220,17 +246,46 @@ def run(job_id):
  rec=job_status(job_id);rec.update(state='running',phase='controller',started_at=time.time(),reason='Executing local service action');write(JOBS/(job_id+'.json'),rec)
  try:
   action=rec['action'];service=rec['service']
-  if action=='Check':result=snapshot()
+  if action=='Check':
+   if service in ('mcp','all','relay'):rec['ssh_diagnostic']=diagnostics.inspect_ssh(sys.modules[__name__],config())
+   result=snapshot()
+  elif action=='Reconnect':
+   result=snapshot();rec['outcome']='requires_user_action'
+   rec['reconnect']={'connector':'guard' if service in ('guard','guard_gateway') else 'mellowcodex','url':'https://chatgpt.com/#settings/Connectors','instruction':'Reconnect only the affected connector in ChatGPT, then run an actual MCP call. Local code cannot complete consent.'}
+  elif action=='Reset':
+   rec['reset']=diagnostics.reset(sys.modules[__name__],job_id);result=snapshot();rec['outcome']=rec['reset']['outcome']
+  elif action=='Repair':
+   result=snapshot();steps=diagnostics.plan(result,service);rec['steps']=steps
+   for step in steps:
+    if step['outcome']!='repair':continue
+    command=['powershell.exe','-NoProfile','-NonInteractive','-File',str(SOURCE/'reconcile-services.ps1'),'-Action','Reconcile','-Service',step['service']]
+    rec.update(phase='repair_'+step['service']);write(JOBS/(job_id+'.json'),rec)
+    p=execute_controller(command,job_id+'-'+step['service'])
+    # Recheck without replaying a side effect. Bounded observation backoff only.
+    for attempt in range(3):
+     time.sleep(attempt+1);result=snapshot()
+     row=next(x for x in result['services'] if x['id']==step['service'])
+     if row.get('status')=='operational':break
+    if p.returncode:step['failure']=diagnostics.controller_failure(sys.modules[__name__],job_id+'-'+step['service'],p.returncode)
+    step['outcome']='repaired' if p.returncode==0 and row.get('status')=='operational' else 'failed'
+    step['evidence']=dict(status=row.get('status'),reason=row['reason'],checked_at=row['checked_at'])
+   rec['outcome']='failed' if any(x['outcome']=='failed' for x in steps) else 'requires_user_action' if any(x['outcome']=='requires_user_action' for x in steps) else 'repaired' if any(x['outcome']=='repaired' for x in steps) else 'unchanged'
+   rec['external_verification']={k:v['status'] for k,v in result.get('connectors',{}).items()}
   else:
    tasks=active_tasks()
    if service in ('hub','ollama','all') and action in ('Stop','Restart','Reconnect') and (tasks is None or tasks) and not (service=='all' and rec.get('confirm_tasks')):
     raise RuntimeError('Active tasks or unknown task state; use explicit whole-agent shutdown with task-impact confirmation')
-   (STATE/'mcp-remote-proof.json').unlink(missing_ok=True)
+   # Invalidate freshness for affected transports, retaining last successful evidence.
+   affected=('mellowcodex',) if service in ('hub','gateway') else ('mellowcodex','guard') if service in ('mcp','all','relay','guard_gateway','guard') else ()
+   for name in affected:write(STATE/('connector-invalidated-'+name+'.json'),dict(checked_at=time.time(),operation_id=job_id))
+
    actual={'Repair':'Reconcile','Reconnect':'Restart'}.get(action,action)
    command=['powershell.exe','-NoProfile','-NonInteractive','-File',str(SOURCE/'reconcile-services.ps1'),'-Action',actual,'-Service',service]
    if rec.get('confirm_tasks') and service=='all':command.append('-ConfirmTasks')
    p=execute_controller(command,job_id)
-   if p.returncode:raise RuntimeError('Service action failed; inspect local reconciler report. Exit '+str(p.returncode))
+   if p.returncode:
+    rec['failure']=diagnostics.controller_failure(sys.modules[__name__],job_id,p.returncode)
+    raise RuntimeError(rec['failure']['reason'])
    rec.update(phase='postconditions');write(JOBS/(job_id+'.json'),rec)
    for attempt in range(3):
     result=snapshot();rec.update(result=result,verification_attempt=attempt+1);write(JOBS/(job_id+'.json'),rec)
@@ -269,8 +324,8 @@ exit $LASTEXITCODE
   owned=d.get('owned') is True;running=d.get('state')=='running'
   return dict(state='available' if owned and running else 'stopped' if d.get('state') in ('stopped','disabled') else 'unknown',
    reason='Owned SSH process running; remote MCP must be verified separately' if owned and running else 'Relay state: '+str(d.get('state','unknown')),
-   owned=owned,running=running,verified=owned and running)
- except Exception:return dict(state='unknown',reason='Installed relay status unavailable; receipt alone is not proof')
+   owned=owned,running=running,verified=False,process_verified=owned and running)
+ except Exception as exc:return dict(state='unknown',reason='Installed relay status unavailable; '+type(exc).__name__+'; receipt alone is not proof',diagnostic_code=type(exc).__name__)
 
 def challenge():
  nonce=uuid.uuid4().hex
@@ -288,10 +343,10 @@ def register_mcp(mcp,local,READ,WRITE):
  @mcp.tool(annotations=READ)
  async def service_health_status()->dict:
   """Read service health separately: ownership, API, tunnel and fresh remote MCP proof. Also returns task impact and durable action state."""
-  return await local('/api/service-health',timeout=45)
+  return await local('/api/service-health?compact=true',timeout=45)
  @mcp.tool(annotations=WRITE)
  async def service_health_action(action:str,service:str,request_id:str,confirm_tasks:bool=False)->dict:
-  """Check/Repair/Start/Stop/Restart/Reconnect through the existing shared manager. MCP stop disconnects this call path; retain durable id and inspect after reconnect. Never changes network or owner permissions."""
+  """Check/Repair/Start/Stop/Restart/Reset through the existing shared manager. Reconnect returns connector-specific consent instructions without restarting healthy services. MCP stop disconnects this call path; retain durable id and inspect after reconnect. Never changes network or owner permissions."""
   return await local('/api/service-health/action',dict(action=action,service=service,request_id=request_id,confirm_tasks=confirm_tasks))
  @mcp.tool(annotations=READ)
  async def service_health_action_status(action_id:str)->dict:
@@ -306,17 +361,22 @@ def register_mcp(mcp,local,READ,WRITE):
   """Acknowledge a nonce actually received through MCP. Never derives success from a local open port."""
   return await local('/api/service-health/connection/ack',dict(nonce=nonce))
 
+ @mcp.tool(annotations=WRITE)
+ async def service_health_connector_observation(connector:str,outcome:str,checked_at:float)->dict:
+  """Record an ACTUALLY observed external MCP call, naming mellowcodex or guard. Outcome success/oauth_token_invalid_grant/transport_error. Supply actual check time (Unix seconds); never infer from local listeners."""
+  return await local('/api/service-health/connector-observation',dict(connector=connector,outcome=outcome,checked_at=checked_at))
+
 
 def verify_result(action,service,result):
- if action=='Reconcile':return
- targets={'mcp':['gateway','guard','guard_gateway','relay'],'all':['hub','gateway','guard','guard_gateway','relay','ollama']}.get(service,[service])
+ if action=='Reconcile':action='Start'
+ targets={'mcp':['gateway','guard','guard_gateway','relay'],'all':['hub','gateway','guard','guard_gateway','relay','ollama'],'guard':['guard','guard_gateway','relay'],'guard_gateway':['guard_gateway','relay']}.get(service,[service])
  for key in targets:
   row=next(x for x in result['services'] if x['id']==key)
   if action=='Stop':
    if row.get('port_open') or row.get('process_exists') or row.get('state') not in ('stopped','idle'):
     raise RuntimeError('Stop postcondition not verified for '+key)
   elif action in ('Start','Restart'):
-   okay=row.get('owned') and (row.get('mcp_api_verified') if key=='guard' else row.get('tunnel_verified') if key=='relay' else row.get('http_status')==200)
+   okay=row.get('owned') and (row.get('mcp_api_verified') if key=='guard' else row.get('owned') and row.get('process_exists') if key=='relay' else row.get('http_status')==200)
    if not okay:raise RuntimeError('Start postcondition not verified for '+key)
 
 def preflight(action,service,confirm=False):
@@ -326,12 +386,20 @@ def preflight(action,service,confirm=False):
   raise RuntimeError('Active tasks or unknown task state; stop refused before changing any service')
  cfg=config();inv=inventory()
  ports={'hub':int(cfg.get('hub_port',PORT)),'gateway':int(cfg.get('gateway_port',8897)),'guard':int(cfg.get('port',8898)),'guard_gateway':int(cfg.get('gateway',{}).get('port',8896)),'ollama':int(OLLAMA.rsplit(':',1)[1])}
- targets=list(ports) if service in ('mcp','all') else [service]
+ targets=list(ports) if service=='all' else ['gateway','guard','guard_gateway'] if service=='mcp' else ['guard','guard_gateway'] if service in ('guard','guard_gateway') else [service]
  for key in targets:
   if key not in ports:continue
   opened,listeners=port_identity(ports[key])
   owned={p['pid'] for p in inv.get(key,[]) if p['owned']}
-  if opened and (not listeners or not listeners.issubset(owned)):raise RuntimeError('Port ownership unverified for '+key+'; no mutation performed')
+  # Windows may transiently omit the accepting PID. Retry observations only;
+  # a foreign PID is never retried, adopted or terminated.
+  for attempt in range(2):
+   if not opened or listeners:break
+   time.sleep(.2*(attempt+1))
+   opened,listeners=port_identity(ports[key])
+   owned={p['pid'] for p in inventory().get(key,[]) if p['owned']}
+  if opened and (not listeners or not listeners.issubset(owned)):
+   raise RuntimeError('Port ownership unverified for '+key+'; accepting_pids='+str(sorted(listeners))+'; verified_pids='+str(sorted(owned))+'; no mutation performed')
  return {'accepted':True}
 
 def quiesce():
@@ -351,3 +419,7 @@ def quiesce():
 
 if __name__=='__main__':
  if len(sys.argv)==3 and sys.argv[1]=='--run':run(sys.argv[2])
+ elif len(sys.argv)==2 and sys.argv[1]=='--status':print(json.dumps(snapshot(),ensure_ascii=False))
+ elif len(sys.argv)==5 and sys.argv[1]=='--preflight':
+  print(json.dumps(preflight(sys.argv[2],sys.argv[3],sys.argv[4].lower()=='true')))
+ else:raise SystemExit('Expected --status, --preflight ACTION SERVICE true|false, or --run ID')

@@ -10,6 +10,7 @@ try {
   $guardRoot = 'C:\ProgramData\MellowGuard'
   $pauseFile = "$root\state\mcp-manual-stop"
   $servicePause = "$root\state\service-manual-stop-$Service"
+  Set-Location -LiteralPath $PSScriptRoot
   if ($Action -eq 'Status') {
     & "$root\tools\hub-venv\Scripts\python.exe" -m hub.service_health --status
     if ($LASTEXITCODE -ne 0) { throw 'Health inspection failed' }
@@ -28,10 +29,11 @@ try {
     default { @($Service) }
   }
   $wanted = switch ($Service) {
-    'mcp' { @('hub','gateway','guard','guard_gateway','relay','ollama') }
+    'mcp' { @('hub','gateway','guard','guard_gateway','relay') }
     'all' { @('hub','gateway','guard','guard_gateway','relay','ollama') }
     'relay' { @('hub','gateway','guard','guard_gateway','relay') }
-    'guard_gateway' { @('guard','guard_gateway') }
+    'guard' { @('guard','guard_gateway','relay') }
+    'guard_gateway' { @('guard','guard_gateway','relay') }
     'gateway' { @('hub','gateway') }
     default { @($Service) }
   }

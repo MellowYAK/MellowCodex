@@ -1,3 +1,15 @@
+# MellowCodex 0.21.0 — Health & Recovery
+
+A native recovery panel with separate service, network, SSH, connector OAuth and external MCP evidence. Open **Mellow Health and Services** on the desktop, or the top health indicator / Tools / tray in a newly opened shell. It remains usable when MCP or Hub is down.
+
+Each supported service has Inspect / Start / Stop / Restart / Repair. Global controls include Check all, Repair all, Restart MCP transports, Start all, Stop all and a scoped Reset that preserves application data, credentials, permissions and owner-stop markers. No network configuration changes are automatic.
+
+Deployed and verified through the existing Guard supervisor. Actual MCP stop/start, offline Windows UI, duplicate-request handling and data preservation passed. Guard authentication survived the controlled restart. A machine/router reboot was not performed; the earlier network/OAuth incident cause remains unproven. The already running desktop/browser was preserved; open the standalone shortcut immediately or reopen the shell later to load its updated native menus.
+
+See [service controls](docs/MCP-SERVICE-CONTROL.md), [validation](VALIDATION.md), and [version history](CHANGELOG.md) for evidence, limitations and rollback. No dependencies added.
+
+## Earlier release documentation
+
 ## Health and service rescue (Hub 0.19.0)
 
 The native top health indicator, Tools > Health and Services, tray menu and offline desktop shortcut open the same local panel. It works without Hub or MCP. The panel and MCP service_health tools submit durable actions to the existing reconcile-services.ps1 manager, with per-service selection, shared locks and intentional-stop markers.
