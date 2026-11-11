@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([ValidateSet('Start','Stop','Restart','Status','Reconcile')][string]$Action='Reconcile',[ValidateSet('mcp','all','hub','gateway','guard','guard_gateway','relay','ollama')][string]$Service='mcp',[switch]$ConfirmTasks)
+param([ValidateSet('Start','Stop','Restart','Status','Reconcile')][string]$Action='Reconcile',[ValidateSet('mcp','all','hub','gateway','guard','guard_gateway','relay','ollama')][string]$Service='mcp',[switch]$ConfirmTasks,[switch]$PowerTransition)
 $ErrorActionPreference = 'Stop'
 # Run with Windows PowerShell 5.1: the installed Guard validates Windows ACLs.
 $mutex = New-Object Threading.Mutex($false, 'Local\MellowCodexServiceReconcile')
@@ -17,6 +17,16 @@ try {
     return
   }
   if ($Action -eq 'Reconcile' -and ((Test-Path $pauseFile) -or (Test-Path "$root\state\agent-manual-stop"))) { return }
+  if ($PowerTransition) {
+    if ($Action -ne 'Stop' -or $Service -ne 'all') { throw 'Transient power stop only supports Stop all' }
+    & "$root\tools\hub-venv\Scripts\python.exe" -m hub.power --transition-required
+    if ($LASTEXITCODE -ne 0) { throw 'No active owned power transition' }
+  }
+  if ($Action -eq 'Reconcile') {
+    & "$root\tools\hub-venv\Scripts\python.exe" -m hub.power --recovery-allowed
+    if ($LASTEXITCODE -eq 75) { return }
+    if ($LASTEXITCODE -ne 0) { throw 'Recovery policy unavailable; no launch attempted' }
+  }
   $confirmed = if ($ConfirmTasks) { 'true' } else { 'false' }
   Push-Location $PSScriptRoot
   try {
@@ -38,9 +48,9 @@ try {
     default { @($Service) }
   }
   if ($Action -in @('Stop','Restart')) {
-    if ($Service -in @('mcp','all')) { Set-Content $pauseFile 'MCP intentionally stopped by owner' }
-    if ($Service -eq 'all') { Set-Content "$root\state\agent-manual-stop" 'All agent services intentionally stopped' }
-    if ($Service -notin @('mcp','all')) { foreach($item in $dependents) { Set-Content "$root\state\service-manual-stop-$item" 'Service intentionally stopped by owner' } }
+    if (!$PowerTransition -and $Service -in @('mcp','all')) { Set-Content $pauseFile 'MCP intentionally stopped by owner' }
+    if (!$PowerTransition -and $Service -eq 'all') { Set-Content "$root\state\agent-manual-stop" 'All agent services intentionally stopped' }
+    if (!$PowerTransition -and $Service -notin @('mcp','all')) { foreach($item in $dependents) { Set-Content "$root\state\service-manual-stop-$item" 'Service intentionally stopped by owner' } }
     $stopArgs=@("$PSScriptRoot\scripts\stop-mcp-transports.py",'--service',$Service)
     if($ConfirmTasks){$stopArgs+='--confirm-tasks'}
     & "$root\tools\hub-venv\Scripts\python.exe" @stopArgs

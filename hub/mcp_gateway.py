@@ -513,3 +513,5 @@ if __name__=='__main__':
 
 from .service_health import register_mcp as register_service_health
 register_service_health(mcp,local,READ,WRITE)
+from .power import register_mcp as register_power
+register_power(mcp,local,READ,WRITE)

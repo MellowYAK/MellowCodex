@@ -1366,3 +1366,37 @@ async def service_health_connector_observation(body:dict):
     try:
         return health.diagnostics.observe(health,body.get('connector'),body.get('outcome'),body.get('checked_at'))
     except ValueError as exc:raise HTTPException(400,str(exc))
+
+@app.get('/api/power/preview/{action}')
+async def computer_power_preview(action:str):
+    from .power import preview
+    try:return await asyncio.to_thread(preview,action)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+class ComputerPowerRequest(BaseModel):
+    action:str
+    request_id:str
+    confirm_tasks:bool=False
+
+@app.post('/api/power/action')
+async def computer_power_action(body:ComputerPowerRequest):
+    from .power import submit
+    try:return await asyncio.to_thread(submit,body.action,body.request_id,body.confirm_tasks)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+    except RuntimeError as exc:raise HTTPException(409,str(exc))
+
+@app.get('/api/power/startup')
+async def agent_startup_status():
+    from .power import startup_status
+    return await asyncio.to_thread(startup_status)
+
+class AgentStartupRequest(BaseModel):
+    enabled:bool
+    expected_revision:int
+
+@app.post('/api/power/startup')
+async def agent_startup_set(body:AgentStartupRequest):
+    from .power import set_startup
+    try:return await asyncio.to_thread(set_startup,body.enabled,body.expected_revision)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+    except RuntimeError as exc:raise HTTPException(409,str(exc))

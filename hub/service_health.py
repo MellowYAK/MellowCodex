@@ -196,8 +196,12 @@ def job_status(job_id):
  if not result:raise ValueError('Unknown action id')
  return result
 def submit(action,service='mcp',request_id='',confirm_tasks=False):
- if action not in ('Check','Repair','Start','Stop','Restart','Reconnect','Reset'):raise ValueError('Unknown service action')
+ if action not in ('Check','Repair','Start','Stop','Restart','Reconnect','Reset','ShutdownComputer','RestartComputer'):raise ValueError('Unknown service action')
  if service not in ('mcp','all',*MANAGED):raise ValueError('This component requires its existing dedicated control')
+ if action in ('ShutdownComputer','RestartComputer'):
+  if service!='all' or not confirm_tasks:raise ValueError('Computer power requires all-service impact confirmation')
+  from .power import transition_active
+  if transition_active():raise RuntimeError('Power transition already active; inspect recorded outcome, do not replay')
  if action=='Reset' and service!='all':raise ValueError('Reset applies only to disposable global diagnostic state')
  if not request_id or len(request_id)>120:raise ValueError('Stable request_id required')
  import hashlib
@@ -243,7 +247,12 @@ def execute_controller(command,job_id):
 
 def run(job_id):
  time.sleep(2)
- rec=job_status(job_id);rec.update(state='running',phase='controller',started_at=time.time(),reason='Executing local service action');write(JOBS/(job_id+'.json'),rec)
+ rec=job_status(job_id)
+ if rec.get('power_dispatch_intent'):return
+ rec.update(state='running',phase='controller',started_at=time.time(),reason='Executing local service action');write(JOBS/(job_id+'.json'),rec)
+ if rec['action'] in ('ShutdownComputer','RestartComputer'):
+  from .power import execute
+  execute(job_id);return
  try:
   action=rec['action'];service=rec['service']
   if action=='Check':

@@ -22,6 +22,7 @@ PUBLIC_READ = frozenset((
     "model_memory_status", "session_status",
 ))
 PRIVATE_READ = frozenset((
+    'computer_power_preview','computer_power_status','agent_startup_status',
     "read_file", "list_files", "files_list", "image_ocr",
     "capture_screenshot", "observe_screen", "window_inspect",
     "list_windows", "inspect_accessibility", "browser_observe",
@@ -39,10 +40,12 @@ REVERSIBLE = frozenset((
     "window_new_document", "terminal_start", "terminal_write",
 ))
 DESTRUCTIVE = frozenset((
+    'computer_power',
     "file_copy", "file_share", "browser_save_media", "browser_save_pdf",
     "browser_close_tabs", "candidate_patch", "candidate_repair",
 ))
 PROTECTED = frozenset((
+    'agent_startup_set',
     "model_install", "model_install_huggingface", "model_install_cancel",
     "upgrade_activate", "upgrade_recover", "candidate_stage_release",
     "extension_register", "tools_enable",

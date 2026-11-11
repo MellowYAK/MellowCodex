@@ -1,3 +1,15 @@
+# MellowCodex 0.22.0 — Safe power and Windows startup
+
+Settings > General now contains **Start with Windows**, **Safely shut down computer** and **Safely restart computer**. The same controls are available in the independent Health & Services window and newly opened Tools/tray menus. The setting currently reads enabled and was verified against the owned current-user Windows task.
+
+Power requests inspect impact and stop only supported owned services through existing lifecycle managers, including Ember Video, Hub, MCP/Guard, SSH and Ollama. Busy work or failed stop verification blocks the Windows request. No forced Windows app closure. Ordinary chat/MCP uses the same backend and existing authorization.
+
+Installed version 0.22.0 and UI/backend parity are verified. Physical shutdown/reboot/logon and generation-model selection of the new tools remain unverified; no machine reboot was performed during this release. Reopen an existing shell later to load updated native menus; the offline desktop shortcut works immediately.
+
+See [power controls](docs/SAFE-COMPUTER-POWER.md), [validation](VALIDATION.md) and [version history](CHANGELOG.md).
+
+## Previous release overview
+
 # MellowCodex 0.21.0 — Health & Recovery
 
 A native recovery panel with separate service, network, SSH, connector OAuth and external MCP evidence. Open **Mellow Health and Services** on the desktop, or the top health indicator / Tools / tray in a newly opened shell. It remains usable when MCP or Hub is down.

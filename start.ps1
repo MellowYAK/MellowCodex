@@ -1,5 +1,7 @@
 param([switch]$WithOpenCode,[switch]$SkipDesktop)
 $ErrorActionPreference = 'Stop'
+Push-Location $PSScriptRoot
+try { & 'E:\AI\tools\hub-venv\Scripts\python.exe' -m hub.power --manual-session; if ($LASTEXITCODE -ne 0) { throw 'Could not record explicit manual start' } } finally { Pop-Location }
 & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot\reconcile-services.ps1"
 if ($LASTEXITCODE -ne 0) { Write-Warning 'Service reconciliation needs attention; see E:\AI\state\service-reconcile.json' }
 $agentRoot = 'E:\AI'

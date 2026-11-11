@@ -27,6 +27,10 @@ class HealthPanel(QDialog):
   for title,action,service in [('בדיקת הכל','Check','all'),('תיקון הכל','Repair','all'),('הפעלה מחדש של תעבורת MCP','Restart','mcp'),('הפעלת הכל','Start','all'),('כיבוי הכל','Stop','all'),('איפוס מצב התאוששות','Reset','all')]:
    b=QPushButton(title);b.clicked.connect(lambda checked=False,a=action,k=service:self.act(a,k));global_line.addWidget(b);self.buttons.append(b)
   box.addLayout(global_line)
+  power_line=QHBoxLayout();self.power_buttons=[]
+  for title,action in [('כיבוי המחשב בבטחה','shutdown'),('הפעלה מחדש של המחשב בבטחה','restart')]:
+   b=QPushButton(title);b.setObjectName('computer-'+action);b.clicked.connect(lambda checked=False,a=action:self.power_action(a));power_line.addWidget(b);self.power_buttons.append(b)
+  b=QPushButton('הפעלה עם Windows');b.setObjectName('agent-startup-settings');b.clicked.connect(self.startup_settings);power_line.addWidget(b);self.power_buttons.append(b);box.addLayout(power_line)
   self.target.currentIndexChanged.connect(lambda _:self.enable(not self.busy) if hasattr(self,'busy') else None)
   self.table=QTableWidget(0,7);self.table.setHorizontalHeaderLabels(['שירות','תפקיד','מצב','סיבה / פעולה מומלצת','בדיקה אחרונה','הצלחה אחרונה','פעולות']);self.table.horizontalHeader().setStretchLastSection(False);self.table.setWordWrap(True);box.addWidget(self.table)
   self.table.cellClicked.connect(self.select_service)
@@ -47,7 +51,7 @@ class HealthPanel(QDialog):
    self.busy=False;self.enable(True);self.banner.setText('בדיקה/פעולה נכשלה: '+error);self.summary.emit('⚠ בריאות: נדרשת בדיקה')
   task.events.done.connect(done);task.events.failed.connect(failed);QThreadPool.globalInstance().start(task)
  def enable(self,yes):
-  for b in self.buttons:b.setEnabled(yes)
+  for b in self.buttons+getattr(self,'power_buttons',[]):b.setEnabled(yes)
   self.target.setEnabled(yes)
   for b,service,action in getattr(self,'row_buttons',[]):
    cap=health.diagnostics.capability(service,action);b.setEnabled(yes and cap['enabled']);b.setToolTip(cap['reason'])
@@ -116,6 +120,34 @@ class HealthPanel(QDialog):
   else:confirm=False
   self.generation+=1;self.busy=True;self.enable(False);self.banner.setText('הפעולה נשלחת למבצע מקומי מתמשך…')
   self.dispatch(lambda:health.submit(action,service,uuid.uuid4().hex,confirm),self.accepted)
+ def power_action(self,action):
+  if self.busy:return
+  from . import power
+  self.generation+=1;self.busy=True;self.enable(False)
+  def confirm(data):
+   self.detail.setPlainText(json.dumps(data,ensure_ascii=False,indent=2));self.detail.setVisible(True)
+   if data.get('blocker'):
+    self.banner.setText(data['blocker']);self.busy=False;self.enable(True);return
+   count='לא ידוע' if data['active_tasks'] is None else str(len(data['active_tasks']))
+   title='כיבוי המחשב' if action=='shutdown' else 'הפעלה מחדש של המחשב'
+   if QMessageBox.question(self,title,'משימות פעילות: '+count+'\nEmber, הסוכן, Ollama, MCP ו־SSH ייעצרו בבטחה לפני Windows. עבודה שלא ניתן לעצור תחסום את הפעולה. יישומים אחרים לא ייסגרו בכוח. להמשיך?',QMessageBox.Yes|QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:
+    self.busy=False;self.enable(True);return
+   self.dispatch(lambda:power.submit(action,uuid.uuid4().hex,True),self.accepted)
+  self.dispatch(lambda:power.preview(action),confirm)
+ def startup_settings(self):
+  if self.busy:return
+  from . import power
+  self.generation+=1;self.busy=True;self.enable(False)
+  def choose(data):
+   self.detail.setPlainText(json.dumps(data,ensure_ascii=False,indent=2));self.detail.setVisible(True)
+   dialog=QMessageBox(self);dialog.setWindowTitle('הפעלה עם Windows');dialog.setText('הגדרה: '+str(data['start_with_windows'])+' | אומת ב־Windows: '+str(data['effective'])+'\nמפעיל את שירותי הסוכן בכניסה לחשבון. אינו מפעיל מודלי תמונה של Ember ואינו מכבה שירותים פעילים.')
+   on=dialog.addButton('הפעל עם Windows',QMessageBox.AcceptRole);off=dialog.addButton('אל תפעיל עם Windows',QMessageBox.DestructiveRole);dialog.addButton(QMessageBox.Cancel);dialog.exec()
+   chosen=dialog.clickedButton()
+   if chosen not in (on,off):self.busy=False;self.enable(True);return
+   def saved(value):
+    self.detail.setPlainText(json.dumps(value,ensure_ascii=False,indent=2));self.banner.setText('הגדרת הפעלה נשמרה; מצב Windows: '+str(value['effective']));self.busy=False;self.enable(True)
+   self.dispatch(lambda:power.set_startup(chosen==on,data['revision']),saved)
+  self.dispatch(power.startup_status,choose)
  def accepted(self,result):
   self.job=result['id'];self.banner.setText('פעולה '+self.job+' — '+result['state']);self.detail.setPlainText(json.dumps(result,ensure_ascii=False,indent=2));self.detail.setVisible(True)
  def tick(self):
@@ -148,6 +180,10 @@ def install(window,toolbar,tray_menu,open_owner):
  tray_menu.addAction('בריאות ושירותים',panel.open)
  for title,action in [('בדיקה מחדש','Check'),('חיבור מחדש ל־MCP','Reconnect'),('תיקון','Repair'),('הפעלת MCP','Start'),('הפעלה מחדש של MCP','Restart'),('כיבוי MCP','Stop')]:
   tray_menu.addAction(title,lambda checked=False,a=action:panel.act(a,'mcp'))
+ for menu in (tools,tray_menu):
+  menu.addAction('כיבוי המחשב בבטחה',lambda:panel.power_action('shutdown'))
+  menu.addAction('הפעלה מחדש של המחשב בבטחה',lambda:panel.power_action('restart'))
+  menu.addAction('הפעלה עם Windows',panel.startup_settings)
  tray_menu.addAction('הרשאות בעלים (UAC)',open_owner)
  return panel
 
