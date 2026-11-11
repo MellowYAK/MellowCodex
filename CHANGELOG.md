@@ -1,3 +1,17 @@
+## 0.24.0 - Browser task evidence and recovery - 2026-11-11
+
+- Preserve actionable controls under bounded tool results; expose DOM headings, checkbox state and coherent screenshot provenance. Keep execution URLs private and OCR secondary to exact DOM labels.
+- Use browser-specific instructions and progressive tool discovery, with stage-aware disclosure and source-backed entity choices. Visibility does not change authorization.
+- Distinguish not-dispatched, pending, observed and uncertain input effects; retain completed actions across resume and reject unsupported completion claims.
+- Preserve corrections/review feedback across resume, allow one fresh read after historical loop counts, and bound unchanged reads and repeated rejected assessments.
+- Expose Task guidance on browser/desktop task cards using existing revision checks.
+- Normalize literal Unicode and UTF-8 encoded URL components without decoding reserved separators; invalidate stale target/observation state after desktop replacement.
+- Reuse existing checkpoints, SQLite actions, browser adapters, discovery and independent SelfDevelop/Guard deployment. No dependencies or migrations added.
+
+Validation: complete local-agent-owned disposable workflow passed without feedback; assisted recovery and Hebrew/English/Russian page reading passed. Same-goal single-case comparison: 140,035 to 86,662 actual input tokens (38.1% less), 18 to 12 model calls, 538.924 to 277.218 model seconds. The earlier run failed verification; this is not a controlled general performance benchmark. Latest focused correction: 14 tests passed. See VALIDATION.md for all samples and failures.
+
+Known limitations: multi-site planning can stall; RBC hung the native GUI and its root cause is unresolved. One owned-GUI recovery restored CDP while retaining the profile. Original OAuth renewal and full rollback activation are not verified. Previous development notes below are historical, superseded by this release entry.
+
 ## 0.23.0 ? 2026-11-11
 Added MCP resume_task and cancel_task with chat binding and revision checks, using existing task control. Added delete_task_preview and delete_task: explicitly removes a terminal task from chat history only, preserving task audit, artifacts, files and memory. Not secure erasure. Active/uncertain tasks are blocked; cancelled tasks cannot resume. Existing stop_task retained.
 Validation: four targeted tests passed; Guard update 446d93a303bf4f9db56fae17070a370d ACTIVE_VERIFIED; installed registered MCP handlers previewed actual cancelled task and rejected cancelled resume, stale cancel and unconfirmed deletion. No user task deleted. Successful execution of a resumed browser/OAuth task remains unverified. Refresh connector tools to discover newly advertised names. UI retains existing resume/cancel; deletion currently available through MCP/backend only.

@@ -16,9 +16,9 @@ from .browser_evidence import resolve_ref
 SNAPSHOT_JS='''token => {
  const visible=e=>{const r=e.getBoundingClientRect(); const s=getComputedStyle(e);return r.width>0&&r.height>0&&r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth&&s.visibility!=='hidden'&&s.display!=='none'};
  const els=Array.from(document.querySelectorAll('a,button,input,textarea,select,img,video,audio,[role="button"],[role="link"],[contenteditable="true"]')).filter(e=>visible(e)||e.type==='file').slice(0,200);
- const elements=els.map((e,i)=>{const ref='e'+(i+1);e.setAttribute('data-local-agent-ref',token+'-'+ref); const r=e.getBoundingClientRect();return {ref,tag:e.tagName.toLowerCase(),role:e.getAttribute('role')||'',type:e.type||'',name:(e.getAttribute('aria-label')||e.labels?.[0]?.innerText?.split(String.fromCharCode(10))[0]||(e.tagName==='SELECT'?'':e.innerText)||e.getAttribute('placeholder')||e.getAttribute('name')||'').trim().slice(0,200),enabled:!e.disabled&&e.getAttribute('aria-disabled')!=='true',options:e.tagName==='SELECT'?Array.from(e.options).slice(0,20).map(o=>({label:o.label,value:o.value,selected:o.selected})):undefined,options_truncated:e.tagName==='SELECT'&&e.options.length>20,value:e.type==='password'?'[private]':String(e.value||'').slice(0,150),href:e.tagName==='A'?e.href:undefined,x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}});
+ const elements=els.map((e,i)=>{const ref='e'+(i+1);e.setAttribute('data-local-agent-ref',token+'-'+ref); const r=e.getBoundingClientRect();return {ref,tag:e.tagName.toLowerCase(),role:e.getAttribute('role')||'',type:e.type||'',name:(e.getAttribute('aria-label')||e.labels?.[0]?.innerText?.split(String.fromCharCode(10))[0]||(e.tagName==='SELECT'?'':e.innerText)||e.getAttribute('placeholder')||e.getAttribute('name')||'').trim().slice(0,200),checked:(e.type==='checkbox'||e.type==='radio')?!!e.checked:undefined,enabled:!e.disabled&&e.getAttribute('aria-disabled')!=='true',modal:!!e.closest('[role=dialog],dialog[open],[aria-modal=true]'),options:e.tagName==='SELECT'?Array.from(e.options).slice(0,20).map(o=>({label:o.label,value:o.value,selected:o.selected})):undefined,options_truncated:e.tagName==='SELECT'&&e.options.length>20,value:e.type==='password'?'[private]':String(e.value||'').slice(0,150),href:e.tagName==='A'?e.href:undefined,x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}});
  const links=Array.from(document.querySelectorAll('a[href]')).filter(e=>e.querySelector('h1,h2,h3,h4')||e.closest('main,article,[role="main"]')).map(e=>({name:(e.innerText||e.getAttribute('aria-label')||'').trim().slice(0,180),href:e.href})).filter(e=>e.name&&/^https?:/.test(e.href)).filter((e,i,a)=>a.findIndex(x=>x.href===e.href)===i).slice(0,60);
- return {url:location.href,title:document.title,links,notices:Array.from(document.querySelectorAll('[role=alert],[role=status],[aria-live=assertive]')).filter(visible).map(e=>e.innerText.trim()).filter(Boolean).slice(0,8),text:(()=>{const root=document.querySelector('main,[role="main"]')||document.body;if(!document.createTreeWalker)return root?.innerText?.slice(0,4000)||'';const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let out='',n;while((n=w.nextNode())&&out.length<4000){const p=n.parentElement;if(p&&!p.closest('select,script,style')&&visible(p)){const r=document.createRange();r.selectNodeContents(n);const b=r.getBoundingClientRect();if(b.bottom>0&&b.top<innerHeight&&b.right>0&&b.left<innerWidth)out+=n.textContent.trim()+' ';}}return out.slice(0,4000);})(),elements,width:innerWidth,height:innerHeight};
+ return {url:location.href,document_generation:performance.timeOrigin,title:document.title,headings:Array.from(document.querySelectorAll('h1,h2,h3,[role=heading]')).filter(visible).map(e=>({text:(e.innerText||e.textContent||'').trim().slice(0,220),level:Number(e.getAttribute('aria-level'))||Number(e.tagName.slice(1))||null,in_navigation:!!e.closest('nav,[role=navigation]')})).filter(e=>e.text).slice(0,12),search_scope:'viewport',viewport:{x:globalThis.scrollX||0,y:globalThis.scrollY||0,width:innerWidth,height:innerHeight,document_height:document.documentElement?.scrollHeight||innerHeight},links,notices:Array.from(document.querySelectorAll('[role=alert],[role=status],[aria-live=assertive]')).filter(visible).map(e=>e.innerText.trim()).filter(Boolean).slice(0,8),text:(()=>{const root=document.querySelector('main,[role="main"]')||document.body;if(!document.createTreeWalker)return root?.innerText?.slice(0,4000)||'';const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let out='',n;while((n=w.nextNode())&&out.length<4000){const p=n.parentElement;if(p&&!p.closest('select,script,style')&&visible(p)){const r=document.createRange();r.selectNodeContents(n);const b=r.getBoundingClientRect();if(b.bottom>0&&b.top<innerHeight&&b.right>0&&b.left<innerWidth)out+=n.textContent.trim()+' ';}}return out.slice(0,4000);})(),elements,width:innerWidth,height:innerHeight};
 }'''
 
 CLICK_JS='''e => {
@@ -124,6 +124,12 @@ class Browser:
         endpoint=json.loads((STATE/'browser-endpoint.json').read_text(encoding='utf-8'))
         if endpoint['url']!=f'http://127.0.0.1:{CDP_PORT}' or not psutil.pid_exists(endpoint['pid']):
             raise RuntimeError('Open the Local Agent desktop app first')
+        if self.instance is not None and self.instance!=endpoint['instance']:
+            # Target IDs and observations belong to one desktop instance only.
+            # The next read follows the new native selected tab; stale inputs
+            # still fail fresh_page because their observation was invalidated.
+            self.target_id=None;self.tab_refs={};self.observation=None
+            self.recoveries={};self.last_recovery=None
         if self.connection and (not self.connection.is_connected() or self.instance!=endpoint['instance']):
             await self.disconnect()
         if not self.connection:
@@ -277,6 +283,8 @@ class Browser:
         page=await self.connect();obs=self.observation
         if not obs or obs['id']!=observation_id or obs['page'] is not page or obs['url']!=page.url or time.monotonic()-obs['at']>90:
             raise ObservationError('Observe this page again before using its content or scripts')
+        if obs.get('coherent') is False or (obs.get('semantic_signature') and await self.semantic_signature(page)!=obs['semantic_signature']):
+            raise ObservationError('Page content changed since the cited observation; observe again before acting or assessing.')
         return page
 
     async def script(self,observation_id,script,arguments=None):
@@ -291,6 +299,8 @@ class Browser:
     async def observe(self,folder,query=""):
         page=await self.connect()
         token=uuid.uuid4().hex
+        try:signature_before=await self.semantic_signature(page)
+        except Exception:signature_before=None
         try:state=await asyncio.wait_for(page.evaluate(SNAPSHOT_JS,token),8)
         except Exception as exc:
             if ('crash' not in str(exc).lower() and not isinstance(exc,TimeoutError)) or not self.target_id:raise
@@ -306,9 +316,21 @@ class Browser:
             capture={'path':str(path),'width':width,'height':height}
         except Exception:
             capture={'screenshot_available':False,'observation_source':'live DOM','note':'Background renderer did not supply a screenshot. Use the observed DOM controls; do not infer visual details.'}
-        self.observation={'id':token,'url':page.url,'at':time.monotonic(),'refs':{e['ref'] for e in state['elements']},'elements':state['elements'],'text':state['text'],'notices':state.get('notices',[]),'page':page}
+        try:signature_after=await self.semantic_signature(page)
+        except Exception:signature_after=None
+        coherent=bool(signature_before and signature_before==signature_after)
+        if not coherent:
+            # Never present pixels from a different semantic page as this snapshot.
+            capture.pop('path',None)
+            capture.update(screenshot_available=False,note='Page changed during capture; obtain a fresh observation before input or assessment.')
+        self.observation={'semantic_signature':signature_after,'coherent':coherent,'id':token,'url':page.url,'at':time.monotonic(),'refs':{e['ref'] for e in state['elements']},'elements':state['elements'],'text':state['text'],'notices':state.get('notices',[]),'page':page}
         recovery=self.last_recovery;self.last_recovery=None
-        return {**state,**capture,'recovery':recovery,'source':'Local Agent embedded Qt WebEngine (NOT Chrome, Edge, or another Windows app)','id':token,'left':0,'top':0}
+        from .browser_evidence import display_url
+        # Keep full execution URLs in the private observation only.
+        rendered={**state,'url':display_url(state.get('url',''))}
+        rendered['elements']=[{**e,**({'href':display_url(e['href'])} if e.get('href') else {})} for e in state['elements']]
+        rendered['links']=[{**link,'href':display_url(link.get('href',''))} for link in state.get('links',[])]
+        return {**rendered,**capture,'coherent':coherent,'captured_at':time.time(),'tab_id':self.target_id,'frame_id':'main','page_signature':signature_after,'screenshot_observation_id':token if coherent and capture.get('path') else None,'recovery':recovery,'source':'Local Agent embedded Qt WebEngine (NOT Chrome, Edge, or another Windows app)','id':token,'left':0,'top':0}
 
     async def frame(self,_geometry_retry=True):
         import base64,sys
@@ -499,37 +521,112 @@ class Browser:
             await page.goto(url,wait_until='domcontentloaded',timeout=15000)
         return await self.observe(folder)
 
+    async def semantic_signature(self,page):
+        import hashlib
+        state=await self.transition_state(page)
+        return hashlib.sha256(json.dumps(state,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+
+    async def transition_state(self, page):
+        """Read-only semantic state; excludes opaque URLs from returned evidence."""
+        return await asyncio.wait_for(page.evaluate("""() => ({
+            url:location.href, document_generation:performance.timeOrigin, ready:document.readyState,
+            viewport:{x:scrollX,y:scrollY,width:innerWidth,height:innerHeight},
+            text:(document.body?.innerText||'').slice(0,16000),
+            values:[...document.querySelectorAll('input,textarea,select')]
+                .filter(e=>e.type!=='password' && e.type!=='hidden')
+                .slice(0,40).map(e=>[e.type,e.value,e.checked]),
+            dialogs:[...document.querySelectorAll('[role=dialog],dialog[open]')]
+                .map(e=>(e.innerText||'').slice(0,1000))
+        })"""),2)
+
+    async def settle_transition(self, page, before, pages_before, timeout=3.0):
+        """Bounded cancellation-aware observation; never dispatches another input."""
+        if before is None:
+            return {'state':'unknown_effect','reason':'transition_probe_unavailable'}
+        deadline=time.monotonic()+timeout;changed_at=None;previous=None
+        while time.monotonic()<deadline:
+            pages=list(page.context.pages) if getattr(page,'context',None) else []
+            if any(p not in pages_before for p in pages):
+                return {'state':'observed_transition','kind':'new_tab','select_tab_required':True}
+            try:current=await self.transition_state(page)
+            except Exception:
+                await asyncio.sleep(.1)
+                continue
+            if current!=before and current.get('ready') in ('interactive','complete'):
+                if current==previous and changed_at is not None and time.monotonic()-changed_at>=.2:
+                    return {'state':'observed_transition','kind':'navigation' if current.get('url')!=before.get('url') else 'page_change'}
+                if current!=previous:changed_at=time.monotonic()
+            else:changed_at=None
+            previous=current
+            await asyncio.sleep(.1)
+        return {'state':'dispatched_pending','reason':'No settled semantic transition observed before deadline; inspect destination before another input.'}
+
     async def act(self,args,folder):
         page=await self.connect();obs=self.observation
-        if not obs or obs['id']!=args['observation_id'] or time.monotonic()-obs['at']>90 or page is not obs['page'] or page.url!=obs['url']:
-            raise ObservationError('Browser observation expired or page changed. Observe again.')
         action=args['action'];ref=args.get('ref')
+        async def not_dispatched(code,message):
+            self.observation=None
+            result={'action':action,'input_sent':False,'dispatch_state':'not_dispatched',
+                    'error':message,'error_code':code,'recoverable':True,'next_action':'Observe the fresh result and reselect; no input was sent.'}
+            try:result['after']=await self.observe(folder)
+            except Exception as exc:result['observation_error']=type(exc).__name__
+            return result
+        if not obs or obs['id']!=args['observation_id'] or time.monotonic()-obs['at']>90 or page is not obs['page'] or page.url!=obs['url']:
+            return await not_dispatched('stale_observation','Browser observation expired or page changed. Use fresh evidence.')
+        if action not in ('click','fill','press','select','check','scroll','back','forward'):
+            return await not_dispatched('unsupported_action','Unsupported browser action; no input was sent.')
+        try:await self.fresh_page(obs['id'])
+        except ObservationError:
+            return await not_dispatched('semantic_stale','Page content changed; select from the new observation.')
         target=None
         if action in ('click','fill','press','select','check'):
-            ref=resolve_ref(obs,ref)
+            try:ref=resolve_ref(obs,ref)
+            except ObservationError as exc:
+                return await not_dispatched('unresolved_target',str(exc))
             from .browser_workflow import retry_guard
             retry_guard(obs,ref)
             target=page.locator(f'[data-local-agent-ref="{obs["id"]}-{ref}"]')
-            if await target.count()!=1 or not await target.is_visible():raise ObservationError('Element changed. Observe again.')
+            if await target.count()!=1 or not await target.is_visible():
+                return await not_dispatched('target_changed','Element changed. Reselect from fresh evidence.')
+        selected=next((e for e in obs.get('elements',[]) if e.get('ref')==ref),{})
+        metadata={'requested':args.get('ref'),'resolved_ref':ref,'name':selected.get('name'),
+                  'role':selected.get('role'),'observation_id':obs['id']}
+        before=None
+        if hasattr(page,'evaluate'):
+            try:before=await self.transition_state(page)
+            except Exception:pass
+        pages_before=list(page.context.pages) if getattr(page,'context',None) else []
         self.observation=None
-        if action=='click':
-            # Qt background pages may never satisfy Playwright animation-frame
-            # stability checks. Invoke an observed, uncovered DOM control once.
-            invoked=await asyncio.wait_for(target.evaluate(CLICK_JS),8)
-            if not invoked.get('invoked'):raise ObservationError(invoked.get('reason','Control was not invoked'))
-        elif action=='fill':
-            if await target.get_attribute('type')=='password':raise ValueError('Enter passwords directly in the built-in browser')
-            await target.fill(args.get('text',''))
-        elif action=='press':await target.press(args['key'])
-        elif action=='select':await target.select_option(label=args['text'])
-        elif action=='check':await target.set_checked(args.get('checked',True))
-        elif action=='scroll':await page.mouse.wheel(0,max(-1500,min(1500,args.get('amount',600))))
-        elif action=='back':await page.go_back(wait_until='domcontentloaded')
-        elif action=='forward':await page.go_forward(wait_until='domcontentloaded')
-        else:raise ValueError('Unknown browser action')
-        try:return {'action':action,'input_sent':True,'after':await self.observe(folder)}
+        try:
+            if action=='click':
+                invoked=await asyncio.wait_for(target.evaluate(CLICK_JS),8)
+                if not invoked.get('invoked'):
+                    return await not_dispatched('covered_or_disabled',invoked.get('reason','Control was not invoked'))
+            elif action=='fill':
+                if await target.get_attribute('type')=='password':
+                    return await not_dispatched('personal_authentication_required','Enter the unavailable password directly in the built-in browser.')
+                await target.fill(args.get('text',''))
+            elif action=='press':await target.press(args['key'])
+            elif action=='select':await target.select_option(label=args['text'])
+            elif action=='check':await target.set_checked(args.get('checked',True))
+            elif action=='scroll':await page.mouse.wheel(0,max(-1500,min(1500,args.get('amount',600))))
+            elif action=='back':await page.go_back(wait_until='domcontentloaded',timeout=8000)
+            elif action=='forward':await page.go_forward(wait_until='domcontentloaded',timeout=8000)
+            else:raise ValueError('Unknown browser action')
+        except asyncio.CancelledError:
+            raise
         except Exception as exc:
-            return {'action':action,'input_sent':True,'verified':False,'observation_error':type(exc).__name__+': '+str(exc),'note':'Input was sent once. Obtain fresh observation; do not replay it merely because capture failed.'}
+            return {'action':action,'input_sent':None,'dispatch_state':'unknown_effect',
+                    'error':'Input dispatch outcome is unknown; inspect destination before retrying.',
+                    'exception_type':type(exc).__name__,'target':metadata,'retry_allowed':False}
+        transition=await self.settle_transition(page,before,pages_before)
+        result={'action':action,'input_sent':True,'verified':False,'target':metadata,
+                'dispatch_state':transition['state'],'transition':transition,
+                'note':'One input dispatched. Transition is not proof of task completion. Do not replay an uncertain effect.'}
+        try:result['after']=await self.observe(folder)
+        except Exception as exc:
+            result.update(observation_error=type(exc).__name__,dispatch_state='unknown_effect')
+        return result
 
     async def import_session(self,transfer):
         page=await self.connect()

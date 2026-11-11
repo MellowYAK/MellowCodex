@@ -1,3 +1,16 @@
+# MellowCodex 0.24.0 - browser task evidence and recovery
+Released 2026-11-11. Installed through the independent SelfDevelop/Guard supervisor; latest update e80ff041a85246eba94738e37458860d is ACTIVE_VERIFIED.
+
+The internal Qt browser is controlled through Playwright/CDP. The local agent receives current DOM headings, exact control labels, enabled/checked state, page identity and matching screenshots when available. OCR supplements the DOM; an incoherent image is not presented as current input evidence. Browser tools are disclosed progressively without changing permissions.
+
+Give the browser a goal in ordinary chat. For corrections, open **Task guidance** on its browser/desktop task card; this uses the same revision-checked task guidance backend as MCP. Mirroring conversation text alone is not an execution instruction. Guidance stored, included in inference, acted on and accepted are separate states.
+
+The agent chooses intermediate actions. Typed action outcomes and durable action history prevent uncertain clicks from being blindly replayed, and completion requires fresh evidence bound to the requested entity. Repeated unchanged reads/rejected assessments are bounded. Unicode URLs are matched without treating encoded reserved separators as equivalent; replacing the desktop invalidates old tab/observation identities.
+
+Verified: one complete disposable multi-step setup without external guidance; one assisted final-stage recovery; individual public-page reading in Hebrew, English and Russian. This is not a promise of human-level performance on every site. A combined multi-site task stalled, and RBC caused a native GUI hang requiring a bounded operator recovery. Real OAuth renewal, CAPTCHA handling and universal automatic GUI recovery are not certified. No new dependencies, model/context changes, credential changes or database migrations.
+
+See [browser operation, evidence and rollback](docs/BROWSER-AUTONOMY.md) and [measured validation](VALIDATION.md).
+
 ## 0.23.0 ? 2026-11-11
 Added MCP resume_task and cancel_task with chat binding and revision checks, using existing task control. Added delete_task_preview and delete_task: explicitly removes a terminal task from chat history only, preserving task audit, artifacts, files and memory. Not secure erasure. Active/uncertain tasks are blocked; cancelled tasks cannot resume. Existing stop_task retained.
 Validation: four targeted tests passed; Guard update 446d93a303bf4f9db56fae17070a370d ACTIVE_VERIFIED; installed registered MCP handlers previewed actual cancelled task and rejected cancelled resume, stale cancel and unconfirmed deletion. No user task deleted. Successful execution of a resumed browser/OAuth task remains unverified. Refresh connector tools to discover newly advertised names. UI retains existing resume/cancel; deletion currently available through MCP/backend only.

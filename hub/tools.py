@@ -70,7 +70,7 @@ CATALOG = [
     schema('app_open','Open or restore a specifically requested Windows application. For a URL in Windows Chrome, Edge or Firefox supply BOTH name and url here. Verify opened_verified and observed_url. Do not use browser_navigate for a named Windows browser.',{'name':STR,'url':STR},('name',)),
     schema('app_close','Normally close a specifically requested Windows application and verify remaining windows/process count. Never force kills or dismisses unsaved-work prompts. A restore-pages popup alone is not an unsaved-work warning.',{'name':STR},('name',)),
     schema('browser_navigate','Navigate the application built-in browser to an http(s) URL. Returns page text, element refs and screenshot.',{'url':STR},('url',)),
-    schema('browser_assess','Assess current browser outcome before finish or retry. Quote visible outcome text exactly, status success/failure/uncertain, and explain how it meets the original goal or proves no effect before retry. This reads fresh page state, never clicks. Account selection/Continue is not final success.',{'observation_id':STR,'status':{'type':'string','enum':['success','failure','uncertain']},'evidence':STR,'reason':STR},('observation_id','status','evidence','reason')),
+    schema('browser_assess','Assess current browser outcome before finish or retry. Quote visible outcome text exactly, status success/failure/uncertain, and explain how it meets the original goal or proves no effect before retry. This validates the cited observation without replacing it; never clicks. Put only the exact quote in evidence; interpretation belongs in reason. Account selection/Continue is not final success.',{'observation_id':STR,'status':{'type':'string','enum':['success','failure','uncertain']},'evidence':STR,'reason':STR,'entity':{'type':'string','description':'For success, exact requested entity or result identifier copied from the original goal and present in the quoted outcome.'}},('observation_id','status','evidence','reason')),
     schema('browser_observe','Read current viewport controls and screenshot. Optional query filters accessible names. Use returned id as observation_id and elements.ref for actions.',{'query':STR}),
     schema('browser_act','Act on a fresh browser observation. Use exact elements.ref from the latest observation. A unique exact observed name is also accepted; ambiguous names fail without input. Never invent selectors. Returns updated page and screenshot.',{'observation_id':STR,'action':{'type':'string','enum':['click','fill','press','select','check','scroll','back','forward']},'ref':STR,'text':STR,'key':STR,'amount':INT,'checked':{'type':'boolean'}},('observation_id','action')),
     schema('list_files','List files inside the task workspace.',{'path':STR},()),
@@ -134,7 +134,7 @@ class ToolRunner:
         if input_mode=='quiet':names-={'desktop_action','focus_window'}
         elif input_mode=='physical':names-={'window_act'}
         if task_id in self.application_targets:names-={'browser_frame','browser_pointer','browser_navigate','browser_observe','browser_assess','browser_act','browser_upload','browser_save_media','browser_extract','browser_script','browser_save_pdf'}
-        if mode in ('code','desktop') and task_id:
+        if mode in ('code','desktop','browser') and task_id:
             core={'tools_enable','list_files','read_file','write_file','run_shell','agent_environment','project_context','recovery_context','project_index','project_index_status','project_index_settings','project_git_status','candidate_create','candidate_inspect','candidate_patch','candidate_test','candidate_diff','candidate_repair'}
             core|={n for n in names if n.startswith('context_')}
             core.add('candidate_read')
@@ -143,6 +143,8 @@ class ToolRunner:
                       'browser_tabs','browser_select_tab','browser_observe','browser_assess','browser_act',
                       'app_find','app_open','app_close','window_inspect','window_act',
                       'observe_screen','capture_screenshot','project_context','recovery_context'}
+            if mode=='browser':
+                core={'tools_enable','agent_environment','browser_tabs','browser_select_tab','browser_navigate','browser_observe','browser_assess','browser_act','browser_close_tabs','chatgpt_ask','project_context','recovery_context'}
             groups=self.enabled_tool_groups.get(task_id,set())
             if not groups and getattr(self,'context_store',None):
                 saved=self.context_store.latest_event(task_id,'tool_groups_enabled')
@@ -164,7 +166,8 @@ class ToolRunner:
                     or 'extensions' in groups and n.startswith(('extension','coding_ask'))
                     or 'development' in groups and ((n.startswith(('candidate_','context_','project_')) and n!='candidate_stage_release') or n=='write_file')):core.add(n)
             names&=core
-        if mode in ('code','desktop'):names|={'tools_enable','project_bind'}
+        if mode in ('code','desktop','browser'):names.add('tools_enable')
+        if mode in ('code','desktop'):names.add('project_bind')
         names|={'computer_power_preview','computer_power_status','agent_startup_status'}
         if mode in ('code','desktop'):names|={'computer_power','agent_startup_set'}
         names.add('conversation_history')
@@ -175,7 +178,18 @@ class ToolRunner:
             from .development.guidance import Guidance
             allowed=Guidance(self.context_store).allowed_tools(task_id)
             if allowed is not None:names&=allowed
-        return [x for x in CATALOG if x['function']['name'] in names]
+        browser_actions=None
+        if mode=='browser' and task_id and getattr(self,'context_store',None):
+            browser_actions=self.context_store.actions(task_id)
+            if not self.enabled_tool_groups.get(task_id):
+                from .browser_workflow import disclosed_browser_tools
+                # Explicit enabled groups restore the ordinary authorized catalog.
+                names=disclosed_browser_tools(names,browser_actions)
+        catalog=[x for x in CATALOG if x['function']['name'] in names]
+        if browser_actions is not None:
+            from .browser_workflow import assessment_catalog
+            catalog=assessment_catalog(catalog,self.context_store.get(task_id)['goal'],browser_actions)
+        return catalog
 
     def path(self, task, name):
         root=Path(task['workspace']).resolve()
@@ -195,6 +209,7 @@ class ToolRunner:
 
     async def execute(self, task, name, args, *, action_id=None):
         import jsonschema
+        allowed=None
         if getattr(self,'context_store',None):
             from .development.guidance import Guidance
             allowed=Guidance(self.context_store).allowed_tools(task['id'])
@@ -536,17 +551,35 @@ class ToolRunner:
                     await asyncio.sleep(.2)
                 raise ObservationError('New browser tab is still loading. Inspect browser_tabs before continuing.')
             return await self.browser.navigate(args['url'],folder)
+        if name in ('browser_act','browser_pointer','browser_upload','browser_script') and getattr(self,'context_store',None):
+            from .browser_workflow import pending_effect_guard
+            pending=pending_effect_guard(self.context_store.actions(task['id']))
+            if pending:return pending
         if name=='browser_observe':return await self.browser.observe(folder,query=args.get('query',''))
         if name=='browser_assess':
             from .browser_workflow import assess
             obs=self.browser.observation
             if not obs or obs['id']!=args['observation_id']:raise ObservationError('Use the latest browser observation before assessment.')
-            page=await self.browser.observe(folder)
+            try:await self.browser.fresh_page(args['observation_id'])
+            except ObservationError:
+                return {'status':'uncertain','verified':False,'error_code':'stale_assessment','cited_observation_id':obs['id'],'reason':'Cited page changed; assess the returned fresh observation instead.','after':await self.browser.observe(folder)}
+            # Assess the exact cited evidence, never an unseen replacement.
+            page={k:obs[k] for k in ('id','text','notices','elements') if k in obs}
             actions=self.context_store.actions(task['id']) if self.context_store else []
             retries=sum(a.get('tool')=='browser_assess' and (a.get('result') or {}).get('retry_allowed',False) for a in actions)
-            result=assess(page,args,retries)
+            from .browser_workflow import verify_outcome_freshness
+            result=verify_outcome_freshness(page,assess(page,args,retries),actions)
+            if result.get('verified'):
+                from .browser_workflow import norm
+                entity=norm(args.get('entity','')).casefold()
+                bound=len(entity)>=3 and entity in norm(task['goal']).casefold() and entity in norm(result.get('evidence','')).casefold()
+                result.update(entity_verified=bound,verified=bound)
+                if not bound:
+                    from .browser_workflow import assessment_entities
+                    result['entity_candidates']=assessment_entities(task['goal'],result.get('evidence',''),actions)
+                if not bound:result['next_step']='The operation occurred, but the entity field is invalid. Copy ONE exact requested person/account/channel/workspace name from the ORIGINAL goal that also appears in the success quote. Do not use the generated receipt, a sentence, or combine names. Correct browser_assess only; do not repeat the completed operation.'
             self.browser.observation['assessment']=result
-            return {**result,'after':page}
+            return {**result,'cited_observation_id':obs['id']}
 
         if name=='browser_frame':
             frame=await self.browser.frame()

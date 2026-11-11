@@ -1,3 +1,48 @@
+## 0.24.0 installed browser validation - 2026-11-11
+
+Main tracked implementation task: bd9960596a9a4cf5b2b281da7331ef21.
+Latest runtime update: e80ff041a85246eba94738e37458860d, ACTIVE_VERIFIED. Final candidate 38d9c1d467a64ddb8b449397a759f13a revision 1 passed 14 focused tests (Unicode/restart, renderer recovery and entity contract). Earlier overlapping focused checkpoints passed 84 tests, 13 updated input-contract tests separately, and 22 entity/disclosure tests; these counts must not be added as unique coverage. Earlier broad-core failures remain historical failures, not passed acceptance.
+
+### Agent-owned live evidence
+
+| Case | Task | Result |
+| --- | --- | --- |
+| Complete independent disposable setup | acf4ea36b0634809bc9ac5d652703e45 | Profile, terms, Continue, workspace, Finish and fresh entity-bound assessment passed without GPT guidance. New receipt de780e6b-43f1-4bf6-8e11-c7ea4089962c. |
+| Assisted final-stage recovery | 141c0463c99b4134a7b52f49a058b551 | New receipt 522e1354-572e-4f49-b374-86657aeffc10; GPT correction plus narrowed verification tools required. Not independent success. |
+| Hebrew public page | a58488cb805f4eb3b6461ab3193f7cce | gov.il title, heading and two controls grounded in DOM; no site mutations. |
+| English public page | 771e2f465a1f4f50bff1a166020d48cf | BBC title/control recognition passed; heading case NEWS versus DOM News is a minor discrepancy. |
+| Russian public page after correction | d8eecf8155c0486db0d6f6c781ca1800 | Wiktionary exact title, heading and labels passed without feedback; control purpose explicitly inferred. Incoherent screenshot omitted; DOM reading only. |
+| Combined multi-site task | 70fbffa355a64386a1df32a2828a76aa | Failed to advance from first site; cancelled, not accepted. |
+| RBC native hang | bbc074a2b1d142959d9a1dd6001d9c14 | CDP and native IPC timed out; Windows confirmed hung GUI. Root cause unresolved. |
+| Equivalent URL/restart baseline | e9081b7f48d6487a9775488c52856dbb | False Unicode URL rejection and stale target caused failure; fixed and retested by Russian case above. |
+
+### Actual full-task model measurements
+
+All samples use the existing qwen3.5:4b runtime and include retries/feedback model calls within each task. No extra summarizer or embedding service was added.
+
+| Workload | Model calls | Input tokens | Output tokens | Prompt seconds | Generation seconds | Model total seconds |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Earlier setup with incomplete verification | 20 | 186009 | 1316 | 374.155 | 200.074 | 576.439 |
+| Same-goal pre-entity-fix setup, failed verification | 18 | 140035 | 1773 | 281.561 | 254.487 | 538.924 |
+| Independent accepted setup | 12 | 86662 | 774 | 173.732 | 101.856 | 277.218 |
+| Assisted final-stage task | 14 | 108027 | 1718 | 215.894 | 241.580 | 458.847 |
+| Hebrew reading | 2 | 14777 | 212 | 28.782 | 30.027 | 59.162 |
+| English reading | 4 | 26527 | 162 | 52.495 | 19.569 | 73.054 |
+| Russian failed URL/restart baseline | 6 | 51541 | 1061 | 100.077 | 160.441 | 261.745 |
+| Russian reading after correction | 4 | 32500 | 298 | 62.287 | 43.036 | 106.207 |
+
+Independent setup elapsed 324.699 seconds from creation to waiting-review; model time 277.218 seconds excludes tools/orchestration. A single before/after pair yields 38.1% fewer input tokens and 48.6% less model time against the failed 18-call setup. Small non-random samples with changing failure outcomes do not establish general percentiles or universal speedup. All 14 selected development/live tasks, including failed attempts, consumed 1,004,244 input tokens and 3,408.686 model seconds; optimization development itself was not free. Cache/resource/model-reload statistics were not systematically measured.
+
+Read-only archived chooser replay preserved requested controls previously missing under 2500-character compaction. Earlier packet estimate 26,619 to 23,064(-13.4%) is estimated, separate from actual whole-task counts. Default browser disclosure now 13 core tools with smaller verification focus; explicit groups remain discoverable.
+
+### Installed checks and preservation
+
+Installed UI guidance-dialog readback and source-hash evidence are in the local validation artifacts. Live tasks exercised the installed MCP-to-local-runner path. No history, project, skill, permission or browser profile deletion. Before/after preserved counts: 104 chats and 10 projects; task count grew with recorded tests. Desktop recovery stopped only the verified hung GUI and its Qt children after graceful IPC failed, retained the profile and archived session metadata, and removed only the disposable RBC URL from automatic restore. This is an operator recovery, not a certified automatic restart feature.
+
+Local artifacts: E:/AI/artifacts/browser-agent-implementation-20261111/FINAL-BROWSER-VALIDATION.json; hung-desktop-recovery/operation.json; INSTALLED-READBACK.json; installed-guidance-panel.png; exact candidate receipts under E:/AI/candidates. Private artifacts are not committed.
+
+Remaining: original real OAuth renewal, broad multi-site reliability, full native-hang root cause, full rollback activation drill and physical shutdown/reboot/logon acceptance are unverified. Existing successful controls do not establish those outcomes. See docs/BROWSER-AUTONOMY.md for rollback and safe power operation.
+
 ## 0.23.0 ? 2026-11-11
 Added MCP resume_task and cancel_task with chat binding and revision checks, using existing task control. Added delete_task_preview and delete_task: explicitly removes a terminal task from chat history only, preserving task audit, artifacts, files and memory. Not secure erasure. Active/uncertain tasks are blocked; cancelled tasks cannot resume. Existing stop_task retained.
 Validation: four targeted tests passed; Guard update 446d93a303bf4f9db56fae17070a370d ACTIVE_VERIFIED; installed registered MCP handlers previewed actual cancelled task and rejected cancelled resume, stale cancel and unconfirmed deletion. No user task deleted. Successful execution of a resumed browser/OAuth task remains unverified. Refresh connector tools to discover newly advertised names. UI retains existing resume/cancel; deletion currently available through MCP/backend only.

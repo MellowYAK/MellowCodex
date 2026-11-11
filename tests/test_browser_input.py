@@ -86,10 +86,55 @@ def test_dom_click_is_once_and_post_capture_failure_does_not_erase_input(blocked
   async def observe(folder):raise RuntimeError('Renderer lost after input')
   browser.connect=connect;browser.observe=observe
   if blocked:
-   with pytest.raises(ObservationError,match='Overlay'):await browser.act({'action':'click','observation_id':'fresh','ref':'e1'},tmp_path)
+   result=await browser.act({'action':'click','observation_id':'fresh','ref':'e1'},tmp_path)
+   assert result['dispatch_state']=='not_dispatched' and result['input_sent'] is False
+   assert 'Overlay' in result['error'] and result['recoverable'] is True
   else:
    result=await browser.act({'action':'click','observation_id':'fresh','ref':'e1'},tmp_path)
    assert result['input_sent'] and result['verified'] is False
-   assert 'Renderer lost' in result['observation_error']
+   assert result['observation_error']=='RuntimeError' and result['dispatch_state']=='unknown_effect'
   assert called==[1] and browser.observation is None
+ asyncio.run(run())
+
+@pytest.mark.parametrize('repeat',range(3))
+def test_semantic_stale_prevents_dispatch_and_refreshes(tmp_path,repeat):
+ async def run():
+  page=SimpleNamespace(url='https://example.test/')
+  browser=Browser()
+  async def connect():return page
+  async def signature(p):return 'changed'
+  async def observe(folder):return {'id':'new','elements':[]}
+  browser.connect=connect;browser.semantic_signature=signature;browser.observe=observe
+  browser.observation={'id':'old','page':page,'url':page.url,'at':time.monotonic(),'semantic_signature':'old','coherent':True}
+  result=await browser.act({'action':'click','observation_id':'old','ref':'e1'},tmp_path)
+  assert result['input_sent'] is False and result['error_code']=='semantic_stale'
+  assert result['after']['id']=='new'
+ asyncio.run(run())
+
+@pytest.mark.parametrize('repeat',range(3))
+def test_delayed_transition_and_pending_are_bounded(repeat):
+ async def run():
+  browser=Browser();page=SimpleNamespace(context=SimpleNamespace(pages=[]))
+  before={'ready':'complete','url':'same','text':'old'}
+  count=0
+  async def probe(p):
+   nonlocal count
+   count+=1
+   return before if count<3 else dict(before,text='new')
+  browser.transition_state=probe
+  result=await browser.settle_transition(page,before,[],timeout=1)
+  assert result=={'state':'observed_transition','kind':'page_change'}
+  async def unchanged(p):return before
+  browser.transition_state=unchanged
+  result=await browser.settle_transition(page,before,[],timeout=.15)
+  assert result['state']=='dispatched_pending'
+ asyncio.run(run())
+
+def test_transition_wait_preserves_cancellation():
+ async def run():
+  browser=Browser()
+  async def cancelled(p):raise asyncio.CancelledError()
+  browser.transition_state=cancelled
+  with pytest.raises(asyncio.CancelledError):
+   await browser.settle_transition(SimpleNamespace(),{},[],timeout=1)
  asyncio.run(run())
