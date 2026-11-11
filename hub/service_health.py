@@ -54,6 +54,21 @@ def active_tasks():
    rows=db.execute("SELECT id,state FROM tasks WHERE state IN ('running','queued','verifying','waiting_desktop')").fetchall()
   return [{'id':i,'state':s} for i,s in rows]
  except Exception:return None
+def verified_venv_launcher(process,expected_source,launcher_executables,interpreter_executables):
+ # Windows venv launchers can report a temp cwd while their actual Python
+ # child owns the configured source. Require the exact direct-child chain.
+ try:
+  if Path(process.exe()).resolve() not in launcher_executables:return False
+  argv=process.cmdline()
+  if len(argv)<3:return False
+  for child in process.children():
+   if (child.ppid()==process.pid and child.cmdline()[1:]==argv[1:]
+       and Path(child.exe()).resolve() in interpreter_executables
+       and Path(child.cwd()).resolve()==expected_source):
+    return True
+ except (psutil.Error,OSError):pass
+ return False
+
 def inventory():
  cfg=config();out={}
  modules={'hub':'hub.app:app','gateway':'hub.mcp_gateway','guard':'mellow_guard.mcp_server','guard_gateway':'mellow_guard.gateway','desktop':'hub.desktop_app'}
@@ -67,6 +82,17 @@ def inventory():
      out.setdefault(key,[]).append({'pid':p.pid,'owned':owned})
    if exe.resolve()==(ROOT/'tools/ollama/ollama.exe').resolve() and 'serve' in argv:out.setdefault('ollama',[]).append({'pid':p.pid,'owned':True})
   except (psutil.Error,OSError):continue
+ # Do not classify an unrelated launcher by name/cwd alone.
+ expected=Path(cfg.get('hub_source',str(SOURCE))).resolve()
+ launcher=Path(cfg.get('hub_python',sys.executable)).resolve()
+ interpreter=Path(cfg.get('trusted_base_python',sys.executable)).resolve()
+ launchers={launcher,launcher.with_name('pythonw.exe')}
+ interpreters={interpreter,interpreter.with_name('pythonw.exe')}
+ for key in ('hub','gateway','desktop'):
+  for item in out.get(key,[]):
+   if not item['owned']:
+    try:item['owned']=verified_venv_launcher(psutil.Process(item['pid']),expected,launchers,interpreters)
+    except psutil.Error:pass
  return out
 
 def port_identity(port):

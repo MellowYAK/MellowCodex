@@ -1,3 +1,9 @@
+## 0.24.1 - Safe shutdown identity correction - 2026-11-11
+
+The first requested safe shutdown stopped Ember, then correctly blocked before Windows power because strict boot-time float equality rejected a same-boot sample differing by about 64 microseconds. Use a 10 ms finite numeric tolerance; distinct boots and invalid markers remain rejected. Recognize a configured venv launcher reporting a temporary cwd only when its direct trusted interpreter child has the exact invocation and configured source cwd. Foreign listeners/processes remain rejected. No forced Windows close, authentication, permission or dependency changes.
+
+Validation: 26 focused tests passed; update cb68c052f4184ba7baeb7e2b0b7df93f ACTIVE_VERIFIED. Running API reports 0.24.1. A separate process accepted the same boot marker, failed transitions remained inactive, actual Hub/gateway/desktop launcher pairs were verified owned, and read-only Stop all preflight passed. The original blocked operation never dispatched Windows power; a new explicit request is required. Physical power-off is not claimed from a disconnected MCP connection. Roll back this patch through a reviewed reverse candidate based on commit 03d8451cc4c16a61c6f7ac7f11f6a506c63d0d66, preserving state, using the documented candidate/test/Guard workflow.
+
 # MellowCodex 0.24.0 - browser task evidence and recovery
 Released 2026-11-11. Installed through the independent SelfDevelop/Guard supervisor; latest update e80ff041a85246eba94738e37458860d is ACTIVE_VERIFIED.
 

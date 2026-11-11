@@ -3,6 +3,7 @@ import contextlib
 import ctypes
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -71,12 +72,18 @@ def set_startup(enabled,expected_revision):
 def manual_session():
  h.write(SESSION,dict(boot_time=h.psutil.boot_time(),at=time.time()))
 
+def same_boot(recorded):
+ # Windows boot_time samples can differ by microseconds across processes.
+ # A 10ms tolerance covers clock sampling jitter, not another boot.
+ if type(recorded) not in (int,float) or not math.isfinite(recorded):return False
+ return abs(recorded-h.psutil.boot_time())<.01
+
 def transition_active():
  d=h.read(TRANSITION)
- return d.get('boot_time')==h.psutil.boot_time() and d.get('state') in ('draining','dispatch_intent','windows_requested')
+ return same_boot(d.get('boot_time')) and d.get('state') in ('draining','dispatch_intent','windows_requested')
 
 def recovery_allowed():
- return not transition_active() and (settings()['start_with_windows'] or h.read(SESSION).get('boot_time')==h.psutil.boot_time())
+ return not transition_active() and (settings()['start_with_windows'] or same_boot(h.read(SESSION).get('boot_time')))
 
 def ember(action='status'):
  if not EMBER.exists():return dict(ok=True,not_installed=True,services={})
