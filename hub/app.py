@@ -1400,3 +1400,22 @@ async def agent_startup_set(body:AgentStartupRequest):
     try:return await asyncio.to_thread(set_startup,body.enabled,body.expected_revision)
     except ValueError as exc:raise HTTPException(400,str(exc))
     except RuntimeError as exc:raise HTTPException(409,str(exc))
+
+class TaskLifecycleRequest(BaseModel):
+    chat_id:str
+    expected_revision:int
+    action:Literal['resume','cancel','delete']
+    confirm:bool=False
+
+@app.get('/api/tasks/{task_id}/delete-preview')
+async def task_delete_preview(task_id:str,chat_id:str):
+    from .task_lifecycle import preview
+    return preview(store,engine,chat_id,task_id)
+
+@app.post('/api/tasks/{task_id}/lifecycle')
+async def task_lifecycle_action(task_id:str,body:TaskLifecycleRequest):
+    from .task_lifecycle import bound,remove
+    bound(store,body.chat_id,task_id)
+    if body.action=='delete':
+        return remove(store,engine,body.chat_id,task_id,body.expected_revision,body.confirm)
+    return public_task(await engine.control(task_id,body.action,body.expected_revision))

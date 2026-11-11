@@ -1,3 +1,7 @@
+## 0.23.0 ? 2026-11-11
+Added MCP resume_task and cancel_task with chat binding and revision checks, using existing task control. Added delete_task_preview and delete_task: explicitly removes a terminal task from chat history only, preserving task audit, artifacts, files and memory. Not secure erasure. Active/uncertain tasks are blocked; cancelled tasks cannot resume. Existing stop_task retained.
+Validation: four targeted tests passed; Guard update 446d93a303bf4f9db56fae17070a370d ACTIVE_VERIFIED; installed registered MCP handlers previewed actual cancelled task and rejected cancelled resume, stale cancel and unconfirmed deletion. No user task deleted. Successful execution of a resumed browser/OAuth task remains unverified. Refresh connector tools to discover newly advertised names. UI retains existing resume/cancel; deletion currently available through MCP/backend only.
+
 ## 0.22.1 ? 2026-11-11
 
 Sidebar projects now sort by latest non-archived conversation activity; project conversations and the lower conversation list sort newest first. Timestamp changes invalidate the sidebar render cache. Wider sidebar and flexible independently scrollable lists reduce wasted space. Pinned markers remain visible without overriding recency. No stored conversations or projects modified.

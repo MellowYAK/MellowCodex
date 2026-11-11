@@ -341,6 +341,26 @@ async def stop_task(task_id:str)->dict:
     task=await local('/api/tasks/'+ident(task_id))
     return await local('/api/tasks/'+task_id+'/control',{'command':'cancel','expected_revision':task['revision']})
 
+@mcp.tool(annotations=WRITE)
+async def resume_task(chat_id:str,task_id:str,expected_revision:int)->dict:
+    """Resume SAME failed, paused or waiting-user task after user request. Read get_task first. Requires loaded model. Rejects cancelled/completed tasks, stale revision or uncertain pending actions; never creates a replacement."""
+    return await local('/api/tasks/'+ident(task_id)+'/lifecycle',dict(chat_id=ident(chat_id),action='resume',expected_revision=expected_revision))
+
+@mcp.tool(annotations=WRITE)
+async def cancel_task(chat_id:str,task_id:str,expected_revision:int)->dict:
+    """Cancel this chat's task using observed revision. Preserves history; cannot undo completed external effects. Existing stop_task remains compatible."""
+    return await local('/api/tasks/'+ident(task_id)+'/lifecycle',dict(chat_id=ident(chat_id),action='cancel',expected_revision=expected_revision))
+
+@mcp.tool(annotations=READ)
+async def delete_task_preview(chat_id:str,task_id:str)->dict:
+    """Show exact deletion scope and eligibility. This removes a terminal task from chat history, NOT underlying audit, artifacts, files or memories. No effect."""
+    return await local('/api/tasks/'+ident(task_id)+'/delete-preview?chat_id='+ident(chat_id))
+
+@mcp.tool(annotations=WRITE)
+async def delete_task(chat_id:str,task_id:str,expected_revision:int,confirm:bool=False)->dict:
+    """Only after explicit user request and displayed preview scope: remove a terminal task from this chat. confirm=true acknowledges retained audit/artifacts/memory; not permanent erasure. Active or uncertain tasks are blocked. Never use to bypass a pending action."""
+    return await local('/api/tasks/'+ident(task_id)+'/lifecycle',dict(chat_id=ident(chat_id),action='delete',expected_revision=expected_revision,confirm=confirm))
+
 def sign(file_id,expires):
     HOME.mkdir(parents=True,exist_ok=True)
     key_path=HOME/'downloads.key'
