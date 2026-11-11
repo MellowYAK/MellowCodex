@@ -1,3 +1,7 @@
+# MellowCodex 0.22.1
+
+Projects and conversations are ordered by latest activity. Sidebar lists have more space. Reload the interface to load updated static assets.
+
 # MellowCodex 0.22.0 — Safe power and Windows startup
 
 Settings > General now contains **Start with Windows**, **Safely shut down computer** and **Safely restart computer**. The same controls are available in the independent Health & Services window and newly opened Tools/tray menus. The setting currently reads enabled and was verified against the owned current-user Windows task.

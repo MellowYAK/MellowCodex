@@ -1,3 +1,9 @@
+## 0.22.1 ? 2026-11-11
+
+Sidebar projects now sort by latest non-archived conversation activity; project conversations and the lower conversation list sort newest first. Timestamp changes invalidate the sidebar render cache. Wider sidebar and flexible independently scrollable lists reduce wasted space. Pinned markers remain visible without overriding recency. No stored conversations or projects modified.
+
+Validation: actual installed Chromium parsed the script and passed deterministic recency/promotion cases. Static assets installed without restarting services or user browser. Actual shell refreshed, sidebar width 290px, project area 280px and chat area 208px at a 932px viewport. Live DOM order verified against timestamp-derived inventory. Backend deployed through Guard update 0d6f3f6500684fc2866eb5536fb28fda; task and mirrored-message activity included. No physical power actions performed.
+
 ## 0.22.0 — Safe computer power and Windows startup — 2026-11-11
 
 Tracked task: 4bc1b4b13f6641d8abf8dbe1c10d4ff7. Runtime deployment 908598faa17a4192bb42251f7edd499b: ACTIVE_VERIFIED. No new dependencies or database migration.

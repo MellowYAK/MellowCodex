@@ -110,7 +110,18 @@ CREATE TABLE IF NOT EXISTS selfdevelop_chat_modes(chat_id TEXT PRIMARY KEY,mode 
         return result
     def inventory(self):
         with self.store.connect() as db:
-            return {'projects':[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY name')], 'chats':[dict(r) for r in db.execute('SELECT * FROM chats ORDER BY pinned DESC,created DESC')]}
+            chats=[dict(r) for r in db.execute('SELECT * FROM chats')]
+            from datetime import datetime
+            def stamp(value):
+                try:return datetime.fromisoformat(value.replace('Z','+00:00')).timestamp()*1000
+                except (ValueError,TypeError,AttributeError):return 0
+            activity={r[0]:stamp(r[1]) for r in db.execute('SELECT ct.chat_id,MAX(t.updated) FROM chat_tasks ct JOIN tasks t ON t.id=ct.task_id GROUP BY ct.chat_id')}
+            if db.execute("SELECT 1 FROM sqlite_master WHERE name='bridge_messages'").fetchone():
+                for chat_id,created in db.execute('SELECT chat_id,MAX(created) FROM bridge_messages GROUP BY chat_id'):
+                    activity[chat_id]=max(activity.get(chat_id,0),created*1000)
+            for chat in chats:chat['last_activity']=max(stamp(chat['created']),activity.get(chat['id'],0))
+            chats.sort(key=lambda c:(c['last_activity'],c['id']),reverse=True)
+            return {'projects':[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY name')], 'chats':chats}
     def page(self,chat_id,before=None,limit=30):
         """A bounded chronological viewport; no task-message arrays or history deletion."""
         if not 1<=limit<=60 or before is not None and before<0:raise ValueError('Invalid conversation page')
