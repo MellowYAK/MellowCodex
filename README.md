@@ -1,3 +1,9 @@
+## Unreleased — dense browser packet correction — 2026-11-12
+
+Compact repeated null/default DOM fields and JSON spacing while preserving selected controls, checkbox state, options and mandatory instructions. Candidate d3dec9643f3b4736a7bd861e2f41a1dd revision1 passed21 focused tests and update de4a3275727144938caf26a48bae37b0 is ACTIVE_VERIFIED. Real-site inference now ran (2832 actual input,3195 estimated) within4096 context without changing model allocation.
+
+Actual Comics reconnection completed with operator assistance: local task909704379f6a495594bdb165e6b619e2 opened YouTube connection and selected the existing Google account, but repeated rejected actions after an unresolved transition; cancelled to stop its loop. Operator then selected the Comics channel and Continue screens using the existing embedded-browser tools. Callback showed channel connected; an independent authenticated YouTube read returned50 videos for UCkLhl5wB--tBWAN6ZgeAWRw instead of expired authorization. No publication/deletion occurred. This is NOT independent local-model acceptance. Remaining defects: stale snapshot after hash-route changes, decorative visual target selection, and failure to reconcile intermediate transitions. Pending cancellation action was reconciled with observed evidence without replay.
+
 ## 0.26.0 — Local UI-TARS browser driver — 2026-11-12
 
 Installed optional UI-TARS 1.5 7B Q4_K_M browser driver using a local llama.cpp OpenAI-compatible runtime. Existing normal/code model choice, task runner, permissions, source-bound screenshots, current DOM targeting, cancellation, uncertain-action fencing and entity-bound completion remain authoritative. No new Python dependency or data migration. Includes compact browser decision evidence, native/web routing corrections and desktop-tool disclosure from the preceding browser effectiveness candidate.

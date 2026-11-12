@@ -23,6 +23,7 @@ navigate(url='http(s) URL')
 assess(status='success|failure|uncertain', evidence='one exact DOM quote', entity='requested entity', reason='why this proves the goal or no effect')
 finished(content='answer') only after the complete goal is proven.
 wait()
+Controls omit default enabled=true and focused/modal=false. checked=false is explicit.
 Use actual refs from the current observation. Password entry may require the user.
 After changes, assess the final outcome with an exact quote containing the requested entity;
 existing checks decide whether it proves success. Never infer completion from a click.
@@ -47,6 +48,19 @@ def parse_action(text):
         return node.func.id,args
     except (ValueError,SyntaxError,TypeError) as e:
         raise ObservationError('UI-TARS returned an invalid action; no input sent: '+str(e)[:160]) from e
+
+def compact_controls(elements):
+    # Omitted booleans default to enabled=true, focused/modal=false; preserve checked=false.
+    result=[]
+    for e in elements:
+        item={k:e[k] for k in ('ref','name','tag','type') if e.get(k) not in (None,'')}
+        for k in ('focused','modal'):
+            if e.get(k):item[k]=True
+        if e.get('enabled') is False:item['enabled']=False
+        if e.get('checked') is not None:item['checked']=e['checked']
+        if e.get('options'):item['options']=e['options']
+        result.append(item)
+    return result
 
 def target_at(page,point,size):
     nums=re.findall(r'-?\d+(?:\.\d+)?',str(point))
@@ -195,9 +209,9 @@ async def _chat(engine,messages,catalog,task_id,settings,protocol_correction='')
     if len(goal)>9000:raise ObservationError('UI-TARS mandatory goal/corrections exceed local input budget; split task, requirements were not truncated')
     with Image.open(path) as im:
         im=im.convert('RGB');im.thumbnail((840,840));size=im.size;buffer=io.BytesIO();im.save(buffer,format='PNG')
-    controls=[{k:e[k] for k in ('ref','name','tag','type','focused','modal','checked','enabled','options') if k in e} for e in page['elements']][:45]
-    history=[{'tool':a['tool'],'args':{k:v for k,v in (a.get('args')or{}).items() if k!='observation_id'}, 'outcome':{k:(a.get('result') or {}).get(k) for k in ('error','dispatch_state','verified','next_step')}} for a in actions[-6:]]
-    text=PROMPT+'\nProtocol correction (no action was dispatched): '+protocol_correction+'\nApplicable task policy:\n'+governing+'\nOriginal task and guidance:\n'+goal+'\nCurrent page evidence:\n'+json.dumps({'id':page['id'],'url':page.get('url'),'title':page.get('title'),'text':page.get('text','')[:2200],'controls':controls,'recent_actions':history,'uncertain_prior_effect':pending_effect_guard(actions)},ensure_ascii=False)
+    controls=compact_controls(page['elements'][:45])
+    history=[{'tool':a['tool'],'args':{k:v for k,v in (a.get('args')or{}).items() if k!='observation_id'}, 'outcome':{k:(a.get('result') or {}).get(k) for k in ('error','dispatch_state','verified','next_step') if (a.get('result')or{}).get(k) is not None}} for a in actions[-6:]]
+    text=PROMPT+'\nProtocol correction (no action was dispatched): '+protocol_correction+'\nApplicable task policy:\n'+governing+'\nOriginal task and guidance:\n'+goal+'\nCurrent page evidence:\n'+json.dumps({'id':page['id'],'url':page.get('url'),'title':page.get('title'),'text':page.get('text','')[:2200],'controls':controls,'recent_actions':history,'uncertain_prior_effect':pending_effect_guard(actions)},ensure_ascii=False,separators=(',',':'))
     async with httpx.AsyncClient(timeout=settings.request_timeout_seconds,trust_env=False) as c:
         counted=await c.post(ENDPOINT+'/tokenize',json={'content':text});counted.raise_for_status()
         estimate=len(counted.json()['tokens'])+math.ceil(size[0]/28)*math.ceil(size[1]/28)+384
