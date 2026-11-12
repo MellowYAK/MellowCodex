@@ -121,9 +121,11 @@ class Browser:
 
     async def connect(self,ready=True):
         from playwright.async_api import async_playwright
-        endpoint=json.loads((STATE/'browser-endpoint.json').read_text(encoding='utf-8'))
-        if endpoint['url']!=f'http://127.0.0.1:{CDP_PORT}' or not psutil.pid_exists(endpoint['pid']):
-            raise RuntimeError('Open the Local Agent desktop app first')
+        try:
+            endpoint=json.loads((STATE/'browser-endpoint.json').read_text(encoding='utf-8'))
+            if endpoint['url']!=f'http://127.0.0.1:{CDP_PORT}' or not psutil.pid_exists(endpoint['pid']):raise ValueError('Desktop not running')
+        except (OSError,ValueError,KeyError):
+            raise RuntimeError('Internal desktop is unavailable. Call desktop_open with a stable request_id, verify ready=true, then retry this browser read. Do not repeat unchanged calls or invent URLs.')
         if self.instance is not None and self.instance!=endpoint['instance']:
             # Target IDs and observations belong to one desktop instance only.
             # The next read follows the new native selected tab; stale inputs

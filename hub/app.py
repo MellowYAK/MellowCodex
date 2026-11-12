@@ -1243,11 +1243,11 @@ async def browser_tabs_view():
 
 @app.post('/api/browser/focus')
 async def focus_native_browser():
-    import sys
-    process=await asyncio.create_subprocess_exec(sys.executable,'-m','hub.browser_ipc','--focus-browser',stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,creationflags=0x08000000)
-    await asyncio.wait_for(process.communicate(),5)
-    if process.returncode:raise HTTPException(503,'Open the Local Agent desktop window first')
-    return {'focused':True}
+    import uuid
+    from .desktop_runtime import open_desktop
+    result=await asyncio.to_thread(open_desktop,'ui-focus:'+uuid.uuid4().hex,True)
+    if not result.get('ready'):raise HTTPException(503,result)
+    return result
 
 class BrowserTab(BaseModel):
     tab_id:str
@@ -1419,3 +1419,18 @@ async def task_lifecycle_action(task_id:str,body:TaskLifecycleRequest):
     if body.action=='delete':
         return remove(store,engine,body.chat_id,task_id,body.expected_revision,body.confirm)
     return public_task(await engine.control(task_id,body.action,body.expected_revision))
+
+
+class DesktopOpenRequest(BaseModel):
+    request_id:str=Field(min_length=1,max_length=120)
+    show:bool=True
+
+@app.get('/api/desktop/runtime')
+async def desktop_runtime_status():
+    from .desktop_runtime import status
+    return await asyncio.to_thread(status)
+
+@app.post('/api/desktop/open')
+async def desktop_runtime_open(body:DesktopOpenRequest):
+    from .desktop_runtime import open_desktop
+    return await asyncio.to_thread(open_desktop,body.request_id,body.show)

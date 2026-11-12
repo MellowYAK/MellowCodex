@@ -535,3 +535,14 @@ from .service_health import register_mcp as register_service_health
 register_service_health(mcp,local,READ,WRITE)
 from .power import register_mcp as register_power
 register_power(mcp,local,READ,WRITE)
+
+
+@mcp.tool(annotations=READ)
+async def desktop_status()->dict:
+    """Check the owned MellowCodex desktop UI and embedded browser, including live IPC and CDP readiness. Works while the UI is closed; does not start anything."""
+    return await local('/api/desktop/runtime')
+
+@mcp.tool(annotations=WRITE)
+async def desktop_open(request_id:str,show:bool=True)->dict:
+    """Open/show MellowCodex's own UI and internal browser through running services. Use when the user requests the UI or a browser task needs it. No manual desktop launch, model call, service restart or arbitrary executable. Reuses existing instance and preserves profile/tasks. Stable request_id prevents duplicate attempts; check ready, state and desktop_status after uncertain response. Windows sign-in required; never unlocks or elevates."""
+    return await local('/api/desktop/open',dict(request_id=request_id,show=show))

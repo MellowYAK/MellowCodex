@@ -1,5 +1,6 @@
 """Native Qt client: independent of Codex, Chromium, and any external browser."""
 import html
+import os
 import json
 import sys
 import uuid
@@ -387,6 +388,9 @@ def main():
             elif payload.startswith(b'{'):
                 try:
                     data=json.loads(payload)
+                    if 'runtime_status' in data:
+                        if data.get('show'):show_window()
+                        client.write(json.dumps({'ready':True,'pid':os.getpid(),'visible':window.isVisible()}).encode()+b'\n');client.flush();client.disconnectFromServer();return
                     if 'browser_extensions' in data:
                         result=browser.extensions.execute(**data['browser_extensions'])
                         client.write(json.dumps(result).encode()+b'\n');client.flush();client.disconnectFromServer();return

@@ -22,6 +22,7 @@ PUBLIC_READ = frozenset((
     "model_memory_status", "session_status",
 ))
 PRIVATE_READ = frozenset((
+    'desktop_status',
     'computer_power_preview','computer_power_status','agent_startup_status',
     "read_file", "list_files", "files_list", "image_ocr",
     "capture_screenshot", "observe_screen", "window_inspect",
@@ -33,6 +34,7 @@ PRIVATE_READ = frozenset((
 # installed Python skills are UNKNOWN until a reviewed, version-pinned adapter
 # can describe their exact arguments and side effects.
 REVERSIBLE = frozenset((
+    'desktop_open',
     "app_open", "app_find", "app_close", "window_act",
     "browser_navigate", "browser_act", "browser_select_tab",
     "browser_pointer", "focus_window", "desktop_action",

@@ -24,6 +24,8 @@ STR={'type':'string'}
 INT={'type':'integer'}
 
 CATALOG = [
+    schema('desktop_status','Check owned internal desktop process, native IPC and embedded browser readiness without starting anything.',{}),
+    schema('desktop_open','Start or show MellowCodex internal desktop and browser when requested or needed for the browser task. No manual opening needed. Reuses existing instance and verifies readiness; does not launch external browsers or restart services. Reuse request_id on uncertain retry.',{'request_id':STR,'show':{'type':'boolean'}},('request_id',)),
     schema('project_bind','Assign this conversation to an existing local folder requested by the user. Effective for subsequent tasks; current/historical workspaces stay unchanged. Read absolute paths now; create candidates next turn. No new Windows permissions.',{'path':STR},('path',)),
     schema('conversation_memory_review','Optionally ask the active ChatGPT connection to verify a claim about retrieved conversation evidence. Read conversation_history first and supply its source task ID AND evidence_quote copied verbatim from the relevant source (never guess an ID). Review is separate from history and never proves current machine state. Browser uses the connected conversation; MCP returns a pending packet for the caller to answer. Missing feedback must not block local work. A review_id reads an existing review without resending.',{'source_task_id':STR,'claim':STR,'evidence_quote':STR,'field':{'type':'string','enum':['goal','result']},'offset':INT,'chars':INT,'review_id':STR}),
     schema('browser_extensions','Read/manage embedded-browser Manifest V3 extensions. Only install or enable when requested by the user, after reviewing source and permissions. Install takes local folder or ZIP path; enabled state changes/uninstall take exact extension_id from status. New installs are disabled. Poll status while pending; a request is not completed installation. No Chrome Web Store support.',{'action':{'type':'string','enum':['status','install','enable','disable','uninstall']},'extension_id':STR,'path':STR},('action',)),
@@ -170,6 +172,8 @@ class ToolRunner:
         if mode in ('code','desktop'):names.add('project_bind')
         names|={'computer_power_preview','computer_power_status','agent_startup_status'}
         if mode in ('code','desktop'):names|={'computer_power','agent_startup_set'}
+        names.add('desktop_status')
+        if mode in ('code','desktop','browser'):names.add('desktop_open')
         names.add('conversation_history')
         names.add('conversation_anchors')
         names.add('conversation_memory_review')
@@ -263,6 +267,9 @@ class ToolRunner:
             raise RuntimeError('Execution stopped')
         folder=ARTIFACTS / task['id']
         folder.mkdir(parents=True,exist_ok=True)
+        if name in ('desktop_status','desktop_open'):
+            from . import desktop_runtime
+            return await asyncio.to_thread(desktop_runtime.status) if name=='desktop_status' else await asyncio.to_thread(desktop_runtime.open_desktop,args['request_id'],args.get('show',True))
         if name in ('computer_power_preview','computer_power','computer_power_status','agent_startup_status','agent_startup_set'):
             from . import power
             if name=='computer_power_preview':return await asyncio.to_thread(power.preview,args['action'])
