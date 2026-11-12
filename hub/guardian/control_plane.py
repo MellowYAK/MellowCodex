@@ -137,9 +137,14 @@ class Services:
         import psutil
         if self.owned():raise RuntimeError('Existing owned services still running')
         env=os.environ.copy();env['LOCAL_AGENT_ROOT']=self.m['root'];env['PYTHONUTF8']='1'
-        commands=[['-m','uvicorn','hub.app:app','--host','0.0.0.0','--port',str(self.m['ports'][0]),'--no-access-log']]
-        if not self.gateway_managed_by_hub():
-            commands.append(['-m','uvicorn','hub.mcp_gateway:app','--host','127.0.0.1','--port',str(self.m['ports'][1]),'--no-access-log'])
+        # The supervisor stops both owned processes before reinstalling. Relay
+        # configuration controls external forwarding, not local gateway ownership.
+        # If the gateway is skipped here, healthy() can never verify its port
+        # after stop(), and rollback also fails the same check.
+        commands=[
+            ['-m','uvicorn','hub.app:app','--host','0.0.0.0','--port',str(self.m['ports'][0]),'--no-access-log'],
+            ['-m','uvicorn','hub.mcp_gateway:app','--host','127.0.0.1','--port',str(self.m['ports'][1]),'--no-access-log'],
+        ]
         self.started=[]
         log=Path(self.m['root'])/'state'/'mellow-guard-services.log'
         log.parent.mkdir(parents=True,exist_ok=True)
@@ -162,7 +167,7 @@ class Services:
                 listeners=listener_owners(psutil.net_connections(kind='tcp'),self.m['ports'])
                 if set(listeners)!=set(self.m['ports']) or not set().union(*listeners.values()).issubset(expected):
                     stable_since=None;time.sleep(.5);continue
-                with httpx.Client(timeout=2,trust_env=False) as client:
+                with httpx.Client(timeout=12,trust_env=False) as client:
                     if client.get('http://127.0.0.1:'+str(self.m['ports'][0])+'/').status_code==200 and client.get('http://127.0.0.1:'+str(self.m['ports'][1])+'/health').status_code==200:
                         if stable_since is None:stable_since=time.monotonic()
                         elif time.monotonic()-stable_since>=2:return True

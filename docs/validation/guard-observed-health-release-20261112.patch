@@ -1,0 +1,118 @@
+--- a/mellow_guard/supervisor.py
++++ b/mellow_guard/supervisor.py
+@@ -227,7 +227,112 @@
+             time.sleep(.4)
+         return False
+ 
++    def observed_service_health(self) -> bool:
++        """Verify both existing Hub services without adopting startup ownership.
++
++        Supports only the two exact Hub supervisor launch forms observed in the
++        installed system; checks verified executable/parent, cwd, creation time,
++        passive socket process identity and live HTTP. This is not authority to
++        terminate these processes or an assertion Guard started them.
++        """
++        import psutil
++        base = self._base_python()
++        if base is None:
++            return False
++        expected = {
++            self.config.hub_port: (
++                "hub.app:app", {"127.0.0.1", "0.0.0.0"}
++            ),
++            self.config.gateway_port: (
++                "hub.mcp_gateway:app", {"127.0.0.1"}
++            ),
++        }
++        if self.config.hub_port == self.config.gateway_port:
++            return False
++
++        def evidence():
++            rows = [
++                row for row in psutil.net_connections(kind="tcp")
++                if row.laddr and row.laddr.port in expected
++                and not row.raddr and row.status in ("LISTEN", "NONE")
++            ]
++            if len(rows) != 2:
++                return None
++            verified = {}
++            for row in rows:
++                if (row.family != socket.AF_INET
++                        or row.type != socket.SOCK_STREAM
++                        or not row.pid):
++                    return None
++                port = row.laddr.port
++                app, hosts = expected[port]
++                if row.laddr.ip not in hosts or port in verified:
++                    return None
++                command = [
++                    "-m", "uvicorn", app, "--host", row.laddr.ip,
++                    "--port", str(port), "--no-access-log"
++                ]
++                proc = psutil.Process(row.pid)
++                parent = proc.parent()
++                if parent is None:
++                    return None
++                if (Path(proc.exe()).resolve() != base
++                        or Path(proc.cwd()).resolve() != self.config.hub_source.resolve()
++                        or tuple(proc.cmdline()[1:]) != tuple(command)
++                        or Path(parent.exe()).resolve() != self.config.hub_python.resolve()
++                        or tuple(parent.cmdline()[1:]) != tuple(command)
++                        or proc.create_time() < parent.create_time()):
++                    return None
++                own_rows = [
++                    x for x in proc.net_connections(kind="tcp")
++                    if x.laddr and x.laddr.port == port
++                    and x.laddr.ip == row.laddr.ip
++                    and not x.raddr and x.status in ("LISTEN", "NONE")
++                ]
++                if len(own_rows) != 1:
++                    return None
++                verified[port] = (proc.pid, proc.create_time(),
++                                  parent.pid, parent.create_time())
++            return verified if set(verified) == set(expected) else None
++
++        try:
++            first = evidence()
++            if first is None:
++                return False
++            opener = build_opener(ProxyHandler({}))
++            for index in range(2):
++                if evidence() != first:
++                    return False
++                with opener.open(
++                    "http://127.0.0.1:" + str(self.config.hub_port) + "/",
++                    timeout=6
++                ) as hub:
++                    if hub.status != 200:
++                        return False
++                with opener.open(
++                    "http://127.0.0.1:" + str(self.config.gateway_port) + "/health",
++                    timeout=6
++                ) as gateway:
++                    if gateway.status != 200:
++                        return False
++                if index == 0:
++                    time.sleep(.2)
++            return evidence() == first
++        except Exception:
++            return False
++
+     def service_status(self):
+-        return {"service_id": "hub", "owned_pids": [p.pid for p in self.owned()],
+-                "started_pids": list(self.started),
+-                "healthy": self.healthy() if self.started else False}
++        """Report verified service readiness separately from startup provenance."""
++        roots = self.owned()
++        supervised = self.healthy() if self.started else False
++        observed = self.observed_service_health()
++        return {
++            "service_id": "hub", "owned_pids": [p.pid for p in roots],
++            "started_pids": list(self.started),
++            "healthy": bool(supervised or observed),
++            "supervisor_healthy": bool(supervised),
++            "observed_healthy": bool(observed),
++            "health_basis": ("supervisor_started" if supervised
++                             else "verified_existing_services" if observed
++                             else "unverified"),
++        }

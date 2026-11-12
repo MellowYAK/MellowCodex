@@ -44,6 +44,39 @@ async def local(path,data=None,timeout=15):
         raise ValueError(f'Local agent returned HTTP {response.status_code}: {response.text[:300]}')
     return response.json()
 
+
+
+
+@mcp.tool(annotations=WRITE)
+async def action_routes(chat_id:str,action:Literal['list','get','create','save','delete','learn','prepare','step','run']='list',arguments:dict|None=None)->dict:
+    """Shared Action Routes library and visual-editor parity. Translate natural-language save/edit/reuse requests into these operations. list: query,offset; get: route_id; create/save: body{title,folder,description,enabled,parameters:[{name,label,required}],steps:[{id?,title,expected,instruction,success,notes,images:[{file_id,caption}]}]}, route_id?,expected_revision,scope(chat/project/global),share_confirmed. Use {{parameter}} in step text. learn: source_task_id,title imports completed action evidence from THIS chat, never replays actions. step: route_id,index; prepare: route_id,values asks for missing variables, no execution. run: route_id,values,request_id starts existing browser task runner; poll returned task_id. delete: route_id,expected_revision removes route only; original evidence retained. Read latest revision before edits. Sharing explicitly exposes route and historical screenshots to that scope. Images must be existing uploaded file IDs, never guessed paths. Historical references are not fresh observations or permissions."""
+    args=dict(arguments or {})
+    if 'action' in args:raise ValueError('Use the action parameter')
+    return await local('/api/chats/'+ident(chat_id)+'/action-routes',{'action':action,**args})
+
+@mcp.tool(annotations=READ)
+async def context_memory_pins(chat_id:str,offset:int=0)->dict:
+    """Read explicit chat-only and intentionally shared project source-bound memory pins. Source corrections and hashes are checked before retrieval."""
+    return await local('/api/chats/'+ident(chat_id)+'/context-pins?offset='+str(max(0,offset)))
+
+@mcp.tool(annotations=WRITE)
+async def context_memory_pin(chat_id:str,anchor_id:str,scope:Literal['chat','project'],pinned:bool,expected_revision:int)->dict:
+    """Pin/unpin an existing exact-source conversation anchor, or intentionally share it with the current project. Read pins for revisions first; a new pin uses revision 0. Does not grant execution permissions. Corrections use existing conversation_anchors supersession."""
+    return await local('/api/chats/'+ident(chat_id)+'/context-pins',dict(anchor_id=ident(anchor_id),scope=scope,pinned=pinned,expected_revision=expected_revision))
+
+@mcp.tool(annotations=READ)
+async def context_memory_status(chat_id:str,task_id:str|None=None)->dict:
+    """Read compact per-chat packet accounting, actual last usage, checkpoint and shared persisted context settings. History stored on disk is not all loaded. No inference."""
+    path='/api/chats/'+ident(chat_id)+'/context-memory'
+    if task_id:path+='?task_id='+ident(task_id)
+    return await local(path)
+
+@mcp.tool(annotations=READ)
+async def context_memory_evidence(chat_id:str,task_id:str,message_index:int,sha256:str,offset:int=0,chars:int=3000)->dict:
+    """Expand one source ref returned by context_memory_status, within the original chat. Paginated original evidence; rejects changed hashes. Never authorizes actions."""
+    from urllib.parse import urlencode
+    return await local('/api/chats/'+ident(chat_id)+'/context-evidence?'+urlencode(dict(task_id=ident(task_id),message_index=message_index,sha256=sha256,offset=offset,chars=chars)))
+
 @mcp.tool(annotations=READ)
 async def model_settings_status()->dict:
     """Read persisted local-model settings, supported field metadata and actual Ollama /api/ps context. No model loading or owner permission changes."""
@@ -66,9 +99,9 @@ async def list_projects_and_chats()->dict:
     return await local('/api/chats')
 
 @mcp.tool(annotations=WRITE)
-async def agent_shutdown()->dict:
-    """Fully shut down the local agent on explicit user request: stop tasks, unload Hub-managed models, close desktop and owned MCP/relay services. Shared Ollama is preserved. Response means accepted, not completed; connection will close. Model loading remains disabled until explicit load."""
-    return await local('/api/lifecycle/shutdown',{})
+async def agent_shutdown(request_id:str,confirm_tasks:bool=False)->dict:
+    """Stop all agent services using shared durable manager. Read service_health_status and explain active-task impact, then obtain explicit user confirmation before confirm_tasks=true. Keeps rescue shell and protected OwnerBroker; retain action id across disconnect."""
+    return await local('/api/lifecycle/shutdown',{'request_id':request_id,'confirm_tasks':confirm_tasks})
 
 @mcp.tool(annotations=READ)
 async def agent_shutdown_status()->dict:
@@ -316,6 +349,26 @@ async def stop_task(task_id:str)->dict:
     task=await local('/api/tasks/'+ident(task_id))
     return await local('/api/tasks/'+task_id+'/control',{'command':'cancel','expected_revision':task['revision']})
 
+@mcp.tool(annotations=WRITE)
+async def resume_task(chat_id:str,task_id:str,expected_revision:int)->dict:
+    """Resume SAME failed, paused or waiting-user task after user request. Read get_task first. Requires loaded model. Rejects cancelled/completed tasks, stale revision or uncertain pending actions; never creates a replacement."""
+    return await local('/api/tasks/'+ident(task_id)+'/lifecycle',dict(chat_id=ident(chat_id),action='resume',expected_revision=expected_revision))
+
+@mcp.tool(annotations=WRITE)
+async def cancel_task(chat_id:str,task_id:str,expected_revision:int)->dict:
+    """Cancel this chat's task using observed revision. Preserves history; cannot undo completed external effects. Existing stop_task remains compatible."""
+    return await local('/api/tasks/'+ident(task_id)+'/lifecycle',dict(chat_id=ident(chat_id),action='cancel',expected_revision=expected_revision))
+
+@mcp.tool(annotations=READ)
+async def delete_task_preview(chat_id:str,task_id:str)->dict:
+    """Show exact deletion scope and eligibility. This removes a terminal task from chat history, NOT underlying audit, artifacts, files or memories. No effect."""
+    return await local('/api/tasks/'+ident(task_id)+'/delete-preview?chat_id='+ident(chat_id))
+
+@mcp.tool(annotations=WRITE)
+async def delete_task(chat_id:str,task_id:str,expected_revision:int,confirm:bool=False)->dict:
+    """Only after explicit user request and displayed preview scope: remove a terminal task from this chat. confirm=true acknowledges retained audit/artifacts/memory; not permanent erasure. Active or uncertain tasks are blocked. Never use to bypass a pending action."""
+    return await local('/api/tasks/'+ident(task_id)+'/lifecycle',dict(chat_id=ident(chat_id),action='delete',expected_revision=expected_revision,confirm=confirm))
+
 def sign(file_id,expires):
     HOME.mkdir(parents=True,exist_ok=True)
     key_path=HOME/'downloads.key'
@@ -370,15 +423,27 @@ async def lifespan(app):
 
 app=FastAPI(lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
 
+async def _hub_ready():
+    """Bounded loopback readiness sample; retries transient Hub overload once."""
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(4.0,connect=2.0),trust_env=False) as client:
+            for attempt in range(2):
+                try:
+                    response=await client.get(f'http://127.0.0.1:{PORT}/openapi.json')
+                    if response.is_success and response.json().get('info',{}).get('title')=='Local Agent Hub':
+                        return True
+                except (httpx.RequestError,ValueError,AttributeError,TypeError):
+                    pass
+                if attempt==0:await asyncio.sleep(.2)
+    except (httpx.RequestError,OSError):
+        pass
+    return False
+
+
 @app.get('/health')
 async def health():
     # Public health reveals no projects, task data or credentials.
-    try:
-        async with httpx.AsyncClient(timeout=3) as client:
-            response=await client.get(f'http://127.0.0.1:{PORT}/openapi.json')
-            ready=response.is_success and response.json().get('info',{}).get('title')=='Local Agent Hub'
-    except Exception:ready=False
-    if not ready:raise HTTPException(503,'Local agent unavailable')
+    if not await _hub_ready():raise HTTPException(503,'Local agent unavailable')
     tools=await mcp.list_tools()
     # Fingerprint only the public tool schema, never runtime state or credentials.
     catalog=[{'name':tool.name,'inputSchema':tool.input_schema} for tool in tools]
@@ -485,3 +550,19 @@ if __name__=='__main__':
     import uvicorn
     uvicorn.run(app,host='127.0.0.1',port=GATEWAY_PORT,access_log=False)
 
+
+from .service_health import register_mcp as register_service_health
+register_service_health(mcp,local,READ,WRITE)
+from .power import register_mcp as register_power
+register_power(mcp,local,READ,WRITE)
+
+
+@mcp.tool(annotations=READ)
+async def desktop_status()->dict:
+    """Check the owned MellowCodex desktop UI and embedded browser, including live IPC and CDP readiness. Works while the UI is closed; does not start anything."""
+    return await local('/api/desktop/runtime')
+
+@mcp.tool(annotations=WRITE)
+async def desktop_open(request_id:str,show:bool=True)->dict:
+    """Open/show MellowCodex's own UI and internal browser through running services. Use when the user requests the UI or a browser task needs it. No manual desktop launch, model call, service restart or arbitrary executable. Reuses existing instance and preserves profile/tasks. Stable request_id prevents duplicate attempts; check ready, state and desktop_status after uncertain response. Windows sign-in required; never unlocks or elevates."""
+    return await local('/api/desktop/open',dict(request_id=request_id,show=show))
