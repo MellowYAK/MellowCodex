@@ -35,6 +35,9 @@ async def status():
     except (httpx.HTTPError,ValueError,KeyError) as exc:
         result['runtime_error']=type(exc).__name__
         result['effective_source']='runtime_unavailable'
+    from .ui_tars import status as visual_status
+    result['browser_driver']=saved.browser_driver
+    result['browser_runtime']=await visual_status() if saved.browser_driver=='ui_tars' else {'selected':False}
     return result
 
 async def perform(*,action='get',field=None,value=None,scope='default',text=None,busy=False,apply_now=False):
@@ -103,6 +106,7 @@ async def perform(*,action='get',field=None,value=None,scope='default',text=None
             'effective_source':actual.get('effective_source'),
             'reload_required':actual['reload_required'] if field in (None,'context_tokens') else False,
             'runtime_available':actual['runtime_available'],
+            'browser_driver':actual['browser_driver'],'browser_runtime':actual['browser_runtime'],
             'settings':actual['settings'],'metadata':actual['metadata']}
     if action!='get':
         answer['applies']='next_request'

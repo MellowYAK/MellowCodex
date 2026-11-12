@@ -3,6 +3,7 @@ import asyncio,os,time,subprocess
 from urllib.parse import urlsplit
 from pathlib import Path
 import psutil
+from .errors import ObservationError
 
 def normalized(value):return ''.join(c for c in value.casefold() if c.isalnum())
 
@@ -114,10 +115,10 @@ class Applications:
         windows=before['windows']
         if url:
             parsed=urlsplit(url)
-            if parsed.scheme not in ('http','https') or not parsed.hostname:raise ValueError('Use an http(s) URL')
+            if parsed.scheme not in ('http','https') or not parsed.hostname:raise ObservationError('Use an http(s) URL; no input sent.')
             candidates=before['installed'];executables={c['executable'].casefold() for c in candidates}
             if len(executables)!=1 or Path(candidates[0]['executable']).name.casefold() not in ('chrome.exe','msedge.exe','firefox.exe'):
-                raise ValueError('URL opening requires one specifically identified installed browser')
+                raise ObservationError('No input sent. app_open URL requires a specifically identified installed Chrome/Edge/Firefox. A web application name is not a Windows browser. For the internal browser use browser_navigate with the observed URL; do not repeat app_open.')
             for window in windows:
                 try:inspection=await self.accessibility.inspect(window['hwnd'])
                 except Exception:continue

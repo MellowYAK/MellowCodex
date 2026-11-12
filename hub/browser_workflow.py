@@ -145,7 +145,7 @@ def verification_focus(actions):
 
 def disclosed_browser_tools(names,actions,now=None):
  # This selects visible schemas, never grants authority or dispatches an input.
- visible=set(names)&{'browser_navigate','browser_observe','browser_assess','browser_act','browser_tabs','browser_select_tab','browser_close_tabs','tools_enable','chatgpt_ask','extensions_list','extension_run','agent_environment','conversation_history'}
+ visible=set(names)&{'desktop_open','desktop_status','browser_navigate','browser_observe','browser_assess','browser_act','browser_tabs','browser_select_tab','browser_close_tabs','tools_enable','chatgpt_ask','extensions_list','extension_run','agent_environment','conversation_history'}
  if verification_focus(actions):return visible&{'browser_observe','browser_assess','tools_enable'}
  page=latest_page(actions)
  if not page or not page.get('coherent') or pending_effect_guard(actions):return visible

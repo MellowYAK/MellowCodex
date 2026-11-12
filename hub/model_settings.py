@@ -17,6 +17,7 @@ class ModelSettings(BaseModel):
     request_timeout_seconds: int = Field(default=120, ge=30, le=600)
     context_management: Literal['legacy','shadow','bounded'] = 'shadow'
     working_input_tokens: int = Field(default=12000, ge=2048, le=262144)
+    browser_driver: Literal['default','ui_tars'] = 'default'
     visual_guidance: bool = True
     visual_policy: Literal['smart','continuous'] = 'smart'
 
@@ -42,6 +43,7 @@ import re
 from pydantic import ValidationError
 
 FIELD_DESCRIPTIONS = {
+    'browser_driver': ('browser task driver: default or ui_tars; UI-TARS requires its local runtime on loopback8794, no Ollama fallback', 'enum', 'next_request'),
     'context_management': ('packet policy: legacy, shadow, bounded; no model allocation change', 'enum', 'next_request'),
     'working_input_tokens': ('soft estimated input target; mandatory evidence may exceed target but never hard budget', 'tokens', 'next_request'),
     'model': ('installed Ollama model ID', 'name', 'next_request'),
