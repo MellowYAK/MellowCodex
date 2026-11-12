@@ -40,6 +40,46 @@ def connector(h, name, now=None):
              oauth_state='accepted_at_last_call' if fresh and outcome=='success' else 'reauthentication_required' if fresh and outcome=='oauth_token_invalid_grant' else 'unverified',
              external_round_trip='verified' if fresh and outcome=='success' else 'unverified')
 
+
+def refresh_connector_evidence(h,data,now=None):
+ """Reconcile real external proofs with an already sampled local health snapshot.
+
+ No port, process or local relay response is ever promoted into external proof.
+ A previously verified MCP call expires normally; its local service can remain
+ healthy without claiming that ChatGPT was seen recently.
+ """
+ now=time.time() if now is None else now
+ connectors={k:connector(h,k,now) for k in CONNECTORS}
+ data['connectors']=connectors
+ externally_verified=any(c['external_round_trip']=='verified' for c in connectors.values())
+ for row in data.get('services',()):
+  key=row.get('id')
+  dimensions=row.setdefault('dimensions',{})
+  if key=='relay':
+   dimensions['tunnel']='verified_by_external_call' if externally_verified else 'unverified'
+   row['tunnel_verified']=externally_verified
+  elif key in ('gateway','guard_gateway'):
+   dimensions['connector']=connectors['mellowcodex' if key=='gateway' else 'guard']
+  elif key=='guard':
+   # Guard returns HTTP 401 to unauthenticated probes on purpose.
+   # Upgrade its local evidence only with a fresh ACTUAL authenticated MCP
+   # exchange plus verified live process ownership and the protected port.
+   proof=connectors['guard']
+   dimensions['connector']=proof
+   if (row.get('status')=='unverified'
+       and row.get('owned') is True and row.get('port_open') is True
+       and row.get('http_status')==401
+       and proof['external_round_trip']=='verified'):
+    row['status']='operational'
+    row['reason']='Guard MCP verified externally; owned local protected API responds.'
+ local=([ 'degraded' ] if data.get('network',{}).get('state')=='error' else [])+[r.get('status','unverified') for r in data.get('services',())]
+ external=[c['status'] for c in connectors.values()]
+ priority=('failed','reauthentication_required','degraded','starting','unverified','stale')
+ data['local_overall_status']=next((s for s in priority if s in local),'operational')
+ data['external_connectors_status']=next((s for s in priority if s in external),'operational')
+ data['overall_status']=next((s for s in priority if s in local+external),'operational')
+ return data
+
 def observe(h,name,outcome,checked_at,source='external_director'):
  if name not in CONNECTORS:raise ValueError('Unknown connector')
  if outcome not in ('success','oauth_token_invalid_grant','transport_error'):raise ValueError('Unsupported observation')
@@ -96,12 +136,9 @@ def enrich(h,data):
   if key in ('gateway','guard_gateway'):
    row['dimensions']['connector']=connectors['mellowcodex' if key=='gateway' else 'guard']
  h.write(h.STATE/'health-last-success.json',previous)
- data['connectors']=connectors
- statuses=([ 'degraded' ] if data.get('network',{}).get('state')=='error' else [])+[r['status'] for r in data['services']]+[r['status'] for r in connectors.values()]
- data['overall_status']=next((s for s in ('failed','reauthentication_required','degraded','starting','unverified','stale') if s in statuses),'operational')
  data['schema_version']=2
  data['reset_scope']=reset_scope(h)
- return data
+ return refresh_connector_evidence(h,data,now)
 
 def reset_scope(h):
  records=[]

@@ -227,8 +227,10 @@ def snapshot():
   if _snapshot_cache and _snapshot_cache['checked_at']>=requested_at:
    import copy
    result=copy.deepcopy(_snapshot_cache)
-   result['connectors']={k:diagnostics.connector(sys.modules[__name__],k) for k in diagnostics.CONNECTORS}
-   return result
+   # Connector evidence may have been acknowledged or expired while the
+   # expensive local probe was shared by another caller. Reconcile all derived
+   # status fields together; never leave a stale overall badge in cached data.
+   return diagnostics.refresh_connector_evidence(sys.modules[__name__],result)
   result=diagnostics.enrich(sys.modules[__name__],_snapshot())
   _snapshot_cache=result
   write(STATE/'health-snapshot.json',result)
@@ -237,7 +239,7 @@ def snapshot():
 
 def compact_status(data):
  keys=('id','name','status','reason','checked_at','evidence_age_seconds','last_success_at','recommended_action','capabilities')
- return {**{k:data.get(k) for k in ('schema_version','checked_at','overall_status','connectors','network','guard_supervisor','active_tasks','reset_scope')},
+ return {**{k:data.get(k) for k in ('schema_version','checked_at','overall_status','local_overall_status','external_connectors_status','connectors','network','guard_supervisor','active_tasks','reset_scope')},
          'services':[{k:r.get(k) for k in keys} for r in data['services']]}
 
 def job_status(job_id):
