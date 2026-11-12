@@ -205,7 +205,7 @@ async def connect_mobile(code:str):
 
 @app.get('/static/{name}')
 async def static_file(name: str):
-    if name not in ('app.js','app.css','context.js','development.js','models.js','richtext.js','continuity.js','shell.js','product.css','delegation.js','owner-permissions.js'):
+    if name not in ('app.js','app.css','context.js','development.js','models.js','richtext.js','continuity.js','shell.js','product.css','delegation.js','owner-permissions.js','action-routes.js','action-routes.css'):
         raise HTTPException(404)
     return FileResponse(STATIC/name)
 
@@ -1268,3 +1268,6 @@ async def screenshot_settings_set(body:ScreenshotSettings):
 
 from .browser_selections import router as browser_selections_router
 app.include_router(browser_selections_router())
+
+from .action_routes import router as action_routes_router
+app.include_router(action_routes_router(store,engine))
