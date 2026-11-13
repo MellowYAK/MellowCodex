@@ -157,11 +157,11 @@ def guard_status(cfg):
      data=result.structured_content
      if not data:
       data=json.loads(next(x.text for x in result.content if getattr(x,'type',None)=='text'))
-     return {k:data.get(k) for k in ('healthy','owned_pids','started_pids','service_id')}
+     return {k:data.get(k) for k in ('healthy','supervisor_healthy','observed_healthy','health_basis','owned_pids','started_pids','service_id')}
  async def bounded():return await asyncio.wait_for(fetch(),12)
  try:
   data=asyncio.run(bounded())
-  return dict(state='verified',checked_at=time.time(),**data,reason='Authenticated Guard status. healthy describes its supervised Hub pair, not Guard transport reachability.')
+  return dict(state='verified',checked_at=time.time(),**data,reason='Authenticated Guard status. healthy may reflect verified existing Hub services; supervisor_healthy separately proves Guard-started ownership.')
  except Exception as exc:return dict(state='unknown',checked_at=time.time(),reason='Guard authenticated status unavailable: '+type(exc).__name__)
 
 def _snapshot():
@@ -191,9 +191,9 @@ def _snapshot():
  services=[s for _,s,_ in probed]
  guard_row=next(x for x in services if x['id']=='guard')
  if guard['state']=='verified':
-  guard_row['mcp_api_verified']=True;guard_row['supervisor_healthy']=guard.get('healthy')
+  guard_row['mcp_api_verified']=True;guard_row['supervisor_healthy']=guard.get('supervisor_healthy');guard_row['observed_healthy']=guard.get('observed_healthy');guard_row['health_basis']=guard.get('health_basis')
   guard_row['state']='available'
-  guard_row['reason']='Guard MCP responds; supervised Hub pair healthy' if guard.get('healthy') is True else 'Guard MCP responds, but healthy=false: no pair started by this supervisor' if guard.get('started_pids')==[] else 'Guard MCP responds, but supervised Hub health check failed'
+  guard_row['reason']=('Guard MCP responds; supervisor-started Hub pair verified' if guard.get('supervisor_healthy') is True else 'Guard MCP responds; existing Hub pair verified healthy (not supervisor-started)' if guard.get('observed_healthy') is True else 'Guard MCP responds; supervised Hub health not verified')
  modeldata=next(d for k,_,d in probed if k=='ollama')
  def row(key,state,reason,**extra):services.append(dict(id=key,name=LABELS[key][0],description=LABELS[key][1],state=state,reason=reason,checked_at=now,actions=['Check'],**extra))
  loaded=bool(modeldata.get('models'));row('model','unknown' if 'models' not in modeldata else 'available' if loaded else 'idle','מודל טעון' if loaded else 'מודל לא טעון — אינו תקלה ב־Ollama',loaded=loaded)
