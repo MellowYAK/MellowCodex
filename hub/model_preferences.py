@@ -6,14 +6,17 @@ import httpx
 from pydantic import ValidationError
 from .config import OLLAMA, STATE
 from .model_settings import ModelSettings, load_settings, save_settings, field_metadata, parse_model_command
+from .model_placement import PlacementProfile, load_profiles, save_profile
 
 async def status():
     saved=load_settings(STATE)
     fields=field_metadata()
+    fields['placement_profile']={'type':'object','scope':['model'],'effect':'next_model_load','description':'Per-model auto/gpu/cpu/percent/layers placement; gpu_percent 0-100, gpu_layers; custom context/output.'}
     result={'model':saved.model,'scope':'default','settings':saved.model_dump(),
             'metadata':fields,'runtime_available':False,'effective':None,
             'requested':saved.context_tokens,'reload_required':None,
-            'scope_support':{'default':True,'conversation':False,'model':False},
+            'scope_support':{'default':True,'conversation':False,'model':True},
+            'placement_profiles':{k:v.model_dump() for k,v in load_profiles(STATE).items()},
             'context_distinction':{'context_tokens':'Ollama num_ctx model allocation',
                 'response_tokens':'Ollama num_predict output limit',
                 'conversation_budget':'prepared prompt compaction, not a change to Ollama num_ctx',
@@ -44,6 +47,43 @@ async def status():
     return result
 
 async def perform(*,action='get',field=None,value=None,scope='default',text=None,busy=False,apply_now=False):
+    if field=='global_policy':
+        from .model_policy_service import perform as policy_perform
+        return await policy_perform(action=action,value=value,busy=busy)
+    if text is not None and field is None:
+        from .model_profile_chat import apply as profile_chat_apply
+        parsed_profile=await profile_chat_apply(text,busy=busy)
+        if parsed_profile is not None:return parsed_profile
+
+    if field=='placement_profile':
+        if action not in ('get','set','reset'):
+            return {'handled':True,'accepted':False,'error':'Expected get/set/reset for placement profile'}
+        if action!='get' and busy:
+            return {'handled':True,'accepted':False,'error':'A task is active; placement settings unchanged'}
+        try:
+            requested=json.loads(value) if isinstance(value,str) and value.startswith('{') else value
+            if action=='get':
+                name=requested if isinstance(requested,str) and requested else load_settings(STATE).model
+                data=load_profiles(STATE).get(name,PlacementProfile())
+                return {'handled':True,'accepted':True,'model':name,'placement_profile':data.model_dump(),'stored':name in load_profiles(STATE)}
+            if not isinstance(requested,dict) or not isinstance(requested.get('model'),str):
+                return {'handled':True,'accepted':False,'error':'Provide JSON {model, profile} with an installed exact model name'}
+            name=requested['model']
+            async with httpx.AsyncClient(timeout=8,trust_env=False) as client:
+                response=await client.get(OLLAMA+'/api/tags')
+                response.raise_for_status()
+            installed={m.get('name') for m in response.json().get('models',[])}
+            if name not in installed:
+                return {'handled':True,'accepted':False,'error':'Choose an exact installed model ID'}
+            profile=PlacementProfile() if action=='reset' else PlacementProfile.model_validate(requested.get('profile',{}))
+            save_profile(STATE,name,profile)
+            actual=load_profiles(STATE)[name]
+            return {'handled':True,'accepted':True,'model':name,'placement_profile':actual.model_dump(),
+                    'saved':True,'applies':'next_model_load',
+                    'note':'Actual GPU VRAM/CPU RAM is measured after load; percentage is not exact VRAM.'}
+        except (ValueError,TypeError,httpx.HTTPError,ValidationError) as exc:
+            return {'handled':True,'accepted':False,'error':str(exc)[:400]}
+
     if text is not None:
         parsed=parse_model_command(text)
         if parsed is None:

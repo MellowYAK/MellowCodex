@@ -334,6 +334,22 @@ def build_adaptive_packet(messages, tools, context_tokens, output_ceiling, *,
                 messages,tools,context_tokens,reserve,
                 target_tokens=target_tokens,identity=identity,ratio=ratio,
                 task_id=task_id)
+            # The initial half-context reservation is a safe search seed,
+            # NOT a hard maximum output cap. If the prepared packet is small,
+            # expand the output budget to the remaining measured headroom.
+            margin=max(1024,math.ceil(context_tokens*.025))
+            room=max(256,context_tokens-margin-diagnostic['estimated_input'])
+            larger=min(output_ceiling,room)
+            if larger>reserve+128:
+                try:
+                    expanded,expanded_diag=build_packet(
+                        messages,tools,context_tokens,larger,
+                        target_tokens=target_tokens,identity=identity,
+                        ratio=ratio,task_id=task_id)
+                    packet,diagnostic,reserve=expanded,expanded_diag,larger
+                except ContextBudgetError:
+                    # Keep the prior proven fit; no new tool calls or history loss.
+                    pass
             diagnostic['configured_output_ceiling']=output_ceiling
             diagnostic['output_reservation_adjusted']=reserve!=output_ceiling
             diagnostic['output_reservation_retries']=retries

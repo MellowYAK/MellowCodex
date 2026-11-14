@@ -80,8 +80,8 @@ def test_combined_language_settings_are_atomic(tmp_path,monkeypatch):
         assert outcome['saved']=={'context_tokens':16000,'response_tokens':16000}
     assert service.load_settings(tmp_path).context_tokens==16000
     assert service.load_settings(tmp_path).response_tokens==16000
-    rejected=asyncio.run(service.perform(text='הגדר את שניהם ל־16001'))
-    assert rejected['accepted'] is False
-    assert service.load_settings(tmp_path).response_tokens==16000
+    accepted=asyncio.run(service.perform(text='הגדר את שניהם ל־16001'))
+    assert accepted['accepted'] is True
+    assert service.load_settings(tmp_path).response_tokens==16001
     rejected_busy=asyncio.run(service.perform(text='Set context and response tokens to 16000',busy=True))
     assert rejected_busy['accepted'] is False

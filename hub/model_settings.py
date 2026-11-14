@@ -11,7 +11,7 @@ class ModelSettings(BaseModel):
     inference_enabled: bool = True
     coding_model: str = Field(default='', max_length=160)
     context_tokens: int = Field(default=16384, ge=1024)
-    response_tokens: int = Field(default=1024, ge=256, le=16000)
+    response_tokens: int = Field(default=1024, ge=256)
     temperature: float = Field(default=.1, ge=0, le=1)
     keep_alive_minutes: int = Field(default=30, ge=0, le=1440)
     request_timeout_seconds: int = Field(default=120, ge=30, le=600)
@@ -50,7 +50,7 @@ FIELD_DESCRIPTIONS = {
     'coding_model': ('installed coding model ID (empty uses primary)', 'name', 'next_request'),
     'inference_enabled': ('allow inference after manual memory control', 'boolean', 'next_request'),
     'context_tokens': ('Ollama num_ctx model context, not conversation compression or tool output', 'tokens', 'next_request_or_reload'),
-    'response_tokens': ('Ollama num_predict maximum output tokens', 'tokens', 'next_request'),
+    'response_tokens': ('Legacy explicit output ceiling; global/per-model automatic maximum uses available shared context without a 16000-token hard cap', 'tokens', 'next_request'),
     'temperature': ('generation temperature', 'ratio', 'next_request'),
     'keep_alive_minutes': ('Ollama model retention', 'minutes', 'next_request'),
     'request_timeout_seconds': ('HTTP inference timeout', 'seconds', 'next_request'),

@@ -123,6 +123,8 @@ class Engine:
         from .model_settings import load_settings
         from .model_context import prepare_messages
         settings=load_settings()
+        if task_id and self.store is not None and self.store.get(task_id)['mode']=='code' and settings.coding_model:
+            settings=settings.model_copy(update={'model':settings.coding_model})
         if response_tokens is not None:
             settings=type(settings).model_validate({**settings.model_dump(),'response_tokens':response_tokens})
         if not settings.inference_enabled:
@@ -160,6 +162,12 @@ class Engine:
             else:
                 from .ui_tars import chat as visual_chat
             return await visual_chat(self,messages,catalog,task_id,settings)
+        model_inference_options={}
+        model_profile_diagnostic=None
+        if task_id:
+            from .inference_profiles import effective_inference
+            async with httpx.AsyncClient(timeout=12,trust_env=False) as profile_client:
+                settings,model_inference_options,model_profile_diagnostic=await effective_inference(profile_client,settings)
         context_diag=None
         inference_response_tokens=settings.response_tokens
         if settings.context_management=='legacy' or self.store is None:
@@ -188,11 +196,35 @@ class Engine:
                 proposed,context_diag=build_adaptive_packet(packet_messages,catalog,min(settings.context_tokens,effective) if effective else settings.context_tokens,settings.response_tokens,target_tokens=settings.working_input_tokens,identity=identity,ratio=measured['ratio'],task_id=task_id)
                 context_diag.update(mode=settings.context_management,degraded=degraded,calibration_samples=measured['samples'],checkpoint_revision=projection['revision'] if projection else None)
             except ContextBudgetError as exc:
-                if settings.context_management!='shadow':
-                    if task_id:self.store.event(task_id,'model_context_budget_blocked',{'diagnostic':exc.diagnostic,'retry_dispatched':False})
-                    raise
-                context_diag={'mode':'shadow','accounting':'estimated','shadow_error':exc.diagnostic,'degraded':'mandatory_budget_exceeded'}
-                proposed=None
+                # A single, side-effect-free recovery can reduce tool schema
+                # cost while preserving ALL mandatory user/source evidence.
+                recovered=False
+                if task_id and catalog:
+                    from .context_tool_selector import compact_tool_catalog
+                    mode=self.store.get(task_id)['mode']
+                    focused,selection=compact_tool_catalog(catalog,mode)
+                    if selection['reduced']:
+                        try:
+                            proposed,context_diag=build_adaptive_packet(
+                                packet_messages,focused,
+                                min(settings.context_tokens,effective) if effective else settings.context_tokens,
+                                settings.response_tokens,target_tokens=settings.working_input_tokens,
+                                identity=identity,ratio=measured['ratio'],task_id=task_id)
+                            catalog=focused
+                            context_diag.update(mode=settings.context_management,
+                                degraded=degraded,calibration_samples=measured['samples'],
+                                checkpoint_revision=projection['revision'] if projection else None,
+                                catalog_recovery=selection)
+                            recovered=True
+                            self.store.event(task_id,'model_context_catalog_recovery',selection)
+                        except ContextBudgetError as reduced_error:
+                            exc=reduced_error
+                if not recovered:
+                    if settings.context_management!='shadow':
+                        if task_id:self.store.event(task_id,'model_context_budget_blocked',{'diagnostic':exc.diagnostic,'retry_dispatched':False})
+                        raise
+                    context_diag={'mode':'shadow','accounting':'estimated','shadow_error':exc.diagnostic,'degraded':'mandatory_budget_exceeded'}
+                    proposed=None
             messages=proposed if settings.context_management=='bounded' else prepare_messages(original_messages,catalog,settings.context_tokens,settings.response_tokens)
             if settings.context_management=='bounded':
                 inference_response_tokens=context_diag['reserved_output']
@@ -206,6 +238,7 @@ class Engine:
                         'messages':len(messages),'tools':len(catalog),'context_tokens':settings.context_tokens,
                         'response_tokens':inference_response_tokens,'configured_response_tokens':settings.response_tokens,'think':think,'temperature':settings.temperature}
         if context_diag is not None:packet_metrics['context']=context_diag
+        if model_profile_diagnostic is not None:packet_metrics['model_profile']=model_profile_diagnostic
         from .resources import Resources
         format_options={'format':output_schema} if output_schema is not None else {}
         if output_schema is not None:
@@ -216,7 +249,7 @@ class Engine:
         dispatch_started=time.monotonic()
         async with Resources().inference(settings.model,'agent',lambda:load_settings().inference_enabled), httpx.AsyncClient(timeout=settings.request_timeout_seconds,trust_env=False) as client:
             try:
-                response=await client.post(OLLAMA+'/api/chat',json={'model':settings.model,'messages':messages,'tools':catalog,'stream':False,'think':think,'keep_alive':str(settings.keep_alive_minutes)+'m','options':{'num_ctx':settings.context_tokens,'num_predict':inference_response_tokens,'temperature':settings.temperature},**format_options})
+                response=await client.post(OLLAMA+'/api/chat',json={'model':settings.model,'messages':messages,'tools':catalog,'stream':False,'think':think,'keep_alive':str(settings.keep_alive_minutes)+'m','options':{'num_ctx':settings.context_tokens,'num_predict':inference_response_tokens,'temperature':settings.temperature,**model_inference_options},**format_options})
                 response.raise_for_status()
                 result=response.json()
             except Exception as exc:
@@ -853,6 +886,16 @@ class Engine:
                 raise
             except Exception as exc:
                 if self.store.get(task_id)['state'] in ('paused','cancelled'):return
+                from .model_context import ContextBudgetError
+                if isinstance(exc,ContextBudgetError):
+                    diagnostic={'stage':'context_preflight','state':'waiting_review',
+                                'recoverable':True,'diagnostic':exc.diagnostic,
+                                'next_action':'Provide narrower source pages or change model/context; never replay uncertain actions or retry unchanged'}
+                    self.store.event(task_id,'model_context_recovery_required',diagnostic)
+                    self.store.update(task_id,state='waiting_review',
+                                      result=json.dumps(diagnostic,ensure_ascii=False),messages=messages)
+                    await self.checkpoint(task_id)
+                    return
                 diagnostic={'stage':'engine_run','exception_type':type(exc).__name__,'message':'Execution failed; inspect the recorded action and model stages before retrying.','recoverable':isinstance(exc,(TimeoutError,asyncio.TimeoutError))}
                 self.store.event(task_id,'execution_failure',diagnostic)
                 self.store.update(task_id,state='failed',result=json.dumps(diagnostic),messages=messages)

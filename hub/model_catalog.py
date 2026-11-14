@@ -152,12 +152,31 @@ def router(provider):
         return await details(repo)
     @routes.post('/install-hf')
     async def install_hf(body:HFInstall):return await provider().install_hf(body.repo,body.filename,body.request_id)
+    from .model_profile_api import router as profile_router
+    routes.include_router(profile_router(lambda: any(t['state'] in ('queued','running','verifying') for t in provider().store.list())))
     return routes
 
 
 def register_mcp(mcp,local,read,write):
     from .i18n import t
+    from .model_profile_api import GlobalChange, ModelChange
     from urllib.parse import urlencode
+    @mcp.tool(annotations=read)
+    async def model_profiles_status(model:str|None=None):
+        """Read GLOBAL model defaults, selectable named presets, optional per-model overrides, resolved effective profile and origins. No model loading or settings mutation."""
+        from urllib.parse import urlencode
+        return await local('/api/models/profiles'+('?' + urlencode({'model':model}) if model else ''))
+
+    @mcp.tool(annotations=write)
+    async def model_profiles_global_set(settings:dict,reset:bool=False):
+        """Edit shared GLOBAL model policy for ALL models and newly installed models. settings examples: {'active_preset':'automatic'|'gpu_priority'|'cpu_only'|'memory_saver'|'maximum_quality'}, {'defaults':{'mode':'auto','context_mode':'maximum','output_mode':'maximum'}}, {'presets':{'custom':{'mode':'percent','gpu_percent':70}}}, request_limit:null for no arbitrary quota. No change to per-model overrides. Use model_profiles_status for current values."""
+        return await local('/api/models/profiles/global',{'settings':settings,'reset':reset})
+
+    @mcp.tool(annotations=write)
+    async def model_profiles_model_set(model:str,settings:dict,reset:bool=False):
+        """Save ONLY explicit per-model override fields, e.g. {'mode':'percent','gpu_percent':70} or {'context_mode':'manual','context_tokens':32768}. New models inherit global preset and defaults. reset clears per-model fields and restores inheritance. Model name must match installed Ollama model exactly. Actual VRAM/CPU memory after load is observed, not guaranteed by percentages."""
+        return await local('/api/models/profiles/model',{'model':model,'settings':settings,'reset':reset})
+
     @mcp.tool(description=t('models.search_tool'),annotations=read)
     async def model_catalog_search(query:str,limit:int=10):return await local('/api/models/search?'+urlencode({'query':query,'limit':limit}))
     @mcp.tool(description=t('models.details_tool'),annotations=read)

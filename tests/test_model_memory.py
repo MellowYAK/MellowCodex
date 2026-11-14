@@ -13,6 +13,7 @@ def memory(monkeypatch,tmp_path):
     def handler(request):
         if request.url.path=='/api/ps':return httpx.Response(200,json={'models':[{'name':n,'size_vram':100} for n in state['loaded']]})
         if request.url.path=='/api/tags':return httpx.Response(200,json={'models':[{'name':n} for n in ['old:latest','new:latest']]})
+        if request.url.path=='/api/show':return httpx.Response(200,json={'model_info':{'test.context_length':32768}})
         import json
         body=json.loads(request.content);state['calls'].append(body)
         if state['fail'] and body['keep_alive']:return httpx.Response(500,text='out of memory')
