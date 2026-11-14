@@ -1,11 +1,16 @@
 """Ground navigation in the request and recorded browser observations."""
 import re
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit, quote
 from .errors import ObservationError
 
 def normalized_url(url):
     parts=urlsplit(url)
-    return urlunsplit((parts.scheme.lower(),parts.netloc.lower(),parts.path or '/',parts.query,''))
+    # Canonicalize literal Unicode to its UTF-8 URL representation, without
+    # decoding reserved escapes (%2F, %3F, %25) into different destinations.
+    def component(value):
+        value=''.join(quote(c,safe='') if ord(c)>127 else c for c in value)
+        return re.sub(r'%[0-9a-fA-F]{2}',lambda match:match.group().upper(),value)
+    return urlunsplit((parts.scheme.lower(),parts.netloc.lower(),component(parts.path or '/'),component(parts.query),''))
 
 def observed_urls(value):
     if isinstance(value,dict):
@@ -22,6 +27,8 @@ def require_observed_navigation(goal,url,actions):
     evidence=[]
     for action in actions:
         result=action.get('result')
+        if action['tool']=='agent_environment' and isinstance(result,dict) and not result.get('error'):
+            evidence.extend((result.get('browser_entry') or {}).get('entries',[]))
         if action['tool'] in ('browser_navigate','browser_observe','browser_act','browser_extract','browser_tabs') and isinstance(result,dict) and not result.get('error'):
             evidence.append(result)
     allowed=requested|set(observed_urls(evidence))

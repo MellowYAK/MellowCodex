@@ -66,3 +66,22 @@ def test_busy_rejects_settings_mutation(tmp_path,monkeypatch):
     outcome=asyncio.run(service.perform(action='set',field='temperature',value=.5,busy=True))
     assert outcome['accepted'] is False
     assert service.load_settings(tmp_path).temperature==.1
+
+def test_combined_language_settings_are_atomic(tmp_path,monkeypatch):
+    monkeypatch.setattr(service,'STATE',tmp_path)
+    monkeypatch.setattr(service.httpx,'AsyncClient',FakeClient)
+    service.save_settings(ModelSettings(model='local-test'),tmp_path)
+    for command in ('הגדר את שניהם ל־16000','Set context and response tokens to 16000'):
+        parsed=parse_model_command(command)
+        assert parsed['action']=='set_many'
+        assert parsed['fields']=={'context_tokens':16000,'response_tokens':16000}
+        outcome=asyncio.run(service.perform(text=command))
+        assert outcome['accepted'] is True, outcome
+        assert outcome['saved']=={'context_tokens':16000,'response_tokens':16000}
+    assert service.load_settings(tmp_path).context_tokens==16000
+    assert service.load_settings(tmp_path).response_tokens==16000
+    rejected=asyncio.run(service.perform(text='הגדר את שניהם ל־16001'))
+    assert rejected['accepted'] is False
+    assert service.load_settings(tmp_path).response_tokens==16000
+    rejected_busy=asyncio.run(service.perform(text='Set context and response tokens to 16000',busy=True))
+    assert rejected_busy['accepted'] is False

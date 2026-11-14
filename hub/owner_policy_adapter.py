@@ -22,6 +22,8 @@ PUBLIC_READ = frozenset((
     "model_memory_status", "session_status",
 ))
 PRIVATE_READ = frozenset((
+    'desktop_status',
+    'computer_power_preview','computer_power_status','agent_startup_status',
     "read_file", "list_files", "files_list", "image_ocr",
     "capture_screenshot", "observe_screen", "window_inspect",
     "list_windows", "inspect_accessibility", "browser_observe",
@@ -32,6 +34,7 @@ PRIVATE_READ = frozenset((
 # installed Python skills are UNKNOWN until a reviewed, version-pinned adapter
 # can describe their exact arguments and side effects.
 REVERSIBLE = frozenset((
+    'desktop_open',
     "app_open", "app_find", "app_close", "window_act",
     "browser_navigate", "browser_act", "browser_select_tab",
     "browser_pointer", "focus_window", "desktop_action",
@@ -39,10 +42,12 @@ REVERSIBLE = frozenset((
     "window_new_document", "terminal_start", "terminal_write",
 ))
 DESTRUCTIVE = frozenset((
+    'computer_power',
     "file_copy", "file_share", "browser_save_media", "browser_save_pdf",
     "browser_close_tabs", "candidate_patch", "candidate_repair",
 ))
 PROTECTED = frozenset((
+    'agent_startup_set',
     "model_install", "model_install_huggingface", "model_install_cancel",
     "upgrade_activate", "upgrade_recover", "candidate_stage_release",
     "extension_register", "tools_enable",
@@ -50,6 +55,11 @@ PROTECTED = frozenset((
 
 
 def classify(name: str, arguments: dict) -> tuple[Risk, bool]:
+    if name=='action_routes':
+        action=arguments.get('action')
+        if action in ('list','get','step','prepare'):return Risk.PRIVATE_READ,True
+        if action in ('create','save','learn'):return Risk.REVERSIBLE_ACTION,True
+        if action=='delete':return Risk.DESTRUCTIVE,True
     if name in PUBLIC_READ:
         return Risk.PUBLIC_READ, True
     if name in PRIVATE_READ:

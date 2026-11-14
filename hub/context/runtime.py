@@ -12,6 +12,13 @@ async def prepare(engine,task,messages):
         # Deterministic read executes exactly the director-selected index tool.
         engine.store.event(task['id'],'source_navigation_delegated',{'basis':'Deterministic director context read; no autonomous bootstrap'})
         return
+    scope=Guidance(engine.store).allowed_tools(task['id'])
+    if scope is not None and 'project_context' not in scope:
+        # A director-limited task must not start with a forbidden broad
+        # project_context lookup before the bounded task can execute.
+        engine.store.event(task['id'],'source_navigation_delegated',
+                           {'basis':'Explicit director tool scope excludes project_context'})
+        return
     if Guidance(engine.store).exact_patch(task['id']):
         # The director already selected the candidate and versioned contents.
         # A fresh autonomous discovery pass is outside this bounded write step.

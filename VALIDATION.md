@@ -1,3 +1,207 @@
+## 2026-11-14 - 0.27.0 source snapshot
+
+The current source includes a new owner-gated Skill Shops one-call fast path; candidate test suites `tests/test_skill_fast_paths.py` (3), `tests/test_skill_shops_lifecycle.py` (3) and `tests/test_skill_shops.py` (4) passed. Running installed `system_resource_snapshot` 4 times via authenticated HTTP returned 200/exit 0 and wall times 2029.63, 341.24, 332.63 and 335.40 ms. Three isolated temporary fast installs returned test-pass and 110.66, 105.65 and 106.14 ms. No power actions were run during benchmarks. See the dated release notes for limitations and Guard supervision caveat.
+
+## Unified system health status - 2026-11-13
+Status retry and independent public health route hardening (2026-11-13): Candidate ef546af303bf4482bd285f6fa3473f17 rev4: 18 passed; update b414018659554b03b489566e534e5ca7 ACTIVE_VERIFIED. Post-activation exact source hashes matched, live authenticated Hub /api/service-health?compact=true returned HTTP 200, schema v2, core services operational; Guard supervisor evidence can independently remain unknown. Concurrent source change blocked the next prepare safely. After preserving live modifications, candidate 1b43c53b30964170b26c8da8f83c6bba rev2 passed 27 focused tests, including separate public HTTP 503/MCP cases; update 652918ce421e44fb839d9a6e20b3c0df ACTIVE_VERIFIED. Live local new-chat '?????', 'Status', '??????' each returned done via shared_service_health_snapshot, model_inference=false. Actual external ChatGPT brand-new chat tool auto-selection, UI button clicks, generic Guard.status() fix, physical reboot and arbitrary network outage recovery were not verified.
+
+
+Guard release IDs: 11b6ee2c58cb4cde92a3da3efdd42e7e and 5a29e19cd93b46f1adbb99847bafc361 both ACTIVE_VERIFIED. First candidate revision6 passed 11 focused tests. Follow-up candidate revision2 passed 12 tests. Live installed Hub and direct fresh-chat submission passed; a Hebrew "סטטוס" and English "status" each returned a completed read-only status task without local inference. MCP connector proofs for MellowCodex and Guard were fresh and successful. Live Hub/Guard/gateway statuses were backed by authenticated external MCP paths; local independent probes can remain inconclusive without a false outage. Intentionally disabled inference was classified as intentional stop.
+
+Limitations: one separate public relay health HTTP probe returned 503 while actual authenticated MCP worked. Generic Mellow Guard status() provider error and ChatGPT MCP tool inventory caching are independent and not claimed fixed. ChatGPT client automatic multilingual tool invocation and UI visual clicks were not verified. No restart, network change, permission change or data deletion. Git changes coexist with preexisting dirty concurrent project work.
+## Unreleased — dense browser packet correction — 2026-11-12
+
+Compact repeated null/default DOM fields and JSON spacing while preserving selected controls, checkbox state, options and mandatory instructions. Candidate d3dec9643f3b4736a7bd861e2f41a1dd revision1 passed21 focused tests and update de4a3275727144938caf26a48bae37b0 is ACTIVE_VERIFIED. Real-site inference now ran (2832 actual input,3195 estimated) within4096 context without changing model allocation.
+
+Actual Comics reconnection completed with operator assistance: local task909704379f6a495594bdb165e6b619e2 opened YouTube connection and selected the existing Google account, but repeated rejected actions after an unresolved transition; cancelled to stop its loop. Operator then selected the Comics channel and Continue screens using the existing embedded-browser tools. Callback showed channel connected; an independent authenticated YouTube read returned50 videos for UCkLhl5wB--tBWAN6ZgeAWRw instead of expired authorization. No publication/deletion occurred. This is NOT independent local-model acceptance. Remaining defects: stale snapshot after hash-route changes, decorative visual target selection, and failure to reconcile intermediate transitions. Pending cancellation action was reconciled with observed evidence without replay.
+
+## 0.26.0 — Local UI-TARS browser driver — 2026-11-12
+
+Installed optional UI-TARS 1.5 7B Q4_K_M browser driver using a local llama.cpp OpenAI-compatible runtime. Existing normal/code model choice, task runner, permissions, source-bound screenshots, current DOM targeting, cancellation, uncertain-action fencing and entity-bound completion remain authoritative. No new Python dependency or data migration. Includes compact browser decision evidence, native/web routing corrections and desktop-tool disclosure from the preceding browser effectiveness candidate.
+
+Controls: Settings > local model > browser driver; select UI-TARS local. MCP model_settings_status/model_settings_command use the same persisted browser_driver field and validation. Browser-runtime availability is separate from the primary Ollama model's loaded state. Local runtime is installed in E:/AI/tools/ui-tars-local and requires start-gpu.cmd; automatic startup is not implemented.
+
+Actual failures fixed: screenshot coordinates returned inside ref; duplicate historical tool-evidence text inflating packets after old images were removed; copied browser_act syntax and stale observation identifiers. Translation validates current targets; stale identifiers remain rejected. A malformed proposal gets at most one model correction before any input is sent, and both calls count toward usage.
+
+Deployed agent-owned acceptance e38baed90ee24990bcaf2b586f077237 completed navigation, English Continue, Russian Продолжить, Hebrew שמור and exact fresh outcome verification "Orion saved successfully" without external feedback or manual steps. Browser assessment recorded verified=true, fresh_operation_verified=true and entity_verified=true. Final protocol candidate0124139271034caba0d7a0215a609a17 revision1 passed19 focused tests; update946da71bcca142ccb5f6122a291f49d7 ACTIVE_VERIFIED. This is one disposable multi-screen workflow, not a broad multilingual/site benchmark.
+
+Successful task:8844 input/105 output tokens across5 model calls, approximately30 seconds from task creation to final assessment. Four visual inference request round trips total8.734 seconds; the fifth text assessment latency is not separately recorded. All five development acceptance attempts, including four failures, total30642 input/250 output tokens across14 calls. Diagnostic proposal-only replays are separate from these task totals. No comparable Qwen run or general speedup claim. Accounting remains estimated before inference and measured from provider usage after inference.
+
+Runtime readback: ui-tars-local available; Ollama models=[] (Qwen weights retained, unloaded); GPU7150/8192 MiB at sampled post-run check. Preserve headroom: normal/code tasks can still load their primary model; automatic cross-runtime VRAM arbitration is not implemented.
+
+Limitations: browser-only; visual points must map to current DOM controls, so canvas-only targets/arbitrary desktop gestures are unsupported. External-feedback mode, real-account login, downloads, broad-site reliability and reboot/autostart not validated in this release. Unsupported or over-budget tasks fail explicitly. No human-level autonomy claim.
+
+Deployed parity update71a6fd237ee94517925e87da2959403b is ACTIVE_VERIFIED; seven focused parity/protocol/packet tests passed. Native Qt settings were refreshed and showed UI-TARS selected/active plus primary model unloaded. Installed registered MCP status/get handlers returned the same saved/effective selection and runtime availability. The current ChatGPT cached catalog does not expose those newer tool names, so this is installed-handler verification, not an external ChatGPT invocation.
+
+Release packaging:32 focused tests passed from the clean0.26.0 release worktree; git diff --check passed. Provider source matches deployed behavior (one whitespace-only line normalized with AST equality).
+
+Evidence: E:/AI/artifacts/ui-tars-acceptance-20261112/acceptance-results.json, task action log, runtime install manifest/SHA receipt in E:/AI/tools/ui-tars-local. Existing chats/projects/skills/permissions/browser profile retained; no history deletion.
+
+Rollback: switch browser_driver to default through UI or MCP; no schema downgrade or model deletion. Stop only the owned UI-TARS runtime when no browser task is active before loading another GPU model. For code rollback use a reviewed reverse candidate and the existing Guard workflow; do not restore the task database. Physical rollback/reboot are not claimed.
+
+## 0.25.0 - Desktop launch from running services - 2026-11-12
+
+Add desktop_status and desktop_open in MCP and the local agent, including browser mode. The same backend powers the UI browser button. Start the installed Qt desktop on demand, reuse the existing singleton/profile, verify owned process + native IPC + browser CDP before reporting ready, and show the window when requested. Stable request IDs, cross-process admission and a startup grace period prevent duplicate/uncertain launch replay. No model inference needed for MCP launch; no arbitrary executable, elevation, network setting, model setting or permission changes.
+
+Validation: 18 focused tests passed on final candidate867bb7f9e5c84866be06807223dcf0e0 revision2. Update b6af9d0129da49f780369e23a9c1c5ee is ACTIVE_VERIFIED; running API0.25.0. Agent-owned task66fbb1f4d2684d669c82f10ea1552cb2 observed no desktop, launched it through desktop_open, verified owned native IPC + CDP + visible window, then read the restored browser tab. Start-to-ready took5.93seconds for this single sample. Installed MCP handler and UI focus backend readback passed; concurrent requests produced one operational result and one bounded starting response, retaining the same PID. Reusing a request ID did not replay launch. External ChatGPT tool catalog refresh and literal UI button click were not tested; backend/native UI response was. Session-zero and power-transition rejection are mocked; locked-session, reboot, hung-GUI recovery and full rollback activation are not claimed. Existing hung/unverified processes are reported without forced termination. No browser profile or application data was deleted.
+
+## 0.24.1 - Safe shutdown identity correction - 2026-11-11
+
+The first requested safe shutdown stopped Ember, then correctly blocked before Windows power because strict boot-time float equality rejected a same-boot sample differing by about 64 microseconds. Use a 10 ms finite numeric tolerance; distinct boots and invalid markers remain rejected. Recognize a configured venv launcher reporting a temporary cwd only when its direct trusted interpreter child has the exact invocation and configured source cwd. Foreign listeners/processes remain rejected. No forced Windows close, authentication, permission or dependency changes.
+
+Validation: 26 focused tests passed; update cb68c052f4184ba7baeb7e2b0b7df93f ACTIVE_VERIFIED. Running API reports 0.24.1. A separate process accepted the same boot marker, failed transitions remained inactive, actual Hub/gateway/desktop launcher pairs were verified owned, and read-only Stop all preflight passed. The original blocked operation never dispatched Windows power; a new explicit request is required. Physical power-off is not claimed from a disconnected MCP connection. Roll back this patch through a reviewed reverse candidate based on commit 03d8451cc4c16a61c6f7ac7f11f6a506c63d0d66, preserving state, using the documented candidate/test/Guard workflow.
+
+## 0.24.0 installed browser validation - 2026-11-11
+
+Main tracked implementation task: bd9960596a9a4cf5b2b281da7331ef21.
+Latest runtime update: e80ff041a85246eba94738e37458860d, ACTIVE_VERIFIED. Final candidate 38d9c1d467a64ddb8b449397a759f13a revision 1 passed 14 focused tests (Unicode/restart, renderer recovery and entity contract). Earlier overlapping focused checkpoints passed 84 tests, 13 updated input-contract tests separately, and 22 entity/disclosure tests; these counts must not be added as unique coverage. Earlier broad-core failures remain historical failures, not passed acceptance.
+
+### Agent-owned live evidence
+
+| Case | Task | Result |
+| --- | --- | --- |
+| Complete independent disposable setup | acf4ea36b0634809bc9ac5d652703e45 | Profile, terms, Continue, workspace, Finish and fresh entity-bound assessment passed without GPT guidance. New receipt de780e6b-43f1-4bf6-8e11-c7ea4089962c. |
+| Assisted final-stage recovery | 141c0463c99b4134a7b52f49a058b551 | New receipt 522e1354-572e-4f49-b374-86657aeffc10; GPT correction plus narrowed verification tools required. Not independent success. |
+| Hebrew public page | a58488cb805f4eb3b6461ab3193f7cce | gov.il title, heading and two controls grounded in DOM; no site mutations. |
+| English public page | 771e2f465a1f4f50bff1a166020d48cf | BBC title/control recognition passed; heading case NEWS versus DOM News is a minor discrepancy. |
+| Russian public page after correction | d8eecf8155c0486db0d6f6c781ca1800 | Wiktionary exact title, heading and labels passed without feedback; control purpose explicitly inferred. Incoherent screenshot omitted; DOM reading only. |
+| Combined multi-site task | 70fbffa355a64386a1df32a2828a76aa | Failed to advance from first site; cancelled, not accepted. |
+| RBC native hang | bbc074a2b1d142959d9a1dd6001d9c14 | CDP and native IPC timed out; Windows confirmed hung GUI. Root cause unresolved. |
+| Equivalent URL/restart baseline | e9081b7f48d6487a9775488c52856dbb | False Unicode URL rejection and stale target caused failure; fixed and retested by Russian case above. |
+
+### Actual full-task model measurements
+
+All samples use the existing qwen3.5:4b runtime and include retries/feedback model calls within each task. No extra summarizer or embedding service was added.
+
+| Workload | Model calls | Input tokens | Output tokens | Prompt seconds | Generation seconds | Model total seconds |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Earlier setup with incomplete verification | 20 | 186009 | 1316 | 374.155 | 200.074 | 576.439 |
+| Same-goal pre-entity-fix setup, failed verification | 18 | 140035 | 1773 | 281.561 | 254.487 | 538.924 |
+| Independent accepted setup | 12 | 86662 | 774 | 173.732 | 101.856 | 277.218 |
+| Assisted final-stage task | 14 | 108027 | 1718 | 215.894 | 241.580 | 458.847 |
+| Hebrew reading | 2 | 14777 | 212 | 28.782 | 30.027 | 59.162 |
+| English reading | 4 | 26527 | 162 | 52.495 | 19.569 | 73.054 |
+| Russian failed URL/restart baseline | 6 | 51541 | 1061 | 100.077 | 160.441 | 261.745 |
+| Russian reading after correction | 4 | 32500 | 298 | 62.287 | 43.036 | 106.207 |
+
+Independent setup elapsed 324.699 seconds from creation to waiting-review; model time 277.218 seconds excludes tools/orchestration. A single before/after pair yields 38.1% fewer input tokens and 48.6% less model time against the failed 18-call setup. Small non-random samples with changing failure outcomes do not establish general percentiles or universal speedup. All 14 selected development/live tasks, including failed attempts, consumed 1,004,244 input tokens and 3,408.686 model seconds; optimization development itself was not free. Cache/resource/model-reload statistics were not systematically measured.
+
+Read-only archived chooser replay preserved requested controls previously missing under 2500-character compaction. Earlier packet estimate 26,619 to 23,064(-13.4%) is estimated, separate from actual whole-task counts. Default browser disclosure now 13 core tools with smaller verification focus; explicit groups remain discoverable.
+
+### Installed checks and preservation
+
+Installed UI guidance-dialog readback and source-hash evidence are in the local validation artifacts. Live tasks exercised the installed MCP-to-local-runner path. No history, project, skill, permission or browser profile deletion. Before/after preserved counts: 104 chats and 10 projects; task count grew with recorded tests. Desktop recovery stopped only the verified hung GUI and its Qt children after graceful IPC failed, retained the profile and archived session metadata, and removed only the disposable RBC URL from automatic restore. This is an operator recovery, not a certified automatic restart feature.
+
+Local artifacts: E:/AI/artifacts/browser-agent-implementation-20261111/FINAL-BROWSER-VALIDATION.json; hung-desktop-recovery/operation.json; INSTALLED-READBACK.json; installed-guidance-panel.png; exact candidate receipts under E:/AI/candidates. Private artifacts are not committed.
+
+Remaining: original real OAuth renewal, broad multi-site reliability, full native-hang root cause, full rollback activation drill and physical shutdown/reboot/logon acceptance are unverified. Existing successful controls do not establish those outcomes. See docs/BROWSER-AUTONOMY.md for rollback and safe power operation.
+
+## 0.23.0 ? 2026-11-11
+Added MCP resume_task and cancel_task with chat binding and revision checks, using existing task control. Added delete_task_preview and delete_task: explicitly removes a terminal task from chat history only, preserving task audit, artifacts, files and memory. Not secure erasure. Active/uncertain tasks are blocked; cancelled tasks cannot resume. Existing stop_task retained.
+Validation: four targeted tests passed; Guard update 446d93a303bf4f9db56fae17070a370d ACTIVE_VERIFIED; installed registered MCP handlers previewed actual cancelled task and rejected cancelled resume, stale cancel and unconfirmed deletion. No user task deleted. Successful execution of a resumed browser/OAuth task remains unverified. Refresh connector tools to discover newly advertised names. UI retains existing resume/cancel; deletion currently available through MCP/backend only.
+
+## 0.22.1 ? 2026-11-11
+
+Sidebar projects now sort by latest non-archived conversation activity; project conversations and the lower conversation list sort newest first. Timestamp changes invalidate the sidebar render cache. Wider sidebar and flexible independently scrollable lists reduce wasted space. Pinned markers remain visible without overriding recency. No stored conversations or projects modified.
+
+Validation: actual installed Chromium parsed the script and passed deterministic recency/promotion cases. Static assets installed without restarting services or user browser. Actual shell refreshed, sidebar width 290px, project area 280px and chat area 208px at a 932px viewport. Live DOM order verified against timestamp-derived inventory. Backend deployed through Guard update 0d6f3f6500684fc2866eb5536fb28fda; task and mirrored-message activity included. No physical power actions performed.
+
+## 0.22.0 — Safe computer power and Windows startup — 2026-11-11
+
+Tracked task: 4bc1b4b13f6641d8abf8dbe1c10d4ff7. Runtime deployment 908598faa17a4192bb42251f7edd499b: ACTIVE_VERIFIED. No new dependencies or database migration.
+
+Added computer Shutdown and Restart, distinct from Stop agent services. The durable existing service controller admits one operation, records progress and dispatch intent, drains Ember through its existing busy/ownership-aware manager, gracefully drains Hub tasks/terminals/downloads and managed models, stops owned MCP/Guard/SSH/Ollama services, closes the owned desktop, and only then requests Windows power. Failed or unverified stops block the Windows request. Windows uses /t 0 without /f; unrelated apps are not force-closed. Uncertain power requests are never automatically replayed.
+
+Added one revisioned startup preference shared by UI, native/offline controls and MCP. The current-user Limited logon task starts the managed agent stack and desktop; optional Ember image models are not started. Automatic recovery respects disabled startup on a new boot, preserves owner-stop markers, and can continue recovery in an explicitly started current session. Startup changes do not stop running services or grant owner permissions.
+
+Controls: Settings > General > Windows startup and computer power; Health & Services offline desktop entry; top health indicator, Tools and tray menus in a newly opened shell. Existing desktop/browser was preserved, so already-running native menus load the update only when the shell is reopened. Ordinary local-chat tools and five MCP tools use the same backend; native tool authorization retains the existing owner gate.
+
+Verified: 23 focused regressions; real Ember preview (four standard services running, two extended stopped); deployed registered MCP handlers against HTTP; startup disable/enable with Windows task readback (final enabled, revision 2); stale revision and unconfirmed power rejected with HTTP 409; actual Windows native and deployed web controls, both restart confirmations cancelled before dispatch. External MellowCodex MCP continued working after deployment. Evidence: E:/AI/artifacts/safe-power-20261111/deployed-settings-readback.json and deployed-ui-readback.json; screenshots alongside. Candidate test receipt: 6289f8b84c464414bc3f4f4b44cfa20e/test-f39f1b4ae8654d23a09ad4626994d3ee.json.
+
+Limits: no physical shutdown, reboot or subsequent Windows logon was performed. Full safe-drain order and failure gates were tested with effect sinks isolated; actual full Ember/agent drain was not performed during this release because live work was preserved. Local generation-model natural-language selection was not exercised (inference remains intentionally disabled); tool visibility, authorization classification, dispatch and UI paths were verified. ChatGPT may need connector tool refresh to see newly advertised tools. A Windows accepted request is recorded as windows_requested, never as physical completion. If Windows is cancelled by an unrelated app, inspect the durable operation and explicitly recover services; no automatic repeat of the power request.
+
+Rollback: first disable the new logon task through the shared startup setting while 0.22.0 is running. Prepare an isolated candidate from the prior release 742efe5179a356516c029d39fdeee41440729b10 and deploy through the existing Guard reviewed workflow, restoring only changed source files from the update backups if needed. Retain state, operation journals and all user data; do not downgrade/delete databases. The older recovery scheduler follows the older startup behavior. Do not treat activate_update(recover=true) as an arbitrary rollback API.
+
+## 0.21.0 — Health & Recovery — deployed 2026-11-11
+
+Task: ef06b2b4072a4ab6ac89fba87e9473ec. Runtime/API/MCP version: 0.21.0 (120 advertised tools). No dependencies added.
+
+### Established causes and changes
+The old panel conflated Guard API availability with supervisor coverage, kept one remote-proof record, skipped Repair postconditions, and did not dispatch CLI --status/--preflight. Windows also intermittently omitted an accepting PID: one missing sample followed by two verified PID samples caused a safe but unnecessary Stop rejection. Read-only ownership observations now retry twice; foreign owners still fail immediately.
+
+The shared native/UI/MCP backend now separates process ownership, local API, IPv4/IPv6, routes/DNS, SSH authentication, forwarded HTTP, connector OAuth/external round trip, supervisor coverage and model inference state. Manual Check uses the installed SSH identity with strict known_hosts and a read-only command; no raw SSH logs or tokens are retained. Background checks do not launch SSH authentication probes. Connector evidence has age/last success and expires as stale, not disconnected. Guard OAuth failure affects Guard only. Restart invalidates affected current proof while preserving last success.
+
+Per-service controls and explicit global controls use existing lifecycle mutexes, dependency management, task-impact checks and durable operation IDs. Duplicate active requests share one operation. Repair reconciles only absent supported services and verifies the result; healthy services and intentional stops are preserved. Reset previews stale operation IDs and removes only the disposable health snapshot; it never deletes application data, credentials, permissions, stop markers or action logs. Reconnect directs the owner to the affected ChatGPT connector; it does not complete consent locally.
+
+### Actual verification
+- 24 focused health checks passed; after the final read-only ownership correction, the 20 affected checks passed. Existing acceptance tests were not rewritten.
+- Four existing independent supervisor activations returned ACTIVE_VERIFIED: 0e2fe9884ba049ea842f92b2276f596e, 523e695155bb49e2972c9369d390b161, 34831643c41d42c68e2de02f9e038b71, febb20281e884291a55b4bedbb46a70b.
+- Controlled MCP Stop 274876342147a5b33d4d27aa167af2c8 and Start a95d5cfb077937c7a911a353400268d7 completed. An actual external MCP call failed while stopped and succeeded after restoration; Guard also answered without reauthentication. Scheduled reconciliation respected the intentional stop. Hub, desktop/browser and Ollama PIDs were unchanged during the exercise.
+- Actual Windows offline panel remained visible/useful during MCP shutdown: 10 rows, 50 row actions, seven columns, unsupported actions disabled. Final native top-indicator/Tools/tray integration and a real Check-all button produced completed operation 5b0085fc9176f1e6460eecb893b5dc24.
+- Registered MCP handlers called the deployed authenticated Hub API successfully; duplicate Check requests shared cd033495a71f6d89d643c2e585925d5f. A direct local MCP attempt using a Hub key was correctly rejected by OAuth and was not bypassed. External MCP transport was verified separately through real connected tools.
+- Deployed Check e982519cfa30644257d210889708ed62 verified SSH authentication. Reset fa975f2bf8e04bf4b22fb2be66b84457 completed without changing stale operations. Final Repair f0b2512bf5974d88235aa1626c15e808 left every service unchanged and requested only fresh external proof after its two-minute expiry.
+- All 104 existing chats, 10 projects and 1,449 prior task IDs remained present. Protected configuration/credential hashes matched. Inference stayed disabled and the model was not loaded. No skill, permission or user-work deletion was performed.
+- Read-only live candidate snapshot: 4.08s. Expanded SSH/DNS/IPv4/IPv6/forwarded-HTTP check: 5.05s (different scopes, not a performance comparison). Public HTTP200 verifies forwarding, not an authenticated MCP round trip.
+
+### OAuth investigation and honest limits
+Guard stores opaque-token hashes and grants in its independent private SQLite file outside release directories. Refresh exchange uses BEGIN IMMEDIATE and single-use tokens. Installed defaults are 900s access and 86400s refresh/grant lifetime; the grant expiry does not become permanent on refresh. Existing expired and current grants were observed. Bounded available logs contained no invalid_grant cause. No evidence proves that reboot erased auth, signing material changed, or a refresh race caused this incident. This controlled normal service restart preserved current external Guard authentication.
+
+No computer/router reboot, locked-desktop acceptance, destructive reset or whole-agent Stop-all with active work was performed. The incident's router-versus-server cause remains unknown. ChatGPT consent cannot be automated. ChatGPT may need to refresh its cached tool catalog to expose newly advertised tool schemas. The existing desktop/browser process was deliberately preserved: its already-imported native panel refreshes to new code when that shell is next reopened. The updated standalone desktop shortcut is available immediately.
+
+### Controls, evidence and rollback
+Open **Mellow Health and Services** on the desktop, or the native health indicator / Tools > Health and Services / tray menu in a newly opened shell. The standalone command is pythonw -m hub.service_health_ui from the repository and works without MCP or Hub.
+
+Evidence: E:/AI/artifacts/health-recovery-20261111 (transport-e2e.json, offline-ui-readback.json, final-ui-readback.json, final-deployed-verification.json, final-repair-readback.json, candidate-final-network.json, oauth-log-inspection.json). The first safely rejected Stop attempt is retained separately.
+
+For rollback, create a fresh isolated candidate from the installed source and restore the pre-task runtime files from E:/AI/candidates/511a3c49563c49fbb39fe89b60a3264b/source; test and activate through the same prepare/activate supervisor while tasks are idle. Its changed-file backups/journals remain available. Do not overwrite live processes, reset the dirty primary checkout or downgrade/delete the task/OAuth databases. New diagnostic evidence can remain on disk. Packaging version-only metadata is synchronized separately because the existing runtime deployment rejects dependency-manifest changes.
+
+
+## 0.20.0 deployed verification - 2026-11-10
+Before: deployed0.19.0 retained optional long tool/history content under an effective262100-token context. Existing memory and selective tools were already present; this release extends them.
+Implemented: shared estimated bounded packets, protected text corrections including older screenshots, current visual evidence, complete tool groups, source-bound compaction, incremental SQLite working state, explicit chat/project pins, and shared UI/MCP settings. No dependencies added.
+Deployed through the existing independent SelfDevelop/Guard supervisor:094c145de50b46d9a60b3498e24cc3e7, then final narrow correction437d632625f840a4b7af8f5e378b23c0; both ACTIVE_VERIFIED. Final actual API and MCP version0.20.0,119 tools. Runtime candidate b14b335b2896486d94fe78132afc7c53/r15 plus b1bd937823db4a1da428961a362e8c85/r1.
+Validation:34 focused tests; final affected21 tests. Actual deployed normal task bb0d78c5b26a4f848b1bd2627819679a completed one read_file and returned CONTEXT_DEPLOYED_7419. Two calls:10358 input/88 output,14.8977643s model-reported total. Estimates8472/8942 versus actual4888/5470; estimated accounting remains explicit. No extra summarization or embedding inference.
+Paired final-packet sample:19621 ->8205 actual input (58.2% less, n=1 pair), wall11.297 ->16.343s. This is not whole-task savings and does not demonstrate latency improvement. No statistically meaningful percentiles or CPU/RAM/VRAM savings established.
+UI readback: actual deployed dialog displayed bounded policy and5470 last actual input, no UI error. Source expansion passed. Legacy/shadow/bounded setting transitions persisted through shared validation. Completed task and diagnostics survived final service restart without replay.
+Preservation check:103 chats/9 projects before;104/10 after one disposable acceptance chat/project. Task/history counts increased; no data deletion, permission change, model context increase, or model unload was performed.
+Controls: conversation memory dialog -> Context & Memory. Final policy bounded, working target12000, configured/effective measured context262100, output512. Rollback setting: context_management=legacy; retained evidence needs no downgrade.
+Standalone Guard stage37025ce5c58f49e5bb44d377683b57b4 was not activated: its fixed loopback Hub launcher does not own the installed0.0.0.0 listener. Existing supported supervisor was used; no Guard policy was changed.
+Remaining limits: compatible exact tokenizer not established; multimodal token reserve uncertain; full-task30% target and multilingual semantic recall benchmark not established. Semantic retrieval intentionally not installed. Synthetic scope/cancellation/restart regressions are distinguished from the bounded live read workflow.
+Evidence: E:/AI/artifacts/context-engineering-validation-20261110 (deployed-live-result.json, paired-actual.json, deployed-ui-readback.json, deployed-context-memory-ui.png, final-runtime-verification.json).
+
+## Context memory 0.20.0 candidate validation (2026-11-10)
+Actual isolated ordinary workflow: one read_file, exact expected code, two model calls, 10,286 input / 48 output tokens; no file mutation. Shared HTTP settings set/readback legacy/shadow/bounded passed.
+One paired historical final packet, no tools executed: actual input 19,621 -> 8,205 (58.2% reduction); wall 11.297 -> 16.343 seconds. Cache/order and differing output lengths confound latency. This is NOT whole-task savings or proof of faster completion.
+Focused tests cover protected corrections, current image, complete exchanges, overflow, incremental recovery, pending identities, cancellation/CAS, source hash/pagination, explicit project sharing and scope exclusion.
+No p50/p95 claim, no semantic index, no exact tokenizer claim. Deployment and UI/MCP live evidence must be read from release artifacts; candidate success alone is not deployment proof.
+Artifacts: E:/AI/artifacts/context-engineering-validation-20261110.
+
+## Service health panel 0.19.0 - 2026-11-10
+
+Deployment: version 0.19.0 is active in Hub/MCP and the native desktop. The existing independent update supervisor reached ACTIVE_VERIFIED, most recently update 2e92e6cb5bb84010aa0c8651161065e5. Desktop reloads used graceful IPC and retained the existing profile/session. The existing recovery mutex coordinated each deployment; the scheduled task was not disabled.
+
+Actual native UI: top indicator and Tools > Health and Services opened the same panel. Right-click tray exposed the requested service actions; Check was clicked. Service action buttons disabled while a durable action was active. Technical detail is expandable and Guard warning remains visible.
+
+Actual MCP stop/recovery: Stop receipt fcbd79e44437a33423cf4bf27fa0da1b completed. MCP stayed stopped for 70 seconds while the real scheduled recovery task ran (LastTaskResult 0); Hub and Ollama PIDs remained unchanged. After fixes, actual panel Start receipt 9b8965784d42f6e31c4754f96dfb2fe2 and Restart receipt 91188c276f34b0d2cf809c4af4ac5f8e completed on their first postcondition observation. One launcher/interpreter pair per managed Python service and one Ollama process remained; no duplicate copies or active user tasks were present.
+
+Actual offline rescue: with no active tasks, Hub-only Stop receipt 23e5944df7aaf7ebaed8d19f343f373b completed. Port 8876 was closed, and the native panel was closed and reopened visibly without Hub. Start receipt 5519dad90f5ae43c67991b1c5ca04261 restored Hub; Ollama PID stayed unchanged. hub-offline-acceptance.json ended completed with an empty final active-task list.
+
+Actual remote evidence: a nonce delivered to ChatGPT through MCP was acknowledged in a separate MCP call after recovery; verified=true. This proof expires after 120 seconds and is never inferred from an open local port. New named service tools are registered server-side; this existing ChatGPT session did not rediscover them. Shared endpoints were exercised through the existing authenticated MCP exact-command runner, not claimed as new-tool invocation.
+
+Diagnosed during acceptance: controller output pipes could be inherited by long-lived children and prevent completion; file-backed output fixed this. Windows TCP enumeration sometimes lacked an accepting PID for an idle probe; a bounded partial HTTP header materializes the exact reverse loopback tuple, retaining executable/cwd ownership requirements. Explicit actions now wait at most 30 seconds for scheduled recovery's existing mutex. Hub stop recognizes both existing reconciler and supervisor launch forms. Failed/interrupted receipts remain failed/interrupted; no failed result was relabelled successful.
+
+Guard: authenticated status returned healthy=false with started_pids empty. Its supervisor requires the pair it started, so this warning is distinct from reachable Guard MCP. It is not hidden or repaired by changing owner permissions. Model unloaded is shown idle, not an Ollama failure. Network settings were not changed; no claim of fixing DNS or changing IP addresses.
+
+Tests: the 12-test focused health/controller/integration/retry/shutdown set passed (1.64 seconds); the final Hub stop invocation change passed the eight relevant health/shutdown tests (1.37 seconds). These are fixture/code checks, distinct from the native and service experiments above. Ten candidate probes also returned the actual Guard accepting PID. Catalog readback retained 23 installed packages and 100 mapped capability IDs; this is not proof all capabilities work end-to-end.
+
+Local private evidence stays under E:/AI/artifacts/service-health-panel-20261110, including controlled-stop-start.json, final-runtime-acceptance.json (contains successful MCP stages and the earlier Hub-only failure), hub-offline-acceptance.json (the corrected Hub result), and panel screenshots. Runtime data, logs and screenshots are not published in Git.
+
+Limits: no physical reboot, locked-session test, real network outage, OAuth re-consent, elevated broker mutation or destructive whole-agent shutdown was performed. Whole-agent confirmation/task guards were tested as fixtures; actual acceptance used only idle Hub and MCP transitions. User tasks were preserved, not used as destructive shutdown fixtures. This change does not claim to fix previously reported rendering artifacts.
+
+## 2026-11-10 browser interaction repair (0.18.1)
+
+26 focused regressions passed; three Node fixtures skipped. Actual existing Qt page snapshot evaluated successfully and preserved 22/22 controls including the late control previously omitted. Agent-owned interaction after activation: PENDING. No claim of OAuth completion.
+
 ## Named browser elements 0.18.0 - 2026-11-10
 
 Candidate 6edcc11400104c198f272642a7b60045 revision 2: tests/test_browser_selections.py and tests/test_conversations.py passed (5 tests, 2.16s). Fixtures covered stable numbers, idempotent save, persistence, Hebrew/English/name resolution, unknown-reference and duplicate-name rejection, rename, and real Conversations.submit context/image assembly without changing the user goal or idempotency. Python compilation and app.js compilation in the actual Qt renderer passed.
@@ -1036,3 +1240,53 @@ Unreleased 2026-11-08: coding-worker packets now include the latest exact-comman
 
 Real installed scheduled task executed successfully with LastTaskResult 0 and five loopback services reachable. Controlled interruption of the manually launched gateway (exact captured process IDs/command lines) recovered through the scheduled task. Real MCP model_memory_status succeeded afterward with qwen3.5:4b loaded and inference enabled. Repeated scheduled execution retained replacement launcher/child pair, avoiding duplicate launches. Broker readback: Running, Automatic after native approval. No reboot, locked-session, foreign-listener or hung-process termination test; no broad synthetic suite. Existing legacy Hub was not restarted. Git publication remains pending due to concurrent workspace changes.
 
+
+Unreleased — 2026-11-10: Added desktop MCP Start/Stop/Restart/Status controls with serialized durable manual stop and exact process ownership. Recovery checks SSH reachability, reports IPv4 Duplicate conflict, preserves relay restart budget while unreachable, and checks post-launch survival. Real Stop/Start restored local services; remote acceptance blocked by Ethernet static IPv4 collision. See docs/MCP-SERVICE-CONTROL.md. No reboot acceptance claimed.
+
+
+2026-11-10 follow-up: Owner approved Ethernet DHCP after confirmed Duplicate static IPv4. Prior configuration backed up locally. New preferred DHCP lease acquired; next automatic scheduled run restored relay (LastTaskResult 0), and real remote MCP model_memory_status succeeded. Model was unloaded; no inference or full reboot test claimed. Installed Start/Stop/Restart/Status shortcuts; Stop/Start exercised. Changes remain Unreleased alongside unrelated concurrent work.
+
+
+
+## Unreleased - Fara browser adapter
+Native Fara computer_use JSON tool calls and normalized1000 coordinates use existing current-observation DOM matching, tool permissions and completion evidence gates. UI and MCP share browser_driver=fara. Local runtime uses vision GPU plus16/65 layers; remaining weights inRAM. Same synthetic image improved44.391s to35.703s (one sample each); not a browser benchmark. Native adapter tests and ZikZak connection acceptance pending. No success claimed for browser autonomy. Runtime rollback: fara27-local/manage.py rollback and restore browser_driver=ui_tars through shared settings.
+
+Fara live acceptance attempt1 stopped before mutation: first inference2601input/118output95.734s, rawXML parser rejected output. Added standard structured tool_calls handling, proper system/user role separation,160outputtoken cap and cancellation recheck. ZikZok OAuth remains expired; no connection success claimed.
+
+Measured native transport fault: Fara emitted one correct Social-networks click JSON but repeated opening tool_call instead of closing tag. Parser now accepts only that exact single-object variant, rejects multiple objects, and requests constrained JSON to eliminate commentary/XML overhead. Prior attempts remain failed autonomous acceptance; no OAuth mutation performed.
+
+Live Fara attempt3 reached Social networks, connectchannel, Googleaccount and unverifiedapp page, then selected Backtosafety rather thanContinue. Added boundedDOMlabel/normalizedcenter feedback, required intendedclicklabel and deterministiclabel-match gate, plus existing guardedhistoryback. This is a measured failure, not a successful ZikZokconnection.
+
+
+Unreleased — 2026-11-12 browser budget repair: shared visual-runner preflight and diagnostics now reserve the same output limit as the dispatched model profile (Fara 160; default 512). Real attempt 41024203 stopped before inference because estimated input 3810 plus the obsolete 512 reserve exceeded 4096. Input accounting remains estimated, including unchanged image bound and margin; no context increase or requirement truncation. Focused checks and renewed autonomous browser acceptance pending.
+
+
+Unreleased — 2026-11-12 Fara runtime grammar repair: express each action as a complete exclusive schema branch with required arguments. Previous sibling properties/oneOf allowed a left_click without coordinates in live runtime; adapter blocked it before input. Prompt now consistently requests plain JSON. No browser acceptance claimed; exact runtime read-only probe required before activation.
+
+Runtime schema probe produced complete Social Networks click in66.109seconds (3208input/42output), but leading decorative arrow caused exact-label rejection. Normalize leading Unicode symbols consistently in displayed hints and comparison; retain actual text and reject different controls. Probe did not dispatch.
+
+
+Unreleased — 2026-11-12 live correction repair: pass consumed task guidance in runner-owned structured metadata to visual planning and completion assessment. Previously splitting system policy at historical continuity omitted later live corrections despite acknowledgement. Preserve current task scope, revision dispatch fence, and historical evidence exclusion. Failure observed in69e4f7d; Alex target correction requires renewed live acceptance.
+
+
+Unreleased — 2026-11-12 browser recovery: when post-click capture fails, reconcile a later coherent changed destination against the exact pre-action observation ID, requiring same tab/frame and newer capture. Same/unknown origin remains blocked; transition never means task completion. Live327044 selected Alex correctly but became stuck after capture error; model also proposed the wrong cancel control (blocked). Add explicit Hebrew/Russian navigation label meanings to Fara instructions; this is guidance, not a proven general reasoning fix. New live acceptance pending.
+
+
+Unreleased — 2026-11-12 transition reconciliation correction: compare attached late post-action and subsequent coherent observations to the exact PRE-action source, never the already changed post-action baseline. Require newer same-tab/frame evidence. Keep completion unverified until separate acceptance. Visual runner observes unresolved effects before spending inference on stale pre-action state. Validate on archived real tasks without replay before new login.
+
+
+Unreleased — 2026-11-12 terminal verification boundary: a fresh short success receipt without actionable form controls routes to existing browser_assess BEFORE another model action. Shared dispatch blocks further writes/navigation at that boundary. Existing negative/stale/freshness/entity checks remain required; generic receipts with no target identity stop for review rather than fabricate completion. No repeated OAuth necessary. Actual channel connection was independently verified; terminal regression live verification pending.
+
+Terminal boundary uses existing local semantic assessment for visual drivers to check the whole objective before completion, preserving entity/freshness checks. Other drivers conservatively stop for independent verification. No generic success keyword alone completes a multi-step goal.
+
+Default/Ollama browser path uses the same selected model with structured output for whole-objective terminal assessment. Visual Fara/UI-TARS keep their existing verifier. No additional inference occurs on ordinary steps; only at a fresh terminal boundary. Entity-less receipts remain unverified.
+
+
+## Unreleased — Action Routes (2026-11-12)
+Implementation candidate prepared. Focused regression and deployed UI/MCP/task-runner validation pending. No real channel connection is part of this acceptance.
+
+Action Routes candidate passed 21 focused tests (4.94 seconds). Live UI verification exposed missing static allowlist entries; fixed explicitly. Live editor and task-runner acceptance still pending.
+## 2026-11-13: Guard provenance report and diagnostic error classification
+Guard status text/provenance update 3077e3863f8f4efb85d1ddf3f478293b ACTIVE_VERIFIED, candidate 217d6ae8dffb429396750f5df92bbec4 revision1: 16 tests passed. Live local '?????' returned a complete report with Guard supervisor uncertainty and diagnostic coverage. Safe nested exception classification update 11d51d262d314651958f635279e23ae6 ACTIVE_VERIFIED, candidate a3f4216511624d0e806aed4ab6be9ffb revision2: 12 tests passed. Live local report displayed 'ExceptionGroup (MCPError)' without raw credential or exception details. Independent connected Guard.status(service_id='hub') returned healthy=true, supervisor_healthy=false, observed_healthy=true; Guard's protected no-argument status does not accept an empty selector. Actual public health probe gave two HTTP 200 responses but a later independent public /health probe returned HTTP 503, so ongoing source intermittency is unresolved. Authenticated MCP continued to work; no forced network/service changes. UI click-through and fresh external ChatGPT client discovery not verified.
+## 2026-11-13: Public health 503 event-loop deadlock correction
+Confirmed original failure: direct external public /health returned 14/14 HTTP200 while synchronous status submissions returned public HTTP503, because async /api/chats/{chat_id}/messages called blocking Conversations.submit -> collect_report -> network(public /health) -> gateway /health -> Hub callback on blocked event loop. Direct /api/service-health already used asyncio.to_thread. Gateway optimization release 9a557bbaa98748948c36152af099a355 ACTIVE_VERIFIED with 10 passed; it alone did NOT fix full chat status. Minimal chat status offload release 9137b9b502a14c6a8f3487d48e8f522f ACTIVE_VERIFIED with 15 passed, preserving non-status behavior. After final release: live local '?????' and 'Status' both returned operational local services, available network and operational diagnostic coverage, without inference. Separate public route: 14/14 HTTP200 after Gateway update, 6/6 HTTP200 after chat update, correct product marker. Installed app SHA256 536722f4ff2f2b8b8095a09bb11357886c8bebf41a21e2d68be483b8a407682a. Noncritical latency spikes around 2.4s remain; sample results do not guarantee future third-party relay uptime. Physical reboot, external ChatGPT new-client auto tool selection not claimed. No user data migration or permission changes. Rollback via recorded Guard-owned independent control-plane release journal, not by restoring chat/task database.

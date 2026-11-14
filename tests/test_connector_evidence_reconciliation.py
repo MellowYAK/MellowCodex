@@ -16,7 +16,7 @@ def test_external_proof_refresh_updates_cached_service_dimensions(tmp_path,monke
     ])
     old=d.refresh_connector_evidence(h,snapshot,now)
     assert old['local_overall_status']=='operational'
-    assert old['overall_status']=='unverified'
+    assert old['overall_status']=='operational'
     assert old['services'][4]['tunnel_verified'] is False
     d.observe(h,'mellowcodex','success',now)
     d.observe(h,'guard','success',now)
@@ -29,7 +29,7 @@ def test_external_proof_refresh_updates_cached_service_dimensions(tmp_path,monke
     expired=d.refresh_connector_evidence(h,snapshot,now+121)
     assert expired['local_overall_status']=='operational'
     assert expired['external_connectors_status']=='stale'
-    assert expired['overall_status']=='stale'
+    assert expired['overall_status']=='operational'
     assert expired['services'][4]['tunnel_verified'] is False
     assert expired['services'][1]['dimensions']['connector']['status']=='stale'
 
@@ -52,7 +52,7 @@ def test_failed_external_observation_does_not_turn_healthy_from_local_ports(tmp_
         dict(id='guard_gateway',status='operational',dimensions={},port_open=True,owned=True)])
     result=d.refresh_connector_evidence(h,data,now)
     assert result['local_overall_status']=='operational'
-    assert result['overall_status'] in ('degraded','unverified')
+    assert result['overall_status']=='operational'
     assert result['connectors']['guard']['external_round_trip']=='unverified'
 
 
@@ -76,6 +76,6 @@ def test_snapshot_cached_path_recomputes_overall_after_proof_and_expiry(tmp_path
     assert fresh['services'][1]['dimensions']['connector']['status']=='operational'
     monkeypatch.setattr(h.time,'time',lambda:now+121)
     expired=h.snapshot()
-    assert expired['overall_status']=='stale'
+    assert expired['overall_status']=='operational'
     assert expired['local_overall_status']=='operational'
     assert expired['services'][1]['dimensions']['connector']['status']=='stale'

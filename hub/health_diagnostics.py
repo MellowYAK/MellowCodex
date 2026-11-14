@@ -58,8 +58,21 @@ def refresh_connector_evidence(h,data,now=None):
   if key=='relay':
    dimensions['tunnel']='verified_by_external_call' if externally_verified else 'unverified'
    row['tunnel_verified']=externally_verified
-  elif key in ('gateway','guard_gateway'):
-   dimensions['connector']=connectors['mellowcodex' if key=='gateway' else 'guard']
+   if externally_verified and row.get('status')=='operational':
+    row['reason']='Owned SSH relay process running; authenticated MCP path verified externally (standalone SSH authentication not separately proven).'
+  elif key in ('hub','gateway','guard_gateway'):
+   proof=connectors['guard' if key=='guard_gateway' else 'mellowcodex']
+   dimensions['authenticated_mcp_path']=proof
+   if key in ('gateway','guard_gateway'):
+    dimensions['connector']=proof
+   # An authenticated external response establishes the live path even when
+   # the independent local probe cannot verify process ownership or HTTP.
+   # Do not promote an intentionally stopped or confirmed failed service.
+   if (row.get('status')=='unverified' and row.get('port_open') is True
+       and proof['external_round_trip']=='verified'):
+    row['status']='operational'
+    row['reason']='Authenticated MCP path verified externally; local ownership/HTTP probe inconclusive.'
+    row['health_basis']='verified_external_mcp_path'
   elif key=='guard':
    # Guard returns HTTP 401 to unauthenticated probes on purpose.
    # Upgrade its local evidence only with a fresh ACTUAL authenticated MCP
@@ -72,18 +85,41 @@ def refresh_connector_evidence(h,data,now=None):
        and proof['external_round_trip']=='verified'):
     row['status']='operational'
     row['reason']='Guard MCP verified externally; owned local protected API responds.'
- local=([ 'degraded' ] if data.get('network',{}).get('state')=='error' else [])+[r.get('status','unverified') for r in data.get('services',())]
+ if externally_verified and data.get('network',{}).get('state')=='error':
+  data['network']['mcp_path']='operational'
+  if 'authenticated MCP still operational' not in str(data['network'].get('reason') or ''):
+   data['network']['reason']=str(data['network'].get('reason') or '')+'; authenticated MCP still operational on its observed path; independent public URL probe remains degraded.'
+ # Keep real public-health 502/503/504 evidence even if the MCP path is
+ # live. Distinguish diagnostic-route coverage from operational capability.
+ net=data.get('network',{})
+ independent_public_failure=(externally_verified and net.get('state')=='error'
+                             and net.get('forwarding')=='failed'
+                             and net.get('forwarded_http_status') in (502,503,504))
+ net['diagnostic_status']='degraded' if net.get('state')=='error' else 'operational'
+ data['diagnostic_coverage']={
+  'status':'degraded' if net.get('state')=='error' else 'operational',
+  'independent_public_health_failure':independent_public_failure,
+  'reason':('Public /health failed independently of observed authenticated MCP'
+            if independent_public_failure else
+            'Network inspection failed' if net.get('state')=='error'
+            else 'Network inspection completed')}
+ local=([ 'degraded' ] if net.get('state')=='error' and not independent_public_failure else [])+[r.get('status','unverified') for r in data.get('services',())]
  external=[c['status'] for c in connectors.values()]
  priority=('failed','reauthentication_required','degraded','starting','unverified','stale')
  data['local_overall_status']=next((s for s in priority if s in local),'operational')
  data['external_connectors_status']=next((s for s in priority if s in external),'operational')
- data['overall_status']=next((s for s in priority if s in local+external),'operational')
+ # Local health remains green when no recent remote MCP tool call was made.
+ # External session evidence remains independent and expires when idle.
+ data['overall_status']=data['local_overall_status']
+ data['overall_status_scope']='local_services'
  return data
+
 
 def observe(h,name,outcome,checked_at,source='external_director'):
  if name not in CONNECTORS:raise ValueError('Unknown connector')
  if outcome not in ('success','oauth_token_invalid_grant','transport_error'):raise ValueError('Unsupported observation')
  if not isinstance(checked_at,(int,float)) or not 0<=time.time()-checked_at<=TTL:raise ValueError('Observation must be current, with its actual check time')
+
  # Append-only unique events prevent out-of-order clients overwriting newer evidence.
  d=dict(connector=name,outcome=outcome,checked_at=checked_at,source=source)
  h.write(h.STATE/'connector-evidence'/name/(str(int(checked_at*1000000)).zfill(20)+'-'+uuid.uuid4().hex+'.json'),d)
@@ -95,6 +131,7 @@ def capability(service,action):
  if action=='Reconnect':return dict(enabled=service in ('mcp','guard','guard_gateway'),reason='Open ChatGPT connector settings; consent cannot be completed locally')
  if action=='Reset':return dict(enabled=service=='all',reason='Mark dead action workers interrupted and rebuild disposable health cache only')
  return dict(enabled=service in managed,reason='Existing owned-service lifecycle controller' if service in managed else {'broker':'Use Owner Control / Windows authorization','model':'Use Models controls; unloaded is not an outage','recovery':'Use registered recovery task control','desktop':'Use desktop lifecycle controls'}.get(service,'Unsupported service'))
+
 
 def enrich(h,data):
  now=data['checked_at'];previous=h.read(h.STATE/'health-last-success.json')
@@ -177,12 +214,14 @@ def plan(data,service):
   steps.append(dict(service=row['id'],outcome=outcome,reason=reason))
  for name,c in data.get('connectors',{}).items():
   if c['status']!='operational':steps.append(dict(connector=name,outcome='requires_user_action',reason=c['recommended_action']))
+
  return steps
 
 def network(h,cfg):
  result=dict(state='unknown',checked_at=time.time(),dns=None,ssh_reachable=None,ipv4_conflict=None,
              ipv4_route=None,ipv6_route=None,reason='Network evidence incomplete')
  try:
+
   r=h.ps("$d=@(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop | Where-Object AddressState -eq 'Duplicate');$r4=@(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue);$r6=@(Get-NetRoute -DestinationPrefix '::/0' -ErrorAction SilentlyContinue);@{duplicate=($d.Count -gt 0);ipv4_route=($r4.Count -gt 0);ipv6_route=($r6.Count -gt 0)}|ConvertTo-Json -Compress",8)
   d=json.loads(r.stdout);result.update(ipv4_conflict=d['duplicate'],ipv4_route=d['ipv4_route'],ipv6_route=d['ipv6_route'])
  except Exception:pass
@@ -195,6 +234,7 @@ def network(h,cfg):
  addresses=[]
  if host:
   # DNS resolution has its own process deadline, unlike getaddrinfo's OS timeout.
+
   import subprocess,sys
   try:
    from .remote_config import PUBLIC
@@ -275,6 +315,7 @@ def controller_failure(h,job_id,code):
   with path.open('rb') as f:
    f.seek(max(0,path.stat().st_size-32000));raw=f.read(32000).decode('utf8',errors='replace').lower()
  except OSError:raw=''
+
  patterns=[('port ownership unverified','ownership_unverified','Listener ownership could not be verified; no unrelated process may be stopped. Inspect accepting PID and retry the check.'),
  ('active tasks','active_work_blocked','Active or unknown work prevents this operation. Inspect tasks and use graceful whole-agent confirmation if intended.'),
  ('ssh relay unreachable','relay_unreachable','Relay SSH endpoint is unreachable. Inspect IPv4/IPv6 and route; healthy services are preserved.'),
@@ -282,6 +323,7 @@ def controller_failure(h,job_id,code):
  ('intentionally stopped','dependency_intentionally_stopped','A dependency was intentionally stopped; explicitly start that dependency if intended.'),
  ('another service operation','operation_busy','Another controller operation holds the lifecycle mutex; wait for its recorded outcome.'),
  ('restart budget exhausted','relay_retry_budget_exhausted','Relay retry budget is exhausted. Diagnose network/authentication before a further explicit action.')]
+
  for needle,ident,reason in patterns:
   if needle in raw:return dict(code=ident,reason=reason,controller_log=str(path),exit_code=code)
  return dict(code='controller_failed',reason='Service controller failed; inspect the retained local operation log.',controller_log=str(path),exit_code=code)

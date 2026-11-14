@@ -35,6 +35,12 @@ async def status():
     except (httpx.HTTPError,ValueError,KeyError) as exc:
         result['runtime_error']=type(exc).__name__
         result['effective_source']='runtime_unavailable'
+    if saved.browser_driver=='fara':
+        from .fara import status as visual_status
+    else:
+        from .ui_tars import status as visual_status
+    result['browser_driver']=saved.browser_driver
+    result['browser_runtime']=await visual_status() if saved.browser_driver in ('ui_tars','fara') else {'selected':False}
     return result
 
 async def perform(*,action='get',field=None,value=None,scope='default',text=None,busy=False,apply_now=False):
@@ -44,6 +50,59 @@ async def perform(*,action='get',field=None,value=None,scope='default',text=None
             return {'handled':False,'error':'Not a model preference command'}
         if parsed.get('action')=='error':
             return {'handled':True,'accepted':False,'error':parsed['error'],'field':parsed['field']}
+        if parsed['action']=='set_many':
+            scope=parsed['scope']
+            if scope!='default':
+                return {'handled':True,'accepted':False,'scope':scope,
+                        'error':'Conversation overrides are not supported; no settings changed'}
+            if busy:
+                return {'handled':True,'accepted':False,'error':'A task is active; no settings changed'}
+            requested=parsed['fields']
+            prior=load_settings(STATE)
+            try:
+                updated=ModelSettings.model_validate({**prior.model_dump(),**requested})
+            except ValidationError as exc:
+                return {'handled':True,'accepted':False,'requested':requested,
+                        'error':f"Invalid setting: {exc.errors()[0].get('msg','validation failed')}"}
+            try:
+                async with httpx.AsyncClient(timeout=8,trust_env=False) as c:
+                    show=await c.post(OLLAMA+'/api/show',json={'model':updated.model})
+                    show.raise_for_status()
+                native=[int(v) for k,v in (show.json().get('model_info') or {}).items()
+                        if k.endswith('.context_length') and isinstance(v,(int,float))]
+                advertised=max(native) if native else None
+                if advertised and updated.context_tokens>advertised:
+                    return {'handled':True,'accepted':False,'requested':requested,
+                            'native_context_length':advertised,
+                            'error':'Requested context exceeds advertised model capability'}
+            except (httpx.HTTPError,ValueError):
+                return {'handled':True,'accepted':False,'requested':requested,
+                        'error':'Could not verify model capability with Ollama; original settings kept'}
+            if updated!=prior:
+                save_settings(updated,STATE)
+            actual=await status()
+            answer={'handled':True,'accepted':True,'action':'set_many',
+                    'requested':requested,'saved':{key:actual['settings'][key] for key in requested},
+                    'settings':actual['settings'],'metadata':actual['metadata'],
+                    'effective':actual['effective'],'effective_source':actual.get('effective_source'),
+                    'reload_required':actual['reload_required'],
+                    'runtime_available':actual['runtime_available'],
+                    'model':actual['model'],'scope':'default','applies':'next_request'}
+            if apply_now and actual.get('model_loaded') and actual.get('reload_required'):
+                try:
+                    from .model_memory import control
+                    loaded=await control('load',actual['model'])
+                    after=await status()
+                    answer['effective']=after['effective']
+                    answer['reload_required']=after['reload_required']
+                    answer['runtime_verified']=bool(loaded.get('verified') and
+                                                   after['effective']==after['settings']['context_tokens'])
+                    if not answer['runtime_verified']:
+                        answer.update({'accepted':False,'error':'Ollama did not confirm context activation'})
+                except Exception as exc:
+                    answer.update({'accepted':False,'runtime_verified':False,
+                                   'error':'Runtime reload failed: '+str(exc)[:250]})
+            return answer
         action=parsed['action'];field=parsed['field'];scope=parsed['scope'];value=parsed.get('value')
     if scope != 'default':
         return {'handled':True,'accepted':False,'scope':scope,'error':
@@ -103,6 +162,7 @@ async def perform(*,action='get',field=None,value=None,scope='default',text=None
             'effective_source':actual.get('effective_source'),
             'reload_required':actual['reload_required'] if field in (None,'context_tokens') else False,
             'runtime_available':actual['runtime_available'],
+            'browser_driver':actual['browser_driver'],'browser_runtime':actual['browser_runtime'],
             'settings':actual['settings'],'metadata':actual['metadata']}
     if action!='get':
         answer['applies']='next_request'

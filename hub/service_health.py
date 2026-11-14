@@ -138,6 +138,7 @@ def port_identity(port):
 def network(cfg):
  return diagnostics.network(sys.modules[__name__],cfg)
 
+
 def guard_status(cfg):
  import asyncio
  async def fetch():
@@ -162,7 +163,21 @@ def guard_status(cfg):
  try:
   data=asyncio.run(bounded())
   return dict(state='verified',checked_at=time.time(),**data,reason='Authenticated Guard status. healthy may reflect verified existing Hub services; supervisor_healthy separately proves Guard-started ownership.')
- except Exception as exc:return dict(state='unknown',checked_at=time.time(),reason='Guard authenticated status unavailable: '+type(exc).__name__)
+ except Exception as exc:
+  # ExceptionGroup is a transport wrapper. Capture only nested exception class
+  # names, not messages, headers, credentials or network response bodies.
+  def classes(error,limit=4):
+   nested=getattr(error,'exceptions',None)
+   if isinstance(nested,tuple) and nested:
+    return [name for child in nested for name in classes(child)][:limit]
+   return [type(error).__name__]
+  names=classes(exc)
+  return dict(state='unknown',checked_at=time.time(),
+              reason='Guard authenticated status unavailable: '+type(exc).__name__+
+                     (' ('+', '.join(names)+')' if names and names!=[type(exc).__name__] else ''),
+              probe_failure_type=type(exc).__name__,
+              nested_error_types=names,
+              recommended_action='Inspect Guard MCP endpoint and authorization using supported status(service_id=hub); do not assume service outage')
 
 def _snapshot():
  now=time.time();cfg=config();inv=inventory()
@@ -238,8 +253,8 @@ def snapshot():
  finally:_snapshot_lock.release()
 
 def compact_status(data):
- keys=('id','name','status','reason','checked_at','evidence_age_seconds','last_success_at','recommended_action','capabilities')
- return {**{k:data.get(k) for k in ('schema_version','checked_at','overall_status','local_overall_status','external_connectors_status','connectors','network','guard_supervisor','active_tasks','reset_scope')},
+ keys=('id','name','status','reason','checked_at','evidence_age_seconds','last_success_at','recommended_action','capabilities','mcp_api_verified','supervisor_healthy','observed_healthy','health_basis')
+ return {**{k:data.get(k) for k in ('schema_version','checked_at','overall_status','local_overall_status','external_connectors_status','connectors','network','guard_supervisor','active_tasks','reset_scope','diagnostic_coverage')},
          'services':[{k:r.get(k) for k in keys} for r in data['services']]}
 
 def job_status(job_id):
@@ -278,6 +293,7 @@ def submit(action,service='mcp',request_id='',confirm_tasks=False):
    old=read(p)
    if old.get('state') in ('queued','running'):
     pid=old.get('worker_pid')
+
     if worker_alive(old):
      if (old.get('action'),old.get('service'),old.get('confirm_tasks',False))==(action,service,confirm_tasks):return old
      raise RuntimeError('Another service action is active: '+old['id'])
@@ -404,10 +420,56 @@ def acknowledge(nonce):
  return dict(verified=True,expires_in=120)
 
 def register_mcp(mcp,local,READ,WRITE):
+ async def _full_system_status():
+  """A safe retry prevents a transient diagnostic failure blocking all status."""
+  import asyncio
+  errors=[]
+  for attempt in range(2):
+   try:
+    result=await local('/api/service-health?compact=true',timeout=35 if not attempt else 12)
+    if not isinstance(result,dict):
+     raise ValueError('Malformed shared-health response')
+    result['current_mcp_call']={'status':'operational',
+      'source':'authenticated_mcp_to_hub','checked_at':time.time(),
+      'note':'Hub round-trip completed; separate SSH authentication not inferred'}
+    result['diagnostic_recovery']={'strategy':'bounded_read_only_retry',
+      'attempts':attempt+1,'recovered':bool(errors),
+      'error_types':errors,'restart_performed':False}
+    return result
+   except Exception as exc:
+    kind=type(exc).__name__;errors.append(kind)
+    retryable=(isinstance(exc,(TimeoutError,ConnectionError,OSError)) or
+      kind in ('ReadTimeout','ConnectTimeout','ConnectError','TimeoutException') or
+      (isinstance(exc,ValueError) and str(exc).startswith('Local agent returned HTTP 5')))
+    if attempt==0 and retryable:
+     await asyncio.sleep(0.15)
+     continue
+    break
+  checked=time.time()
+  return {'schema_version':2,'check_id':uuid.uuid4().hex,
+   'checked_at':checked,'overall_status':'unverified',
+   'local_overall_status':'unverified','external_connectors_status':'unverified',
+   'checks_completed':0,'checks_failed':0,'checks_unverified':len(LABELS),
+   'services':[{'id':k,'name':v[0],'status':'unverified','checked_at':checked,
+     'reason':'Shared health probe unavailable; no service outage established',
+     'recommended_action':'Inspect existing recovery controller, no automatic restart'}
+     for k,v in LABELS.items()],
+   'diagnostic_coverage':{'status':'unverified',
+     'reason':'Backend probe could not complete; each service remains unverified'},
+   'diagnostic_recovery':{'strategy':'bounded_read_only_retry',
+     'attempts':len(errors),'recovered':False,'error_types':errors,
+     'restart_performed':False},
+   'current_mcp_call':{'status':'operational',
+     'source':'authenticated_mcp_gateway_only','checked_at':checked,
+     'note':'Gateway answered MCP; Hub round-trip and standalone SSH are not verified'}}
+ @mcp.tool(annotations=READ)
+ async def system_health_check()->dict:
+  """FULL REAL-TIME STATUS OF ALL MellowCodex SERVICES. Call THIS tool when user writes just 'status', 'system health', 'check all services', Hebrew 'סטטוס', 'בדוק סטטוס', 'בדיקת בריאות', Russian 'статус', 'проверь сервисы', or equivalent in any chat/language. Never guess based on chat history. Always inspect Hub, MCP, Guard, gateways, SSH relay/network, Ollama/model, desktop and recovery from the SAME shared health backend. No model needed. A probe error is NOT a service outage. Explicitly separate intentional model unload from failure and MCP endpoint success from SSH daemon verification. Returns all rows, evidence times, connector observations and reasons."""
+  return await _full_system_status()
  @mcp.tool(annotations=READ)
  async def service_health_status()->dict:
-  """Read service health separately: ownership, API, tunnel and fresh remote MCP proof. Also returns task impact and durable action state."""
-  return await local('/api/service-health?compact=true',timeout=45)
+  """Alias for system_health_check: always perform a fresh comprehensive diagnostic, including all services and their evidence. Use for any status request."""
+  return await _full_system_status()
  @mcp.tool(annotations=WRITE)
  async def service_health_action(action:str,service:str,request_id:str,confirm_tasks:bool=False)->dict:
   """Check/Repair/Start/Stop/Restart/Reset through the existing shared manager. Reconnect returns connector-specific consent instructions without restarting healthy services. MCP stop disconnects this call path; retain durable id and inspect after reconnect. Never changes network or owner permissions."""
@@ -418,6 +480,7 @@ def register_mcp(mcp,local,READ,WRITE):
   return await local('/api/service-health/action/'+action_id)
  @mcp.tool(annotations=READ)
  async def service_health_connection_challenge()->dict:
+
   """Issue a nonce for a two-call MCP round trip; receive it before acknowledging."""
   return await local('/api/service-health/connection/challenge',{})
  @mcp.tool(annotations=WRITE)

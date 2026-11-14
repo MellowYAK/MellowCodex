@@ -731,26 +731,17 @@ class SelfDevelop:
 
     def step(self, chat_id, request_id, instruction, allowed_tools, required_tools=None,
              required_sources=None, evidence_only=False, exact_patch=None, context_read=None):
+        """Preflight and commit the first task and guidance in one SQLite transaction.
+
+        The queued task is not visible to the executor until its mandatory
+        director guidance is committed. Failed validation or inserts leave no
+        orphan task or chat turn.
+        """
         self.status(chat_id)
-        chats = Conversations(self.store)
-        chat = chats.get(chat_id)
-        idem = 'chat:' + chat_id + ':' + request_id
-        with self.store.connect() as db:
-            retry = db.execute('SELECT id FROM tasks WHERE idem=?', (idem,)).fetchone()
-        if not retry and any(t['state'] not in ('done', 'cancelled') for t in chat['turns']):
-            raise Conflict('Review or correct the existing step before starting another SelfDevelop step')
-        if not allowed_tools:
-            raise ValueError('Director must provide explicit allowed tools')
-        Guidance.validate_request(request_id,instruction,required_tools,required_sources,allowed_tools,evidence_only,exact_patch,context_read)
-        task = chats.submit(chat_id, instruction, 'code', request_id)
-        guide = Guidance(self.store)
-        status = guide.status(task['id'])
-        guide.submit(task['id'], task['revision'], status['guidance_revision'], status['consumer_epoch'],
-                     request_id, instruction, required_tools=required_tools,
-                     required_sources=required_sources, allowed_tools=allowed_tools,
-                     evidence_only=evidence_only, exact_patch=exact_patch, context_read=context_read)
-        self.guard(task['id'])
-        return self.store.get(task['id'])
+        from .atomic_step import submit_atomic_step
+        return submit_atomic_step(self.store, chat_id, request_id, instruction,
+                                  allowed_tools, required_tools, required_sources,
+                                  evidence_only, exact_patch, context_read)
 
     def close_failed(self, chat_id, task_id, expected_revision, request_id, reason):
         """Explicit audited closure of a final failed step, without replaying actions."""

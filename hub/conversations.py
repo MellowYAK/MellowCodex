@@ -110,7 +110,18 @@ CREATE TABLE IF NOT EXISTS selfdevelop_chat_modes(chat_id TEXT PRIMARY KEY,mode 
         return result
     def inventory(self):
         with self.store.connect() as db:
-            return {'projects':[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY name')], 'chats':[dict(r) for r in db.execute('SELECT * FROM chats ORDER BY pinned DESC,created DESC')]}
+            chats=[dict(r) for r in db.execute('SELECT * FROM chats')]
+            from datetime import datetime
+            def stamp(value):
+                try:return datetime.fromisoformat(value.replace('Z','+00:00')).timestamp()*1000
+                except (ValueError,TypeError,AttributeError):return 0
+            activity={r[0]:stamp(r[1]) for r in db.execute('SELECT ct.chat_id,MAX(t.updated) FROM chat_tasks ct JOIN tasks t ON t.id=ct.task_id GROUP BY ct.chat_id')}
+            if db.execute("SELECT 1 FROM sqlite_master WHERE name='bridge_messages'").fetchone():
+                for chat_id,created in db.execute('SELECT chat_id,MAX(created) FROM bridge_messages GROUP BY chat_id'):
+                    activity[chat_id]=max(activity.get(chat_id,0),created*1000)
+            for chat in chats:chat['last_activity']=max(stamp(chat['created']),activity.get(chat['id'],0))
+            chats.sort(key=lambda c:(c['last_activity'],c['id']),reverse=True)
+            return {'projects':[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY name')], 'chats':chats}
     def page(self,chat_id,before=None,limit=30):
         """A bounded chronological viewport; no task-message arrays or history deletion."""
         if not 1<=limit<=60 or before is not None and before<0:raise ValueError('Invalid conversation page')
@@ -127,6 +138,8 @@ CREATE TABLE IF NOT EXISTS selfdevelop_chat_modes(chat_id TEXT PRIMARY KEY,mode 
                 task['attachments']=[]
                 for event in db.execute("SELECT kind,data FROM events WHERE task_id=? AND kind IN ('attachments','request_presentation') ORDER BY seq",(task['id'],)):
                     data=json.loads(event['data'])
+
+
                     if event['kind']=='attachments':task['attachments'].extend(data.get('files',[]))
                     else:task['presentation']=data
         return result
@@ -181,6 +194,30 @@ CREATE TABLE IF NOT EXISTS selfdevelop_chat_modes(chat_id TEXT PRIMARY KEY,mode 
             uncertain=[r[0] for r in db.execute("SELECT DISTINCT c.task_id FROM chat_tasks c JOIN actions a ON a.task_id=c.task_id WHERE c.chat_id=? AND a.state='pending'",(chat_id,))]
             recent=[dict(r) for r in db.execute('SELECT t.id,t.goal,t.result,t.state FROM chat_tasks c JOIN tasks t ON t.id=c.task_id WHERE c.chat_id=? ORDER BY c.position DESC LIMIT 12',(chat_id,))][::-1]
             position=db.execute('SELECT COALESCE(MAX(position),-1)+1 FROM chat_tasks WHERE chat_id=?',(chat_id,)).fetchone()[0]
+        # System health is an observed, read-only command, not a model task.
+        # It works in every chat and is allowed while unrelated work is active.
+        from .system_health import is_status_request, collect_report
+        if not attachments and is_status_request(goal):
+            if existing:
+                if existing['goal']!=goal:raise Conflict('Different status request for existing identity')
+                return self.store.get(existing['id'])
+            report,details=collect_report()
+            with self.store.connect() as db:
+                db.execute('BEGIN IMMEDIATE')
+                saved=db.execute('SELECT id,goal FROM tasks WHERE idem=?',(idem,)).fetchone()
+                if saved:
+                    if saved['goal']!=goal:raise Conflict('Different status request for existing identity')
+                    return self.store.get(saved['id'])
+                task_id=uuid.uuid4().hex
+                stamp=now()
+                db.execute('INSERT INTO tasks(id,idem,revision,state,created,updated,goal,workspace,mode,result) '
+                           'VALUES(?,?,?,?,?,?,?,?,?,?)',
+                           (task_id,idem,1,'done',stamp,stamp,goal,chat['workspace'],'inspect',report))
+                db.execute('INSERT INTO chat_tasks VALUES(?,?,?)',(chat_id,task_id,position))
+                if position==0:db.execute('UPDATE chats SET title=? WHERE id=?',(goal[:70],chat_id))
+                db.execute('INSERT INTO events(task_id,revision,kind,data,at) VALUES(?,?,?,?,?)',
+                           (task_id,1,'system_health_check',json.dumps(details,ensure_ascii=False),stamp))
+            return self.store.get(task_id)
         if existing:
             if existing['goal']!=goal or existing['mode']!=mode:raise Conflict('Different message for existing request')
             return self.store.get(existing['id'])
@@ -245,4 +282,5 @@ def migrate_legacy(store):
         if not Path(t['workspace']).is_dir():continue
         p=c.project(t['workspace']);chat=c.create(p['id'],t['goal'][:70])
         with store.connect() as db:
+
             db.execute('INSERT OR IGNORE INTO chat_tasks VALUES(?,?,0)',(chat['id'],t['id']))

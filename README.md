@@ -1,4 +1,116 @@
-## Named browser elements (Hub 0.18.0)
+## 0.27.0 - Verified running source snapshot (2026-11-14)
+
+Published the complete current MellowCodex application source tree (not merely one recent patch), source tests, bundled skills, pinned dependency lock and portable SHA256-verified external-tools downloader. Included adaptive bounded context reservation (16K input/output configuration), deterministic SelfDevelop required-tool completion, one-call owner-gated Skill Shop install/run and native safe computer shutdown routing. Deployed live updates `3a28f7a1c4d741a581b7bcd2dd12e0c8` and `f42e6a76caf34c118f2ef64c62249459` were `ACTIVE_VERIFIED`; four real owner-approved skill runs and three isolated install benchmarks passed. The 2026-11-14 16:49 post-boot report showed all ten local services operational and both external MCP paths acknowledged, **but Guard supervisor_healthy=false**. Detailed timings, testing and portability limits: [release notes](docs/RELEASE-NOTES-0.27.0-2026-11-14.md) and [install guide](docs/INSTALL-REPRODUCIBLE-0.27.0.md). External Guard binaries, owner credentials, model weights and local machine state are not distributed. A clean-machine install has not been independently tested.
+
+## 0.27.0 - Unified system health status - 2026-11-13
+Status retry and independent public health route hardening (2026-11-13): Full system status retries a transient backend timeout/transport failure at most once without restarting services. If still blocked, the diagnostic error is reported and every untested service is unverified, never automatically failed. A public /health HTTP 503 is retained as diagnostic degradation even when live authenticated MCP works. For full status in a connected ChatGPT conversation, use the MCP system_health_check tool; independent Guard.status() requires service_id='hub' or update_id. See docs/SYSTEM-HEALTH-STATUS.md.
+
+
+Write "status", "סטטוס" or "статус" in the local chat to obtain one fresh read-only full service report, without loading a local model. The same underlying check is used in the native Health panel and authenticated MCP system_health_check (also service_health_status). Shows per-component timestamps, evidence and fault diagnostics, including explicit distinction between a probe failure and a real outage. An actual MCP round-trip proves that connection path, not separately every SSH authentication method. See docs/SYSTEM-HEALTH-STATUS.md.
+## Unreleased — deterministic file-reference handoff — 2026-11-12
+
+`list_files` returns task-scoped `ref` identifiers for exact observed entries. `read_file` accepts either the original `path` or the observed `ref`, never both. References resolve to the original canonical path before workspace and owner-policy checks. Cross-task, stale, missing, ambiguous and directory references fail closed. Legacy path usage and Windows permissions are unchanged. This feature is currently staged in an isolated candidate and is NOT deployed.
+
+## Unreleased — dense browser packet correction — 2026-11-12
+
+Compact repeated null/default DOM fields and JSON spacing while preserving selected controls, checkbox state, options and mandatory instructions. Candidate d3dec9643f3b4736a7bd861e2f41a1dd revision1 passed21 focused tests and update de4a3275727144938caf26a48bae37b0 is ACTIVE_VERIFIED. Real-site inference now ran (2832 actual input,3195 estimated) within4096 context without changing model allocation.
+
+Actual Comics reconnection completed with operator assistance: local task909704379f6a495594bdb165e6b619e2 opened YouTube connection and selected the existing Google account, but repeated rejected actions after an unresolved transition; cancelled to stop its loop. Operator then selected the Comics channel and Continue screens using the existing embedded-browser tools. Callback showed channel connected; an independent authenticated YouTube read returned50 videos for UCkLhl5wB--tBWAN6ZgeAWRw instead of expired authorization. No publication/deletion occurred. This is NOT independent local-model acceptance. Remaining defects: stale snapshot after hash-route changes, decorative visual target selection, and failure to reconcile intermediate transitions. Pending cancellation action was reconciled with observed evidence without replay.
+
+## 0.26.0 — Local UI-TARS browser driver — 2026-11-12
+
+Installed optional UI-TARS 1.5 7B Q4_K_M browser driver using a local llama.cpp OpenAI-compatible runtime. Existing normal/code model choice, task runner, permissions, source-bound screenshots, current DOM targeting, cancellation, uncertain-action fencing and entity-bound completion remain authoritative. No new Python dependency or data migration. Includes compact browser decision evidence, native/web routing corrections and desktop-tool disclosure from the preceding browser effectiveness candidate.
+
+Controls: Settings > local model > browser driver; select UI-TARS local. MCP model_settings_status/model_settings_command use the same persisted browser_driver field and validation. Browser-runtime availability is separate from the primary Ollama model's loaded state. Local runtime is installed in E:/AI/tools/ui-tars-local and requires start-gpu.cmd; automatic startup is not implemented.
+
+Actual failures fixed: screenshot coordinates returned inside ref; duplicate historical tool-evidence text inflating packets after old images were removed; copied browser_act syntax and stale observation identifiers. Translation validates current targets; stale identifiers remain rejected. A malformed proposal gets at most one model correction before any input is sent, and both calls count toward usage.
+
+Deployed agent-owned acceptance e38baed90ee24990bcaf2b586f077237 completed navigation, English Continue, Russian Продолжить, Hebrew שמור and exact fresh outcome verification "Orion saved successfully" without external feedback or manual steps. Browser assessment recorded verified=true, fresh_operation_verified=true and entity_verified=true. Final protocol candidate0124139271034caba0d7a0215a609a17 revision1 passed19 focused tests; update946da71bcca142ccb5f6122a291f49d7 ACTIVE_VERIFIED. This is one disposable multi-screen workflow, not a broad multilingual/site benchmark.
+
+Successful task:8844 input/105 output tokens across5 model calls, approximately30 seconds from task creation to final assessment. Four visual inference request round trips total8.734 seconds; the fifth text assessment latency is not separately recorded. All five development acceptance attempts, including four failures, total30642 input/250 output tokens across14 calls. Diagnostic proposal-only replays are separate from these task totals. No comparable Qwen run or general speedup claim. Accounting remains estimated before inference and measured from provider usage after inference.
+
+Runtime readback: ui-tars-local available; Ollama models=[] (Qwen weights retained, unloaded); GPU7150/8192 MiB at sampled post-run check. Preserve headroom: normal/code tasks can still load their primary model; automatic cross-runtime VRAM arbitration is not implemented.
+
+Limitations: browser-only; visual points must map to current DOM controls, so canvas-only targets/arbitrary desktop gestures are unsupported. External-feedback mode, real-account login, downloads, broad-site reliability and reboot/autostart not validated in this release. Unsupported or over-budget tasks fail explicitly. No human-level autonomy claim.
+
+Deployed parity update71a6fd237ee94517925e87da2959403b is ACTIVE_VERIFIED; seven focused parity/protocol/packet tests passed. Native Qt settings were refreshed and showed UI-TARS selected/active plus primary model unloaded. Installed registered MCP status/get handlers returned the same saved/effective selection and runtime availability. The current ChatGPT cached catalog does not expose those newer tool names, so this is installed-handler verification, not an external ChatGPT invocation.
+
+Release packaging:32 focused tests passed from the clean0.26.0 release worktree; git diff --check passed. Provider source matches deployed behavior (one whitespace-only line normalized with AST equality).
+
+Evidence: E:/AI/artifacts/ui-tars-acceptance-20261112/acceptance-results.json, task action log, runtime install manifest/SHA receipt in E:/AI/tools/ui-tars-local. Existing chats/projects/skills/permissions/browser profile retained; no history deletion.
+
+Rollback: switch browser_driver to default through UI or MCP; no schema downgrade or model deletion. Stop only the owned UI-TARS runtime when no browser task is active before loading another GPU model. For code rollback use a reviewed reverse candidate and the existing Guard workflow; do not restore the task database. Physical rollback/reboot are not claimed.
+
+## 0.25.0 - Desktop launch from running services - 2026-11-12
+
+Add desktop_status and desktop_open in MCP and the local agent, including browser mode. The same backend powers the UI browser button. Start the installed Qt desktop on demand, reuse the existing singleton/profile, verify owned process + native IPC + browser CDP before reporting ready, and show the window when requested. Stable request IDs, cross-process admission and a startup grace period prevent duplicate/uncertain launch replay. No model inference needed for MCP launch; no arbitrary executable, elevation, network setting, model setting or permission changes.
+
+Validation: 18 focused tests passed on final candidate867bb7f9e5c84866be06807223dcf0e0 revision2. Update b6af9d0129da49f780369e23a9c1c5ee is ACTIVE_VERIFIED; running API0.25.0. Agent-owned task66fbb1f4d2684d669c82f10ea1552cb2 observed no desktop, launched it through desktop_open, verified owned native IPC + CDP + visible window, then read the restored browser tab. Start-to-ready took5.93seconds for this single sample. Installed MCP handler and UI focus backend readback passed; concurrent requests produced one operational result and one bounded starting response, retaining the same PID. Reusing a request ID did not replay launch. External ChatGPT tool catalog refresh and literal UI button click were not tested; backend/native UI response was. Session-zero and power-transition rejection are mocked; locked-session, reboot, hung-GUI recovery and full rollback activation are not claimed. Existing hung/unverified processes are reported without forced termination. No browser profile or application data was deleted.
+
+## 0.24.1 - Safe shutdown identity correction - 2026-11-11
+
+The first requested safe shutdown stopped Ember, then correctly blocked before Windows power because strict boot-time float equality rejected a same-boot sample differing by about 64 microseconds. Use a 10 ms finite numeric tolerance; distinct boots and invalid markers remain rejected. Recognize a configured venv launcher reporting a temporary cwd only when its direct trusted interpreter child has the exact invocation and configured source cwd. Foreign listeners/processes remain rejected. No forced Windows close, authentication, permission or dependency changes.
+
+Validation: 26 focused tests passed; update cb68c052f4184ba7baeb7e2b0b7df93f ACTIVE_VERIFIED. Running API reports 0.24.1. A separate process accepted the same boot marker, failed transitions remained inactive, actual Hub/gateway/desktop launcher pairs were verified owned, and read-only Stop all preflight passed. The original blocked operation never dispatched Windows power; a new explicit request is required. Physical power-off is not claimed from a disconnected MCP connection. Roll back this patch through a reviewed reverse candidate based on commit 03d8451cc4c16a61c6f7ac7f11f6a506c63d0d66, preserving state, using the documented candidate/test/Guard workflow.
+
+# MellowCodex 0.24.0 - browser task evidence and recovery
+Released 2026-11-11. Installed through the independent SelfDevelop/Guard supervisor; latest update e80ff041a85246eba94738e37458860d is ACTIVE_VERIFIED.
+
+The internal Qt browser is controlled through Playwright/CDP. The local agent receives current DOM headings, exact control labels, enabled/checked state, page identity and matching screenshots when available. OCR supplements the DOM; an incoherent image is not presented as current input evidence. Browser tools are disclosed progressively without changing permissions.
+
+Give the browser a goal in ordinary chat. For corrections, open **Task guidance** on its browser/desktop task card; this uses the same revision-checked task guidance backend as MCP. Mirroring conversation text alone is not an execution instruction. Guidance stored, included in inference, acted on and accepted are separate states.
+
+The agent chooses intermediate actions. Typed action outcomes and durable action history prevent uncertain clicks from being blindly replayed, and completion requires fresh evidence bound to the requested entity. Repeated unchanged reads/rejected assessments are bounded. Unicode URLs are matched without treating encoded reserved separators as equivalent; replacing the desktop invalidates old tab/observation identities.
+
+Verified: one complete disposable multi-step setup without external guidance; one assisted final-stage recovery; individual public-page reading in Hebrew, English and Russian. This is not a promise of human-level performance on every site. A combined multi-site task stalled, and RBC caused a native GUI hang requiring a bounded operator recovery. Real OAuth renewal, CAPTCHA handling and universal automatic GUI recovery are not certified. No new dependencies, model/context changes, credential changes or database migrations.
+
+See [browser operation, evidence and rollback](docs/BROWSER-AUTONOMY.md) and [measured validation](VALIDATION.md).
+
+## 0.23.0 ? 2026-11-11
+Added MCP resume_task and cancel_task with chat binding and revision checks, using existing task control. Added delete_task_preview and delete_task: explicitly removes a terminal task from chat history only, preserving task audit, artifacts, files and memory. Not secure erasure. Active/uncertain tasks are blocked; cancelled tasks cannot resume. Existing stop_task retained.
+Validation: four targeted tests passed; Guard update 446d93a303bf4f9db56fae17070a370d ACTIVE_VERIFIED; installed registered MCP handlers previewed actual cancelled task and rejected cancelled resume, stale cancel and unconfirmed deletion. No user task deleted. Successful execution of a resumed browser/OAuth task remains unverified. Refresh connector tools to discover newly advertised names. UI retains existing resume/cancel; deletion currently available through MCP/backend only.
+
+# MellowCodex 0.22.1
+
+Projects and conversations are ordered by latest activity. Sidebar lists have more space. Reload the interface to load updated static assets.
+
+# MellowCodex 0.22.0 — Safe power and Windows startup
+
+Settings > General now contains **Start with Windows**, **Safely shut down computer** and **Safely restart computer**. The same controls are available in the independent Health & Services window and newly opened Tools/tray menus. The setting currently reads enabled and was verified against the owned current-user Windows task.
+
+Power requests inspect impact and stop only supported owned services through existing lifecycle managers, including Ember Video, Hub, MCP/Guard, SSH and Ollama. Busy work or failed stop verification blocks the Windows request. No forced Windows app closure. Ordinary chat/MCP uses the same backend and existing authorization.
+
+Installed version 0.22.0 and UI/backend parity are verified. Physical shutdown/reboot/logon and generation-model selection of the new tools remain unverified; no machine reboot was performed during this release. Reopen an existing shell later to load updated native menus; the offline desktop shortcut works immediately.
+
+See [power controls](docs/SAFE-COMPUTER-POWER.md), [validation](VALIDATION.md) and [version history](CHANGELOG.md).
+
+## Previous release overview
+
+# MellowCodex 0.21.0 — Health & Recovery
+
+A native recovery panel with separate service, network, SSH, connector OAuth and external MCP evidence. Open **Mellow Health and Services** on the desktop, or the top health indicator / Tools / tray in a newly opened shell. It remains usable when MCP or Hub is down.
+
+Each supported service has Inspect / Start / Stop / Restart / Repair. Global controls include Check all, Repair all, Restart MCP transports, Start all, Stop all and a scoped Reset that preserves application data, credentials, permissions and owner-stop markers. No network configuration changes are automatic.
+
+Deployed and verified through the existing Guard supervisor. Actual MCP stop/start, offline Windows UI, duplicate-request handling and data preservation passed. Guard authentication survived the controlled restart. A machine/router reboot was not performed; the earlier network/OAuth incident cause remains unproven. The already running desktop/browser was preserved; open the standalone shortcut immediately or reopen the shell later to load its updated native menus.
+
+See [service controls](docs/MCP-SERVICE-CONTROL.md), [validation](VALIDATION.md), and [version history](CHANGELOG.md) for evidence, limitations and rollback. No dependencies added.
+
+## Earlier release documentation
+
+## Health and service rescue (Hub 0.19.0)
+
+The native top health indicator, Tools > Health and Services, tray menu and offline desktop shortcut open the same local panel. It works without Hub or MCP. The panel and MCP service_health tools submit durable actions to the existing reconcile-services.ps1 manager, with per-service selection, shared locks and intentional-stop markers.
+
+Process presence, verified accepting PID, API response, owned SSH tunnel and remote MCP round-trip evidence are separate. Remote evidence expires after two minutes; use connection_challenge then connection_ack only after actually receiving the nonce through MCP. A local port is never remote proof. OAuth renewal must be done through the MellowCodex connection in ChatGPT when required; reconnect does not bypass consent.
+
+Close window hides the shell. Stop MCP leaves Hub, conversation/tasks, Ollama and the desktop running. Stop all requires task-impact confirmation and uses existing graceful shutdown; the rescue window and protected OwnerBroker stay available. OwnerBroker changes still use existing Owner Control/UAC. Model, recovery-task and shell-specific settings remain in their dedicated controls. No network/credential/permission changes are automated.
+
+Intentional MCP/all/service stop markers persist across reboot. Scheduled Reconcile honors them. Explicit Start/Restart clears the relevant markers, starts dependencies and resumes recovery. Start all clears the global all-stop marker; Start MCP alone does not undo a prior all-services recovery pause. Explicit actions wait up to 30 seconds for the existing manager lock; scheduled recovery remains nonblocking and retries on its existing one-minute schedule. Failed/interrupted jobs are visible and are never replayed automatically.
+
+Native UI/deployment and controlled stop/reconnect validation are recorded separately in VALIDATION.md; no reboot claim is implied.
+
+## Named browser elements (Hub 0.18.1)
 
 Use Select element in the internal browser, give the preview an optional unique name, then Save element and select more. Each saved element/region gets a permanent automatic number. The Elements toolbar opens the shared list: rename, select multiple entries and attach references to the current draft. Saving or attaching never sends a task automatically.
 
@@ -8,7 +120,7 @@ MCP browser_selections lists entries or resolves the same natural-language refer
 
 Saved elements are snapshots, not permanent live DOM identities. Re-observe the current page before acting, especially after navigation or layout changes. Arbitrary-site, iframe and closed-shadow-root compatibility is not guaranteed. No renderer, owner policy or package change is included.
 
-## Browser element annotations (Hub 0.18.0)
+## Browser element annotations (Hub 0.18.1)
 
 In the internal browser toolbar, choose Select element. Hover to highlight, click an element or drag a visible region; Escape cancels. The click is intercepted instead of activating the page control. A native preview shows the cropped screenshot and bounded element DOM/computed CSS. Enter an instruction and choose Attach to conversation draft. Two local library files (PNG and JSON) and the instruction are added to the existing draft, preserving other attachments up to the five-file limit. Press Send in the conversation when ready; picking/attaching never starts a task automatically.
 
@@ -16,7 +128,7 @@ The saved JSON includes page URL without query/fragment, title, element tag and 
 
 MCP browser_annotations lists recent saved selection files; use get_file with the returned IDs. This is the same library used by the conversation attachment pipeline, not separate state. Existing connector sessions may need tool discovery refreshed. No new persistent setting or renderer change is introduced.
 
-## Skill Shops icons (Hub 0.18.0)
+## Skill Shops icons (Hub 0.18.1)
 
 Each installed skill has a colorful purpose-specific SVG icon. Damaged question-mark titles and categories are repaired for display without editing installed package manifests, code or hashes.
 
@@ -28,17 +140,17 @@ MCP skill_icon_settings uses the same validation and storage: name identifies th
 
 Dialog backdrops retain their shaded overlay without backdrop blur, including Settings, AI connectors and task status. Actual Qt software-renderer scroll callbacks improved from about 5 to 31 per second in the bounded comparison; this is not a physical monitor refresh measurement or proof that intermittent artifacts are fixed.
 
-## UI refresh performance (Hub 0.18.0)
+## UI refresh performance (Hub 0.18.1)
 
 Unchanged project/chat lists retain their DOM nodes across background polling. Collapsed activity logs update only their summary; detailed logs render when opened. Task polling and background execution continue.
 
 The Windows OpenGL trial was reported faster but still produced artifacts. It has been replaced for the current process with a software-rendering trial using the optimized UI and unblurred modal backdrops. This is not a persisted application preference or proven fix for intermittent physical display corruption. No new setting was added. Runtime API version metadata loads at the next normal service restart; source-only metadata updates do not require an extra restart.
 
-## Skill Shops lifecycle (Hub 0.18.0)
+## Skill Shops lifecycle (Hub 0.18.1)
 
 Open Skill Shops with a selected conversation. Local packages under scripts/skills containing tool.py and test_tool.py can be previewed, installed, updated and removed. Confirmation shows the exact plan digest and current-user Python execution permissions. The protected OwnerBroker enforces the existing Full/Ask/Safe policy; this does not grant new permissions. Tests run before atomic activation; failed updates keep the previous version. Removal moves packages to quarantine, and research100 packages are protected. Source hashes and syntax checks are integrity checks, not a malware sandbox. Remote ZIP marketplaces are not supported.
 
-## Service recovery — source version 0.18.0
+## Service recovery — source version 0.18.1
 
 Run `register-service-recovery.ps1` once to install current-user logon and one-minute background recovery. `start.ps1` also invokes `reconcile-services.ps1` with Windows PowerShell 5.1. Missing Ollama, Hub, MCP gateway, installed Guard and owned SSH relay are restored without stopping existing work. Runtime status is in `E:\AI\state\service-reconcile.json`. Repeated launches are serialized. Live nonresponsive processes are reported rather than forcibly terminated. Recovery runs while logged in, including a locked session; actual locked-session and reboot acceptance remain untested. This is not pre-login desktop automation.
 
@@ -699,3 +811,61 @@ A real Qwen Coder 7B trial fixed timeout validation but removed existing shell/c
 
 
 Unreleased 2026-11-08: coding-worker packets now include the latest exact-command correction reason and request identity, without executable command payloads, while retaining the original objective. Previously the exact-command correction was recorded but omitted from the worker packet. A focused transport regression verifies latest-reason delivery; real-model correction acceptance remains pending.
+
+### Browser interaction evidence (0.18.1)
+The local agent receives controls before long page prose. Use fresh observation IDs and element refs; an exact unique observed name is accepted, but ambiguous/stale controls are rejected. browser_observe accepts an optional accessible-name query for omitted controls. This uses the existing tool/API path and adds no global configuration. Input acknowledgement alone is not proof of completion. Browser login/password and verification prompts can still require the user.
+
+MCP service controls: see [MCP-SERVICE-CONTROL.md](docs/MCP-SERVICE-CONTROL.md). Desktop shortcuts start, stop, restart and show status without closing tasks or inference.
+
+
+
+### Context & Memory
+Open the conversation memory dialog to inspect local packet accounting, checkpoints and sources, or explicitly pin chat/project decisions. Model settings expose the same persisted context_management (legacy/shadow/bounded) and working_input_tokens controls through UI and MCP. See [context memory](docs/CONTEXT_MEMORY.md).
+
+
+### 0.20.0 installed controls and rollback
+Context & Memory is available in the conversation memory dialog. Final policy: bounded; working input target:12000. UI and MCP use the same persisted settings. Switch context_management to legacy to roll back packet selection while retaining history. No dependency installation is needed. See VALIDATION.md for measured results and limitations; the single-packet58.2% reduction is not a whole-task performance claim.
+
+
+## Unreleased - Fara browser adapter
+Native Fara computer_use JSON tool calls and normalized1000 coordinates use existing current-observation DOM matching, tool permissions and completion evidence gates. UI and MCP share browser_driver=fara. Local runtime uses vision GPU plus16/65 layers; remaining weights inRAM. Same synthetic image improved44.391s to35.703s (one sample each); not a browser benchmark. Native adapter tests and ZikZak connection acceptance pending. No success claimed for browser autonomy. Runtime rollback: fara27-local/manage.py rollback and restore browser_driver=ui_tars through shared settings.
+
+Fara live acceptance attempt1 stopped before mutation: first inference2601input/118output95.734s, rawXML parser rejected output. Added standard structured tool_calls handling, proper system/user role separation,160outputtoken cap and cancellation recheck. ZikZok OAuth remains expired; no connection success claimed.
+
+Measured native transport fault: Fara emitted one correct Social-networks click JSON but repeated opening tool_call instead of closing tag. Parser now accepts only that exact single-object variant, rejects multiple objects, and requests constrained JSON to eliminate commentary/XML overhead. Prior attempts remain failed autonomous acceptance; no OAuth mutation performed.
+
+Live Fara attempt3 reached Social networks, connectchannel, Googleaccount and unverifiedapp page, then selected Backtosafety rather thanContinue. Added boundedDOMlabel/normalizedcenter feedback, required intendedclicklabel and deterministiclabel-match gate, plus existing guardedhistoryback. This is a measured failure, not a successful ZikZokconnection.
+
+
+Unreleased — 2026-11-12 browser budget repair: shared visual-runner preflight and diagnostics now reserve the same output limit as the dispatched model profile (Fara 160; default 512). Real attempt 41024203 stopped before inference because estimated input 3810 plus the obsolete 512 reserve exceeded 4096. Input accounting remains estimated, including unchanged image bound and margin; no context increase or requirement truncation. Focused checks and renewed autonomous browser acceptance pending.
+
+
+Unreleased — 2026-11-12 Fara runtime grammar repair: express each action as a complete exclusive schema branch with required arguments. Previous sibling properties/oneOf allowed a left_click without coordinates in live runtime; adapter blocked it before input. Prompt now consistently requests plain JSON. No browser acceptance claimed; exact runtime read-only probe required before activation.
+
+Runtime schema probe produced complete Social Networks click in66.109seconds (3208input/42output), but leading decorative arrow caused exact-label rejection. Normalize leading Unicode symbols consistently in displayed hints and comparison; retain actual text and reject different controls. Probe did not dispatch.
+
+
+Unreleased — 2026-11-12 live correction repair: pass consumed task guidance in runner-owned structured metadata to visual planning and completion assessment. Previously splitting system policy at historical continuity omitted later live corrections despite acknowledgement. Preserve current task scope, revision dispatch fence, and historical evidence exclusion. Failure observed in69e4f7d; Alex target correction requires renewed live acceptance.
+
+
+Unreleased — 2026-11-12 browser recovery: when post-click capture fails, reconcile a later coherent changed destination against the exact pre-action observation ID, requiring same tab/frame and newer capture. Same/unknown origin remains blocked; transition never means task completion. Live327044 selected Alex correctly but became stuck after capture error; model also proposed the wrong cancel control (blocked). Add explicit Hebrew/Russian navigation label meanings to Fara instructions; this is guidance, not a proven general reasoning fix. New live acceptance pending.
+
+
+Unreleased — 2026-11-12 transition reconciliation correction: compare attached late post-action and subsequent coherent observations to the exact PRE-action source, never the already changed post-action baseline. Require newer same-tab/frame evidence. Keep completion unverified until separate acceptance. Visual runner observes unresolved effects before spending inference on stale pre-action state. Validate on archived real tasks without replay before new login.
+
+
+Unreleased — 2026-11-12 terminal verification boundary: a fresh short success receipt without actionable form controls routes to existing browser_assess BEFORE another model action. Shared dispatch blocks further writes/navigation at that boundary. Existing negative/stale/freshness/entity checks remain required; generic receipts with no target identity stop for review rather than fabricate completion. No repeated OAuth necessary. Actual channel connection was independently verified; terminal regression live verification pending.
+
+Terminal boundary uses existing local semantic assessment for visual drivers to check the whole objective before completion, preserving entity/freshness checks. Other drivers conservatively stop for independent verification. No generic success keyword alone completes a multi-step goal.
+
+Default/Ollama browser path uses the same selected model with structured output for whole-objective terminal assessment. Visual Fara/UI-TARS keep their existing verifier. No additional inference occurs on ordinary steps; only at a fresh terminal boundary. Entity-less receipts remain unverified.
+
+
+## Unreleased — Action Routes (2026-11-12)
+Action Routes adds a shared, versioned visual step library in Settings → מסלולי פעולה, with folders, parameters, historical screenshots, uploaded reference images, notes and ordering. UI and MCP action_routes use the same persisted service; local agents discover action_routes in their tool catalog. Imports are drafts and preserve source IDs; they do not replay history. Explicit sharing exposes route content/images to the selected project or global scope. Missing parameters prevent launch. Runs use the existing task runner and fresh observations, not recorded coordinates. Edits require current revisions. Delete removes discovery/use but retains source tasks/files and database/backup history. Rollback restores the previous release without dropping additive route tables. This is not a fix for general browser/model accuracy.
+
+Action Routes image validation also exposed unclosed FileLibrary SQLite connections on Windows; connections now close deterministically after each transaction.
+## 2026-11-13: Guard provenance report and diagnostic error classification
+For complete local status use '?????', 'Status', or '??????', backed by shared Hub snapshot and bounded read-only retry. Guard startup provenance, observed service readiness, separate public /health diagnostic coverage and safe nested transport failure types are visible without treating an inconclusive probe as a service outage. Standalone Mellow Guard.status requires service_id='hub' or an update_id; no-selector status is unsupported in the installed Guard runtime. The status route never force-restarts services to repair a diagnostic error.
+## 2026-11-13: Public health 503 event-loop deadlock correction
+Status and system health requests in the local chat no longer block the Hub event loop while probing Gateway/public health. Gateway validates a cheap, identifying Hub page instead of generating OpenAPI on every /health check. A genuine unavailable or wrong Hub still returns 503; no fake green cache. Public and local endpoints use the existing live health and authorized update mechanisms.

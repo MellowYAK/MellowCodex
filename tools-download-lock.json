@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "platform": "windows-x64",
+  "components": [
+    {
+      "name": "uv",
+      "version": "0.13.7",
+      "asset": "uv-x86_64-pc-windows-msvc.zip",
+      "url": "https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-pc-windows-msvc.zip",
+      "sha256": "0cdc5b38fe5a8168ed6a25814f5ba43c21d313dd3187314fccb37b7cec46e021"
+    },
+    {
+      "name": "opencode",
+      "version": "v1.19.5",
+      "asset": "opencode-windows-x64.zip",
+      "url": "https://github.com/anomalyco/opencode/releases/download/v1.19.5/opencode-windows-x64.zip",
+      "sha256": "09a6e693157f0887e504f2cf4357a8cbddc5ead5d0dffb9a269dcc47c48640f5"
+    },
+    {
+      "name": "ollama",
+      "version": "v0.40.14",
+      "asset": "ollama-windows-amd64.zip",
+      "url": "https://github.com/ollama/ollama/releases/download/v0.40.14/ollama-windows-amd64.zip",
+      "sha256": "65d68cade6cf6375f398b518224f8c8a15e062387f38cf477abfc848de7e7e29"
+    }
+  ]
+}

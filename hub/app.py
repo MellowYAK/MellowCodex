@@ -97,6 +97,81 @@ async def lifespan(app):
 
 app=FastAPI(title='Local Agent Hub',version=__version__,lifespan=lifespan,docs_url=None,redoc_url=None)
 
+# Owner-approved frozen Safe Mode is managed by an independent offline runtime.
+SAFE_MODE_ROOT = Path('E:/AI/safe-mode')
+
+def _safe_cli(name: str, *args: str) -> dict:
+    import subprocess
+    bootstrap=SAFE_MODE_ROOT/'bootstrap-python'/'python.exe'
+    program=SAFE_MODE_ROOT/name
+    if not bootstrap.is_file() or not program.is_file():
+        raise RuntimeError('Standalone Safe Mode bootstrap is missing')
+    completed=subprocess.run([str(bootstrap),str(program),*args],
+                             cwd=str(SAFE_MODE_ROOT),capture_output=True,text=True,
+                             timeout=35,check=False)
+    if completed.returncode:
+        raise RuntimeError((completed.stderr or completed.stdout)[-500:])
+    return json.loads(completed.stdout)
+
+@app.get('/api/safe-mode/status')
+async def safe_mode_status():
+    try:
+        snapshot=await asyncio.to_thread(_safe_cli,'safe_manager.py','status')
+        runtime=await asyncio.to_thread(_safe_cli,'safe_runtime.py','status')
+        return {'production_version':__version__,'production_path':str(Path(__file__).parent.parent),
+                'safe':snapshot,'runtime':runtime,'promotion_requires_explicit_owner_confirmation':True}
+    except (RuntimeError, OSError, ValueError) as exc:
+        raise HTTPException(503,str(exc)[:500])
+
+class SafeModePromotion(BaseModel):
+    request_id: str
+    confirmation: Literal['PROMOTE_CURRENT_TO_SAFE']
+
+@app.post('/api/safe-mode/promote',status_code=202)
+async def promote_safe_mode(body:SafeModePromotion):
+    import re
+    import subprocess
+    from .service_health import active_tasks
+    if not re.fullmatch(r'[a-f0-9]{32}',body.request_id):
+        raise HTTPException(400,'Invalid promotion request ID')
+    if active_tasks():
+        raise HTTPException(409,'Cannot freeze a new Safe release while local tasks are active')
+    root=SAFE_MODE_ROOT
+    jobs=root/'state'/'jobs';jobs.mkdir(parents=True,exist_ok=True)
+    job=jobs/(body.request_id+'.json')
+    if job.is_file():
+        return json.loads(job.read_text(encoding='utf-8-sig'))
+    if (root/'state'/'promotion.lock').exists():
+        raise HTTPException(409,'Another Safe release promotion is already running')
+    bootstrap=root/'bootstrap-python'/'python.exe'
+    worker=root/'safe_jobs.py'
+    if not bootstrap.is_file() or not worker.is_file():
+        raise HTTPException(503,'Offline Safe promotion worker unavailable')
+    created={'id':body.request_id,'state':'queued','source_version':__version__}
+    temp=job.with_suffix('.tmp')
+    temp.write_text(json.dumps(created),encoding='utf-8')
+    os.replace(temp,job)
+    log=root/'state'/'jobs'/(body.request_id+'.log')
+    try:
+        with log.open('ab') as output:
+            subprocess.Popen([str(bootstrap),str(worker),'promote',body.request_id],
+                             cwd=str(root),stdin=subprocess.DEVNULL,stdout=output,stderr=output,
+                             creationflags=getattr(subprocess,'CREATE_NEW_PROCESS_GROUP',0))
+    except OSError as exc:
+        job.write_text(json.dumps({**created,'state':'failed','error':str(exc)[:300]}),encoding='utf-8')
+        raise HTTPException(503,'Could not launch independent Safe promotion worker')
+    return created
+
+@app.get('/api/safe-mode/promotions/{request_id}')
+async def safe_mode_promotion_status(request_id:str):
+    import re
+    if not re.fullmatch(r'[a-f0-9]{32}',request_id):
+        raise HTTPException(400,'Invalid promotion request ID')
+    job=SAFE_MODE_ROOT/'state'/'jobs'/(request_id+'.json')
+    if not job.is_file():
+        raise HTTPException(404,'Promotion request not found')
+    return json.loads(job.read_text(encoding='utf-8-sig'))
+
 @app.get('/api/owner-permissions/status')
 async def owner_permission_status(chat_id: str = ''):
     # STATUS ONLY. MCP/agent/Guard have no permission-write API.
@@ -107,11 +182,17 @@ async def owner_permission_status(chat_id: str = ''):
 
 
 @app.post('/api/lifecycle/shutdown')
-async def shutdown_agent():
+async def shutdown_agent(body:dict | None=None):
+    from .service_health import submit,active_tasks
+    body=body or {}
+    if not body.get('confirm_tasks'):
+        raise HTTPException(409, {'reason':'Confirm whole-agent task impact in Health and Services first','active_tasks':active_tasks()})
     try:
-        return app.state.shutdown.start()
+        return await asyncio.to_thread(submit,'Stop','all',body.get('request_id',''),True)
+    except ValueError as exc:
+        raise HTTPException(400,str(exc))
     except RuntimeError as exc:
-        raise HTTPException(409, str(exc))
+        raise HTTPException(409,str(exc))
 
 @app.get('/api/lifecycle/status')
 async def shutdown_status():
@@ -752,7 +833,16 @@ async def chat_message(chat_id:str,body:ChatMessage):
         from .model_preferences import perform
         outcome=await perform(text=body.text,busy=any(not job.done() for job in engine.jobs.values()))
         return {'handled_model_command':True,'model_command':outcome}
-    task=conversations().submit(chat_id,body.text,body.mode,body.request_id,body.attachments,presentation={'text':body.user_message or body.text,'source':body.source})
+    from .system_health import is_status_request
+    submit=conversations().submit
+    if not body.attachments and is_status_request(body.text):
+        # A status request probes the public Gateway which calls Hub back.
+        # Offload blocking collection so this Hub event loop can answer it.
+        task=await asyncio.to_thread(submit,chat_id,body.text,body.mode,body.request_id,body.attachments,
+                                     presentation={'text':body.user_message or body.text,'source':body.source})
+    else:
+        task=submit(chat_id,body.text,body.mode,body.request_id,body.attachments,
+                    presentation={'text':body.user_message or body.text,'source':body.source})
     if task['state']=='queued':engine.enqueue(task['id'])
     return public_task(task)
 
@@ -1237,11 +1327,11 @@ async def browser_tabs_view():
 
 @app.post('/api/browser/focus')
 async def focus_native_browser():
-    import sys
-    process=await asyncio.create_subprocess_exec(sys.executable,'-m','hub.browser_ipc','--focus-browser',stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,creationflags=0x08000000)
-    await asyncio.wait_for(process.communicate(),5)
-    if process.returncode:raise HTTPException(503,'Open the Local Agent desktop window first')
-    return {'focused':True}
+    import uuid
+    from .desktop_runtime import open_desktop
+    result=await asyncio.to_thread(open_desktop,'ui-focus:'+uuid.uuid4().hex,True)
+    if not result.get('ready'):raise HTTPException(503,result)
+    return result
 
 class BrowserTab(BaseModel):
     tab_id:str
@@ -1268,6 +1358,166 @@ async def screenshot_settings_set(body:ScreenshotSettings):
 
 from .browser_selections import router as browser_selections_router
 app.include_router(browser_selections_router())
+
+
+# Native rescue and MCP share the same durable service manager.
+@app.get('/api/service-health')
+async def service_health_snapshot(compact:bool=False):
+    from .service_health import snapshot,compact_status
+    data=await asyncio.to_thread(snapshot)
+    return compact_status(data) if compact else data
+
+class ServiceHealthAction(BaseModel):
+    action: str
+    service: str = 'mcp'
+    request_id: str
+    confirm_tasks: bool = False
+
+@app.post('/api/service-health/action')
+async def service_health_action(body: ServiceHealthAction):
+    from .service_health import submit
+    try:
+        return await asyncio.to_thread(submit,body.action,body.service,body.request_id,body.confirm_tasks)
+    except ValueError as exc:
+        raise HTTPException(400,str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(409,str(exc))
+
+@app.get('/api/service-health/action/{action_id}')
+async def service_health_action_result(action_id:str):
+    from .service_health import job_status
+    try:return job_status(action_id)
+    except ValueError as exc:raise HTTPException(404,str(exc))
+
+@app.post('/api/service-health/connection/challenge')
+async def service_health_challenge():
+    from .service_health import challenge
+    return challenge()
+
+class HealthConnectionAck(BaseModel):
+    nonce: str
+
+@app.post('/api/service-health/connection/ack')
+async def service_health_ack(body:HealthConnectionAck):
+    from .service_health import acknowledge
+    try:return acknowledge(body.nonce)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+@app.post('/api/service-health/quiesce')
+async def service_health_quiesce():
+    return app.state.shutdown.start(keep_desktop=True)
+
+
+@app.get('/api/chats/{chat_id}/context-memory')
+async def context_memory_status(chat_id:str,task_id:str|None=None):
+    from .conversation_memory import ConversationMemory
+    from .model_settings import load_settings
+    memory=ConversationMemory(store)
+    with store.connect() as db:
+        memory._exists(db,chat_id)
+        if task_id is None:
+            row=db.execute('SELECT task_id FROM chat_tasks WHERE chat_id=? ORDER BY position DESC LIMIT 1',(chat_id,)).fetchone()
+            task_id=row[0] if row else None
+    result=memory.context_diagnostics(chat_id,task_id) if task_id else {'chat_id':chat_id,'task_id':None,'packet':None,'checkpoint':None,'history_loaded':False}
+    settings=load_settings()
+    result['settings']={k:getattr(settings,k) for k in ('context_management','working_input_tokens','context_tokens','response_tokens')}
+    result['scope']='chat';result['rollback']='Set context_management to legacy through model settings; durable evidence is retained.'
+    return result
+
+@app.get('/api/chats/{chat_id}/context-evidence')
+async def context_memory_evidence(chat_id:str,task_id:str,message_index:int,sha256:str,offset:int=0,chars:int=3000):
+    from .conversation_memory import ConversationMemory
+    try:return ConversationMemory(store).context_evidence(chat_id,task_id,message_index,sha256,offset,chars)
+    except KeyError as exc:raise HTTPException(404,str(exc))
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
+
+@app.get('/api/chats/{chat_id}/context-pins')
+async def context_memory_pins(chat_id:str,offset:int=0):
+    from .conversation_memory import ConversationMemory
+    return ConversationMemory(store).pinned_memory(chat_id,offset)
+
+@app.post('/api/chats/{chat_id}/context-pins')
+async def context_memory_pin(chat_id:str,body:dict):
+    from .conversation_memory import ConversationMemory
+    try:return ConversationMemory(store).pin_memory(chat_id,body['anchor_id'],body['scope'],body['pinned'],body['expected_revision'])
+    except KeyError as exc:raise HTTPException(404,str(exc))
+    except ValueError as exc:raise HTTPException(409,str(exc))
+
+@app.post('/api/service-health/connector-observation')
+async def service_health_connector_observation(body:dict):
+    from . import service_health as health
+    try:
+        return health.diagnostics.observe(health,body.get('connector'),body.get('outcome'),body.get('checked_at'))
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+@app.get('/api/power/preview/{action}')
+async def computer_power_preview(action:str):
+    from .power import preview
+    try:return await asyncio.to_thread(preview,action)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+
+class ComputerPowerRequest(BaseModel):
+    action:str
+    request_id:str
+    confirm_tasks:bool=False
+
+@app.post('/api/power/action')
+async def computer_power_action(body:ComputerPowerRequest):
+    from .power import submit
+    try:return await asyncio.to_thread(submit,body.action,body.request_id,body.confirm_tasks)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+    except RuntimeError as exc:raise HTTPException(409,str(exc))
+
+@app.get('/api/power/startup')
+async def agent_startup_status():
+    from .power import startup_status
+    return await asyncio.to_thread(startup_status)
+
+class AgentStartupRequest(BaseModel):
+    enabled:bool
+    expected_revision:int
+
+@app.post('/api/power/startup')
+async def agent_startup_set(body:AgentStartupRequest):
+    from .power import set_startup
+    try:return await asyncio.to_thread(set_startup,body.enabled,body.expected_revision)
+    except ValueError as exc:raise HTTPException(400,str(exc))
+    except RuntimeError as exc:raise HTTPException(409,str(exc))
+
+class TaskLifecycleRequest(BaseModel):
+    chat_id:str
+    expected_revision:int
+    action:Literal['resume','cancel','delete']
+    confirm:bool=False
+
+@app.get('/api/tasks/{task_id}/delete-preview')
+async def task_delete_preview(task_id:str,chat_id:str):
+    from .task_lifecycle import preview
+    return preview(store,engine,chat_id,task_id)
+
+@app.post('/api/tasks/{task_id}/lifecycle')
+async def task_lifecycle_action(task_id:str,body:TaskLifecycleRequest):
+    from .task_lifecycle import bound,remove
+    bound(store,body.chat_id,task_id)
+    if body.action=='delete':
+        return remove(store,engine,body.chat_id,task_id,body.expected_revision,body.confirm)
+    return public_task(await engine.control(task_id,body.action,body.expected_revision))
+
+
+class DesktopOpenRequest(BaseModel):
+    request_id:str=Field(min_length=1,max_length=120)
+    show:bool=True
+
+@app.get('/api/desktop/runtime')
+async def desktop_runtime_status():
+    from .desktop_runtime import status
+    return await asyncio.to_thread(status)
+
+@app.post('/api/desktop/open')
+async def desktop_runtime_open(body:DesktopOpenRequest):
+    from .desktop_runtime import open_desktop
+    return await asyncio.to_thread(open_desktop,body.request_id,body.show)
 
 from .action_routes import router as action_routes_router
 app.include_router(action_routes_router(store,engine))

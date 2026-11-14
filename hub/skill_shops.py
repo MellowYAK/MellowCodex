@@ -173,6 +173,7 @@ def catalog_data(extension_root=None, audit_path=None):
                     if isinstance(c, str) and CAP.fullmatch(c)))[:100]
             unique.update(caps)
             categories = m.get("categories", [])
+
             categories = categories if isinstance(categories, list) else []
             limits = m.get("limitations", [])
             limits = limits if isinstance(limits, list) else []
@@ -214,6 +215,15 @@ class ShopActionRequest(BaseModel):
 
 class ShopCommitRequest(ShopActionRequest):
     expected_digest: str
+
+class ShopFastInstallRequest(BaseModel):
+    slug: str
+    chat_id: str
+
+class ShopFastRunRequest(BaseModel):
+    name: str
+    chat_id: str
+    arguments: dict
 
 
 def _extension_tasks_busy(_name):
@@ -302,5 +312,57 @@ def action_router():
             )
         except (ValueError, OSError) as exc:
             raise HTTPException(409, str(exc)[:200]) from exc
+
+
+    @api.post("/api/skill-shops/fast-install")
+    async def fast_install(payload: ShopFastInstallRequest):
+        """Single call through same exact owner-gated preview and immutable commit."""
+        import time
+        _require_chat(payload.chat_id)
+        start=time.perf_counter()
+        try:
+            plan=_marketplace.preview("install",payload.slug,payload.chat_id)
+            result=await _marketplace.commit("install",payload.slug,plan["digest"],payload.chat_id)
+        except (ValueError,OSError) as exc:
+            raise HTTPException(409,str(exc)[:200]) from exc
+        return {**result,"duration_ms":round((time.perf_counter()-start)*1000,2),
+                "single_call":True}
+
+    @api.post("/api/skill-shops/fast-run")
+    async def fast_run(payload: ShopFastRunRequest):
+        """Direct installed skill run using fresh OwnerBroker authorization."""
+        import time
+        from .extensions import Extensions
+        from .skill_shops_lifecycle import protected_authorize,digest
+        start=time.perf_counter()
+        _require_chat(payload.chat_id)
+        if not NAME.fullmatch(payload.name):
+            raise HTTPException(422,"Invalid skill name")
+        if len(json.dumps(payload.arguments,ensure_ascii=False))>65536:
+            raise HTTPException(422,"Skill arguments too large")
+        try:
+            installed=_marketplace._installed(payload.name)
+        except (ValueError,OSError) as exc:
+            raise HTTPException(409,str(exc)[:200]) from exc
+        if installed is None:raise HTTPException(404,"Skill not installed")
+        plan={"operation":"skill_shops_lifecycle","action":"run",
+              "chat_id":payload.chat_id,"installed_name":payload.name,
+              "installed_version":installed["version"],
+              "source_sha256":installed["source_sha256"],
+              "arguments_digest":digest(payload.arguments),"risk":"CURRENT_USER_PYTHON_EXECUTION"}
+        approval=protected_authorize(plan)
+        if not (isinstance(approval,dict) and approval.get("allowed") is True
+                and approval.get("server_identity_verified") is True
+                and approval.get("approved_action_digest")==digest(plan)):
+            return {"status":"needs_owner","executed":False,
+                    "reason":approval.get("reason") if isinstance(approval,dict) else "authorization_unavailable"}
+        task={"id":"skill-fast-run-"+digest(plan)[:24],"workspace":str(ROOT)}
+        try:
+            result=await Extensions().run(task,payload.name,payload.arguments)
+        except (ValueError,OSError) as exc:
+            raise HTTPException(409,str(exc)[:200]) from exc
+        return {"status":"executed" if result["exit_code"]==0 else "execution_failed",
+                "executed":True,"duration_ms":round((time.perf_counter()-start)*1000,2),
+                "result":result}
 
     return api

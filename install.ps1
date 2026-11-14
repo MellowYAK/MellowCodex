@@ -4,7 +4,7 @@ $env:UV_CACHE_DIR = "$agentRoot\cache\uv"
 $env:UV_PYTHON_INSTALL_DIR = "$agentRoot\tools\python"
 $env:TEMP = "$agentRoot\cache"
 $env:TMP = "$agentRoot\cache"
-if (!(Test-Path "$agentRoot\tools\uv\uv.exe")) { throw 'Run E:\AI\download-tools.ps1 first; it uses pinned release manifests and SHA256 checks.' }
+if (!(Test-Path "$agentRoot\tools\uv\uv.exe")) { & "$PSScriptRoot\download-tools.ps1" -AgentRoot $agentRoot }
 & "$agentRoot\tools\uv\uv.exe" python install 3.12.16
 if ($LASTEXITCODE -ne 0) { throw 'Python installation failed' }
 if (!(Test-Path "$agentRoot\tools\hub-venv\Scripts\python.exe")) {

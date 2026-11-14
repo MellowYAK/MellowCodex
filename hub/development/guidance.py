@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS development_guidance(task_id TEXT NOT NULL,revision I
         with self.store.connect() as db:
             consumer=db.execute('SELECT epoch FROM development_consumers WHERE task_id=?',(task_id,)).fetchone()
             rows=db.execute('SELECT * FROM development_guidance WHERE task_id=? ORDER BY revision',(task_id,)).fetchall()
-        return {'task_id':task_id,'task_revision':task['revision'],'task_state':task['state'],'human_request_original':task['goal'],'consumer_epoch':consumer['epoch'] if consumer else '', 'guidance_revision':len(rows),'guidance':[dict(r) for r in rows]}
+        return {'task_id':task_id,'task_revision':task['revision'],'task_state':task['state'],'human_request_original':task['goal'],'consumer_epoch':consumer['epoch'] if consumer else '', 'guidance_revision':len(rows),'guidance':[dict(r) for r in rows],'last_action_evidence':(self.store.latest_event(task_id,'guidance_action_evidence') or {}).get('data')}
 
     @staticmethod
     def validate_request(request_id,text,required_tools=None,required_sources=None,allowed_tools=None,evidence_only=False,exact_patch=None,context_read=None):

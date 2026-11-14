@@ -11,10 +11,13 @@ class ModelSettings(BaseModel):
     inference_enabled: bool = True
     coding_model: str = Field(default='', max_length=160)
     context_tokens: int = Field(default=16384, ge=1024)
-    response_tokens: int = Field(default=1024, ge=256, le=8192)
+    response_tokens: int = Field(default=1024, ge=256, le=16000)
     temperature: float = Field(default=.1, ge=0, le=1)
     keep_alive_minutes: int = Field(default=30, ge=0, le=1440)
     request_timeout_seconds: int = Field(default=120, ge=30, le=600)
+    context_management: Literal['legacy','shadow','bounded'] = 'shadow'
+    working_input_tokens: int = Field(default=12000, ge=2048, le=262144)
+    browser_driver: Literal['default','ui_tars','fara'] = 'default'
     visual_guidance: bool = True
     visual_policy: Literal['smart','continuous'] = 'smart'
 
@@ -40,6 +43,9 @@ import re
 from pydantic import ValidationError
 
 FIELD_DESCRIPTIONS = {
+    'browser_driver': ('browser task driver: default, ui_tars or fara; UI-TARS runtime loopback8794, Fara runtime loopback8796; no silent Ollama fallback', 'enum', 'next_request'),
+    'context_management': ('packet policy: legacy, shadow, bounded; no model allocation change', 'enum', 'next_request'),
+    'working_input_tokens': ('soft estimated input target; mandatory evidence may exceed target but never hard budget', 'tokens', 'next_request'),
     'model': ('installed Ollama model ID', 'name', 'next_request'),
     'coding_model': ('installed coding model ID (empty uses primary)', 'name', 'next_request'),
     'inference_enabled': ('allow inference after manual memory control', 'boolean', 'next_request'),
@@ -51,6 +57,7 @@ FIELD_DESCRIPTIONS = {
     'visual_guidance': ('visual guidance enabled', 'boolean', 'next_request'),
     'visual_policy': ('visual guidance policy', 'enum', 'next_request'),
 }
+
 
 def field_metadata():
     result = {}
@@ -91,6 +98,24 @@ def parse_model_command(text):
     if not isinstance(text, str) or not 4 <= len(text) <= 1000:
         return None
     s = text.strip().lower()
+    # A combined instruction must not silently edit only the first named field.
+    both = ('שניהם' in s or 'שתי ההגדרות' in s or
+            (('context' in s or 'קונטקסט' in s or 'חלון הקשר' in s) and
+             ('response tokens' in s or 'מגבלת פלט' in s or 'טוקנים לפלט' in s)))
+    if both:
+        scope = 'conversation' if any(w in s for w in ('לשיחה הזאת','לשיחה הזו','בשיחה הזאת','for this chat','this conversation')) else 'default'
+        if not any(w in s for w in ('הגדל','הקטן','קבע','שנה','הגדר','עדכן','שים','set','change','increase','decrease')):
+            return None
+        if any(w in s for w in ('ב-', 'by ', 'פי ', 'כפול')):
+            return {'action':'error','field':None,'scope':scope,'error':'Specify an absolute desired setting'}
+        numbers = list(re.finditer(r'(?<![0-9a-z_])(\d+(?:\.\d+)?)\s*([km])?(?![0-9a-z_])',s))
+        if len(numbers) != 1:
+            return {'action':'error','field':None,'scope':scope,'error':'Specify exactly one numeric value'}
+        match=numbers[0]
+        value=float(match.group(1)) * (1024 if match.group(2)=='k' else 1048576 if match.group(2)=='m' else 1)
+        if value != int(value):
+            return {'action':'error','field':None,'scope':scope,'error':'Token settings must be whole numbers'}
+        return {'action':'set_many','fields':{'context_tokens':int(value),'response_tokens':int(value)},'scope':scope}
     field = next((field for field, words in _FIELD_WORDS if any(w in s for w in words)), None)
     if field is None:
         if (re.search(r'\d+\s*[km]\b', s) and any(word in s for word in ('קבע','הגדל','הגדר','set'))) or s in ('מה הערך הפעיל?', 'מה הערך הפעיל', 'החזר לברירת המחדל'):
@@ -112,6 +137,7 @@ def parse_model_command(text):
         numbers = list(re.finditer(r'(?<![0-9a-z_])(\d+(?:\.\d+)?)\s*([km])?(?![0-9a-z_])', s))
         if len(numbers) != 1:
             return {'action': 'error', 'field': field, 'scope': scope, 'error': 'Specify exactly one numeric value'}
+
         match = numbers[0]
         value = float(match.group(1)) * (1024 if match.group(2) == 'k' else 1048576 if match.group(2) == 'm' else 1)
         if field != 'temperature':

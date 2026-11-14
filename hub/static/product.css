@@ -86,3 +86,14 @@ body.dark .status-dialog{background:#1e222a;color:#e5e7eb}body.dark .dashboard-m
 
 /* Keep the permission status row visible when the header wraps. */
 @media(max-width:760px){main>header{height:auto;min-height:74px}}
+
+/* Sidebar: devote remaining height to both independently scrollable lists. */
+#sidebar,.native-shell #sidebar{width:290px;padding:14px 12px 10px;min-height:0}
+#sidebar .brand{margin:3px 5px 12px}
+#sidebar #search{margin:8px 0 4px}
+#sidebar>.section{margin:10px 8px 4px}
+#sidebar .sidebar-extra{margin:3px 0}
+#sidebar #projects{flex:1.35 1 0;min-height:110px;max-height:none;overflow:auto}
+#sidebar #chats{flex:1 1 0;min-height:110px;overflow:auto}
+#sidebar>.account{flex-shrink:0;padding-top:7px}
+@media(max-width:760px){#sidebar,.native-shell #sidebar{width:min(290px,88vw)}}

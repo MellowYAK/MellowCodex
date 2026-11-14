@@ -34,15 +34,35 @@ def ident(value):
 
 async def local(path,data=None,timeout=15):
     key=(STATE/'hub.key').read_text(encoding='utf-8').strip()
-    async with httpx.AsyncClient(base_url=f'http://127.0.0.1:{PORT}',headers={'x-hub-key':key},timeout=timeout) as client:
+    async with httpx.AsyncClient(base_url=f'http://127.0.0.1:{PORT}',headers={'x-hub-key':key},timeout=timeout,trust_env=False) as client:
         response=await (client.get(path) if data is None else client.post(path,json=data))
     if response.status_code == 409:
         try: detail=response.json().get('detail','State conflict')
         except (ValueError,AttributeError): detail=response.text[:300]
+        # Report the exact SelfDevelop preflight blocker without turning it into
+        # an opaque MCP exception. All other conflicts remain hard failures.
+        if path.startswith('/api/selfdevelop/') and path.endswith('/step'):
+            try: blocker=json.loads(detail) if isinstance(detail,str) else detail
+            except (TypeError,ValueError): blocker=None
+            if isinstance(blocker,dict) and blocker.get('code')=='selfdevelop_blocked':
+                return {'state':'blocked','status_code':409,**blocker}
         raise LocalStateConflict(str(detail)[:300])
     if not response.is_success:
         raise ValueError(f'Local agent returned HTTP {response.status_code}: {response.text[:300]}')
-    return response.json()
+    result = response.json()
+    # Runs after successful authenticated MCP tool -> Hub response, not a health probe.
+    # Recording an observation must never interrupt the caller or create fake evidence.
+    if path != '/api/service-health/connector-observation':
+        try:
+            async with httpx.AsyncClient(base_url=f'http://127.0.0.1:{PORT}',
+                                          headers={'x-hub-key':key}, timeout=2,
+                                          trust_env=False) as evidence_client:
+                await evidence_client.post('/api/service-health/connector-observation',
+                                           json={'connector':'mellowcodex','outcome':'success',
+                                                 'checked_at':time.time()})
+        except (httpx.HTTPError, OSError, ValueError):
+            pass
+    return result
 
 
 
@@ -85,9 +105,28 @@ async def model_settings_status()->dict:
 @mcp.tool(annotations=WRITE)
 async def model_settings_command(text:str|None=None,action:Literal['get','set','reset']='get',field:str|None=None,value:str|int|float|bool|None=None,scope:str='default',apply_now:bool=False)->dict:
     """Understand Hebrew/English model preference requests such as 'הגדל את חלון הקונטקסט ל32768', 'מה הערך הפעיל', or 'החזר לברירת המחדל'. Also supports typed fields from model_settings_status. Preserves existing model-settings.json; never adjusts owner Safe/Ask/Full. Conversation-specific settings return an explicit unsupported error, never change global silently. Values report requested, persisted, Ollama effective and reload_required; changing during an active task is blocked."""
+
     if text is not None and len(text)>1000:raise ValueError('Model preference command exceeds 1000 characters')
     return await local('/api/settings/model/control',dict(text=text,action=action,field=field,value=value,scope=scope,apply_now=apply_now),timeout=125 if apply_now else 20)
 
+@mcp.tool(annotations=READ)
+async def safe_mode_status()->dict:
+    """Read Production and immutable local Safe release versions, actual frozen integrity and active mode. No service changes."""
+    return await local('/api/safe-mode/status',timeout=30)
+
+@mcp.tool(annotations=WRITE)
+async def safe_mode_promote(request_id:str,confirm_current_verified:bool=False)->dict:
+
+    """Owner explicitly approves freezing current verified Production as a new Safe release, retaining previous Safe releases. Runs as a durable independent job. NEVER auto-promote. After acceptance poll safe_mode_promotion_status."""
+    if not confirm_current_verified:
+        raise ValueError('Explicit user confirmation is required to promote current Production to Safe')
+    return await local('/api/safe-mode/promote',{'request_id':ident(request_id),
+                      'confirmation':'PROMOTE_CURRENT_TO_SAFE'},timeout=25)
+
+@mcp.tool(annotations=READ)
+async def safe_mode_promotion_status(request_id:str)->dict:
+    """Read a durable Safe promotion job; queued/running is not successful completion."""
+    return await local('/api/safe-mode/promotions/'+ident(request_id),timeout=25)
 @mcp.tool(annotations=READ)
 async def owner_permission_status(chat_id: str = '') -> dict:
     """Read effective local owner permission status. Cannot approve/change any policy."""
@@ -124,15 +163,42 @@ async def sync_conversation_message(project_id:str,conversation_key:str,message_
     return await local('/api/mcp/conversation-message',dict(project_id=ident(project_id),conversation_key=conversation_key,message_id=message_id,text=text,speaker=speaker))
 
 @mcp.tool(annotations=WRITE)
+async def skill_fast_install(chat_id:str,slug:str)->dict:
+    """Install a local bundled Skill Shops package in one owner-gated call with source hash checks, validation, and atomic publishing. Never downloads remote code."""
+    if not isinstance(slug,str) or not re.fullmatch(r"[a-z][a-z0-9_-]{2,60}",slug):
+        raise ValueError("Valid local skill slug required")
+    return await local('/api/skill-shops/fast-install',dict(chat_id=ident(chat_id),slug=slug),timeout=80)
+
+@mcp.tool(annotations=WRITE)
+async def skill_fast_run(chat_id:str,name:str,arguments:dict)->dict:
+    """Run one hash-verified installed skill in one call after fresh OwnerBroker approval. Execution stays in isolated subprocess; never skips native computer power confirmation."""
+    if not isinstance(name,str) or not re.fullmatch(r"[a-z][a-z0-9_]{2,60}",name):
+        raise ValueError("Valid installed skill required")
+    if not isinstance(arguments,dict) or len(json.dumps(arguments,ensure_ascii=False))>65536:
+        raise ValueError("Bounded JSON argument object required")
+    return await local('/api/skill-shops/fast-run',dict(chat_id=ident(chat_id),name=name,arguments=arguments),timeout=100)
+
+@mcp.tool(annotations=WRITE)
 async def submit_task(chat_id:str,request:str,request_id:str,mode:Literal['inspect','code','desktop','browser']='desktop',ctx:Context=None,user_message:str|None=None,attachments:list[dict]|None=None)->dict:
-    """Add a task INSIDE the existing chat: keep the same chat_id for this external conversation. Do not create a chat for every task or bypass a busy/uncertain task by creating another chat. Wait up to 20 seconds; if active you MUST poll get_task until terminal before reporting completion. Reuse request_id on retries. user_message is the original human-facing request in the user language, kept separate from technical execution instructions. attachments contains existing uploaded file_id references, never invented paths."""
+    """For status/סטטוס/статус in ANY chat, perform a fresh FULL system health check and return a compact result immediately without local model inference. Add other tasks INSIDE the existing chat: keep the same chat_id for this external conversation. Do not create a chat for every task or bypass a busy/uncertain task by creating another chat. Wait up to 20 seconds; if active you MUST poll get_task until terminal before reporting completion. Reuse request_id on retries. user_message is the original human-facing request in the user language, kept separate from technical execution instructions. attachments contains existing uploaded file_id references, never invented paths."""
     if not 8<=len(request_id)<=200:raise ValueError('request_id must contain 8–200 characters')
     if not request.strip() or len(request)>30000:raise ValueError('Request must contain 1–30000 characters')
+    from .system_health import is_status_request
+
     try:
-        task=await local('/api/chats/'+ident(chat_id)+'/messages',{'text':request,'request_id':request_id,'mode':mode,'user_message':user_message,'source':'mcp','attachments':attachments or []})
+        task=await local('/api/chats/'+ident(chat_id)+'/messages',{'text':request,'request_id':request_id,'mode':mode,'user_message':user_message,'source':'mcp','attachments':attachments or []},timeout=70 if not attachments and is_status_request(request) else 15)
     except LocalStateConflict as exc:
         return {'state':'blocked','status_code':409,'chat_id':chat_id,'error':str(exc),
                 'next_action':'Inspect the recorded pending action; reconcile after the executor has ended. No task was submitted.'}
+    # An isolated full-system status request is completed synchronously by
+    # Conversations.submit. Return its bounded report directly: the normal
+    # task wait wrapper includes large unrelated task diagnostics and can
+    # fail MCP delivery even though the read-only health check succeeded.
+    from .system_health import is_status_request
+    if not attachments and is_status_request(request) and task.get('state')=='done':
+        return {'id':task['id'],'state':'done','status_report':str(task.get('result') or '')[:12000],
+                'source':'shared_service_health_snapshot','model_inference':False,
+                'next_action':'Report this fresh service status; separate probe failures from actual outages.'}
     return await wait_for_task(task['id'],ctx=ctx) if ctx else await wait_for_task(task['id'])
 
 async def wait_for_task(task_id, timeout=20, ctx=None):
@@ -158,6 +224,7 @@ async def wait_for_task(task_id, timeout=20, ctx=None):
         if (result['task'].get('result') or '').startswith('Execution is incomplete: successful reads'):
             result['next_action']='Execution is incomplete. Review the recorded evidence and provide one focused corrected step in the SAME chat. Do not approve completion or repeat redundant reads. Supply a verified file_id when a requested image is missing.'
         if result.get('memory_review_next_action'):
+
             result['next_action']=result['memory_review_next_action']+' Then continue observing the same task if execution is active.'
             return result
         if not active or time.monotonic()>=deadline:return result
@@ -188,6 +255,7 @@ async def task_review(task_id:str,expected_revision:int,reason:str)->dict:
     if type(expected_revision) is not int or expected_revision<0:raise ValueError('Expected a nonnegative integer task revision')
     if not isinstance(reason,str) or not reason.strip() or len(reason)>10000:raise ValueError('Provide a concise nonempty semantic review reason')
     try:
+
         return await local('/api/tasks/'+task_id+'/review',{'decision':'approve','expected_revision':expected_revision,'reason':reason,'resume_handoff':False})
     except LocalStateConflict as exc:
         return {'state':'blocked','status_code':409,'task_id':task_id,'error':str(exc),'next_action':'Read current task, action log, and verification evidence; do not replay actions or bypass review.'}
@@ -257,6 +325,7 @@ async def play_connection_instructions()->dict:
 @mcp.tool(annotations=READ)
 async def ai_connector_catalog()->dict:
     """List AI conversation connectors and supported transports (Web PLAY or MCP). Distinguishes implemented adapters from planned providers; a card is not authentication or live connection proof."""
+
     return await local('/api/ai-connectors')
 
 @mcp.tool(annotations=READ)
@@ -286,6 +355,7 @@ async def browser_extensions_status()->dict:
     return await local('/api/browser/extensions')
 
 @mcp.tool(annotations=WRITE)
+
 async def conversation_memory_feedback_settings(chat_id:str,enabled:bool|None=None,transport:Literal['auto','browser','mcp']|None=None)->dict:
     """Read or change optional ChatGPT verification of retrieved memory in this conversation. auto uses a connected browser chat when available, otherwise caller-driven MCP. Disabled by default. Saving takes effect on the next review request; never implies remote review occurred."""
     path='/api/chats/'+ident(chat_id)+'/memory-review/settings'
@@ -298,6 +368,7 @@ async def conversation_decisions(chat_id:str,after:int|None=None,limit:int=12)->
 
 @mcp.tool(annotations=WRITE)
 async def conversation_remember_decision(chat_id:str,source_task_id:str,quote:str,label:str,supersedes:str|None=None)->dict:
+
     """Preserve an important explicit user decision from this chat. Supply its exact original quotation and task ID, never invent text. A correction may supersede an anchor only using a later user request. Original history remains intact; evidence stays accessible after model context compaction."""
     return await local('/api/chats/'+ident(chat_id)+'/anchors',dict(source_task_id=ident(source_task_id),quote=quote,label=label,supersedes=ident(supersedes) if supersedes else None))
 
@@ -356,6 +427,7 @@ async def resume_task(chat_id:str,task_id:str,expected_revision:int)->dict:
 
 @mcp.tool(annotations=WRITE)
 async def cancel_task(chat_id:str,task_id:str,expected_revision:int)->dict:
+
     """Cancel this chat's task using observed revision. Preserves history; cannot undo completed external effects. Existing stop_task remains compatible."""
     return await local('/api/tasks/'+ident(task_id)+'/lifecycle',dict(chat_id=ident(chat_id),action='cancel',expected_revision=expected_revision))
 
@@ -408,6 +480,7 @@ async def desktop_set_wallpaper(file_id:str)->dict:
 
 @mcp.tool(annotations=READ)
 async def get_file(file_id:str)->CallToolResult:
+
     """Return an existing library file by its observed ID, with a 10-minute download link; images also return visual content. Do not invent IDs."""
     item=FileLibrary().get(ident(file_id),ready=True);expires=int(time.time())+600
     record={k:item[k] for k in ('id','name','mime','size','sha256')}
@@ -424,18 +497,36 @@ async def lifespan(app):
 app=FastAPI(lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
 
 async def _hub_ready():
-    """Bounded loopback readiness sample; retries transient Hub overload once."""
+    """Probe the cheap, owned loopback Hub UI, never its 120 KB OpenAPI schema.
+
+    The local Hub root is a small stable application marker. Keep identity
+    validation and a bounded retry: a different server on the port is never
+    treated as a healthy Hub.
+    """
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(4.0,connect=2.0),trust_env=False) as client:
             for attempt in range(2):
                 try:
-                    response=await client.get(f'http://127.0.0.1:{PORT}/openapi.json')
-                    if response.is_success and response.json().get('info',{}).get('title')=='Local Agent Hub':
-                        return True
+                    response=await client.get(f'http://127.0.0.1:{PORT}/')
+                    if response.is_success:
+                        body=getattr(response,'text','')
+                        if ('<title>MellowCodex</title>' in body
+                                and 'id="chatgpt-bridge"' in body):
+                            return True
+                        # Existing JSON identity contract is still accepted,
+                        # including the original test fixtures; unknown apps
+                        # and forged empty / responses remain rejected.
+                        try:
+                            marker=response.json()
+                        except (ValueError,TypeError,AttributeError):
+                            marker={}
+                        if isinstance(marker,dict) and marker.get('info',{}).get('title')=='Local Agent Hub':
+                            return True
                 except (httpx.RequestError,ValueError,AttributeError,TypeError):
                     pass
                 if attempt==0:await asyncio.sleep(.2)
     except (httpx.RequestError,OSError):
+
         pass
     return False
 
@@ -455,6 +546,7 @@ async def health():
                                 ('project_context','context_search','context_expand','task_guide','task_request_changes'))}}
 
 @app.get('/consent')
+
 def consent(ticket:str):
     with auth.db() as conn:
         approved=auth.get(conn,'approved',auth.digest(ticket));pending=auth.get(conn,'request',auth.digest(ticket))
@@ -518,6 +610,7 @@ from .development.tools import register_mcp as register_development_mcp
 register_development_mcp(mcp,local,READ,WRITE)
 from .delegation_api import register_mcp as register_delegation_mcp
 register_delegation_mcp(mcp,local,READ,WRITE)
+
 from .browser_pointer import register_mcp as register_pointer_mcp
 register_pointer_mcp(mcp,local,READ,WRITE)
 
@@ -554,6 +647,7 @@ if __name__=='__main__':
 from .service_health import register_mcp as register_service_health
 register_service_health(mcp,local,READ,WRITE)
 from .power import register_mcp as register_power
+
 register_power(mcp,local,READ,WRITE)
 
 

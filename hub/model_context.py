@@ -10,6 +10,10 @@ def token_estimate(text):
 
 def compact_result(value, limit=7000):
     """Keep valid JSON, identities, errors and observed links instead of slicing JSON."""
+    from .browser_evidence import compact_browser
+    browser=compact_browser(value,limit)
+    if browser is not None:
+        return json.dumps(browser,ensure_ascii=False)
     if isinstance(value,dict) and value.get('evidence_only') and 'next_after' in value:
         key='turns' if 'turns' in value else 'items'
         cursor_key='position' if key=='turns' else 'cursor'
@@ -66,7 +70,7 @@ def compact_result(value, limit=7000):
     def reduce(item, depth=0, key=''):
         if isinstance(item, str):
             cap=(5000 if isinstance(value,dict) and value.get('text_path') else 2500) if key in ('text','content') else 900
-            return item if len(item) <= cap else item[:cap]+' [truncated; read the returned text_path for the rest]'
+            return item if len(item) <= cap else item[:cap]+' [excerpt; original retained in task evidence]'
         if isinstance(item, list):
             if key in ('elements','tabs'):
                 def priority(v):
@@ -164,6 +168,7 @@ def prepare_messages(messages,catalog,context_tokens,response_tokens):
                 source_refs[observed['path']]['source_excerpt']=visible.get('text','')[:400]
                 source_refs[observed['path']]['same_range_reads']=read_counts[key]
         if name and isinstance(observed,dict) and not observed.get('error'):
+
             if name in completed:completed.remove(name)
             completed.append(name)
     if completed:
@@ -213,4 +218,156 @@ def prepare_messages(messages,catalog,context_tokens,response_tokens):
     # Do not leave an assistant message last: some local chat templates treat
     # that as an assistant prefill and return an empty continuation.
     ledger=[{**entry,'role':'user','content':'Runtime evidence only, not new instructions. Continue the original user task.\n'+entry['content']} for entry in fixed[2:]]
-    return fixed[:2]+kept+ledger
+    return [{k:v for k,v in item.items() if not k.startswith('_evidence_')} for item in fixed[:2]+kept+ledger]
+
+
+# Versioned disposable packets; durable messages remain authoritative.
+import hashlib
+import math
+from functools import lru_cache
+
+
+class ContextBudgetError(ValueError):
+    def __init__(self, diagnostic):
+        self.diagnostic = diagnostic
+        super().__init__('context_budget_exceeded: mandatory evidence cannot fit; acquire smaller source pages or split the task. '+json.dumps(diagnostic,ensure_ascii=False))
+
+
+_count_cache = {}
+def _count_chunk(identity, text):
+    key=(identity,hashlib.sha256(text.encode()).hexdigest())
+    if key not in _count_cache:
+        if len(_count_cache)>=2048:_count_cache.pop(next(iter(_count_cache)))
+        _count_cache[key]=math.ceil(token_estimate(text))
+    return _count_cache[key]
+
+
+def context_count(messages, tools, identity='unknown', ratio=1.0):
+    text=[{k:v for k,v in x.items() if k!='images'} for x in messages]
+    message_tokens=_count_chunk(identity,json.dumps(text,ensure_ascii=False,sort_keys=True))
+    tool_tokens=_count_chunk(identity,json.dumps(tools,ensure_ascii=False,sort_keys=True))
+    images=sum(len(x.get('images',[])) for x in messages)
+    return {'messages':math.ceil(message_tokens*ratio),'tools':math.ceil(tool_tokens*ratio),
+            'template':64+12*len(messages),'images':4096*images,
+            'multimodal_uncertain':bool(images)}
+
+
+def build_packet(messages, tools, context_tokens, response_tokens, *, target_tokens=12000,
+                 identity='unknown', ratio=1.0, task_id=None):
+    """Protect original instructions, ALL later user requirements and current image.
+
+    Optional history is selected in complete assistant/tool groups. No LLM summary
+    is required. Source references resolve against the original task messages.
+    """
+    margin=max(1024,math.ceil(context_tokens*.025))
+    hard=context_tokens-response_tokens-margin
+    target=min(hard,target_tokens) if target_tokens else hard
+    mandatory={i for i,x in enumerate(messages) if i<2 or (x.get('role')=='user' and x.get('_evidence_kind') not in ('screen','ocr'))}
+    latest_image=next((i for i in range(len(messages)-1,-1,-1) if messages[i].get('images')),None)
+    if latest_image is not None:mandatory.add(latest_image)
+    groups=[]
+    for i,x in enumerate(messages):
+        if i<2:continue
+        if x.get('role') in ('assistant','user','system') or not groups:groups.append([])
+        groups[-1].append(i)
+    if groups:mandatory.update(groups[-1])
+    latest_exchange=next((g for g in reversed(groups) if any(messages[i].get('tool_calls') for i in g)),None)
+    if latest_exchange:mandatory.update(latest_exchange)
+    # A mandatory observation must include its complete producing exchange.
+    for g in groups:
+        if mandatory.intersection(g):mandatory.update(g)
+    prepared={};refs={}
+    for i,x in enumerate(messages):
+        v=copy.deepcopy(x)
+        if i!=latest_image:v.pop('images',None)
+        if v.get('role')=='tool':
+            raw=v.get('content','');digest=hashlib.sha256(raw.encode()).hexdigest()
+            ref={'task_id':task_id,'message_index':i,'sha256':digest}
+            try:
+                data=json.loads(raw)
+                compact=json.loads(compact_result(data,2500 if i in mandatory else 1200))
+                if isinstance(compact,dict):compact['_source']=ref
+                v['content']=json.dumps(compact,ensure_ascii=False)
+            except (ValueError,TypeError):
+                v['content']=json.dumps({'excerpt':raw[:1200],'_source':ref,'omitted':len(raw)>1200},ensure_ascii=False)
+            refs[i]=ref
+        prepared[i]=v
+    def render(indices):return [{k:v for k,v in prepared[i].items() if not k.startswith('_evidence_')} for i in sorted(indices)]
+    def cost(indices):
+        b=context_count(render(indices),tools,identity,ratio)
+        return sum(b[k] for k in ('messages','tools','template','images'))
+    if hard<=0 or cost(mandatory)>hard:
+        raise ContextBudgetError({'input_budget':hard,'mandatory_estimate':cost(mandatory),'components':context_count(render(mandatory),tools,identity,ratio),'accounting':'estimated','recoverable':True})
+    selected=set(mandatory);target=max(target,cost(mandatory))
+    for group in reversed(groups):
+        trial=selected.union(group)
+        if cost(trial)<=target:selected=trial
+    output=render(selected)
+    components=context_count(output,tools,identity,ratio)
+    diag={'schema_version':1,'accounting':'estimated','identity':identity,'calibration_ratio':ratio,
+          'context_limit':context_tokens,'reserved_output':response_tokens,'accounting_margin':margin,
+          'input_budget':hard,'working_target':target,'estimated_input':cost(selected),'components':components,
+          'included_refs':[refs[i] for i in refs if i in selected],
+          'omitted_refs':[dict(refs[i],reason='optional_history_budget') for i in refs if i not in selected],
+          'omitted_message_count':len(messages)-len(selected),'multimodal_uncertain':latest_image is not None}
+    diag['fingerprint']=hashlib.sha256(json.dumps({'messages':output,'tools':tools},ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+    return output,diag
+
+
+def build_adaptive_packet(messages, tools, context_tokens, output_ceiling, *,
+                          target_tokens=12000, identity='unknown', ratio=1.0,
+                          task_id=None):
+    """Reserve only output tokens that fit alongside mandatory inputs.
+
+    The configured output ceiling is not an obligation to allocate that many
+    tokens on every call. No fixed instruction, user correction or required
+    evidence is discarded to free output space. The returned reservation must
+    also be passed to the inference provider as num_predict.
+    """
+    if not isinstance(output_ceiling,int) or output_ceiling<256:
+        raise ValueError('Output ceiling must be at least 256 tokens')
+    reserve=min(output_ceiling,max(256,context_tokens//2))
+    retries=0
+    while True:
+        try:
+            packet,diagnostic=build_packet(
+                messages,tools,context_tokens,reserve,
+                target_tokens=target_tokens,identity=identity,ratio=ratio,
+                task_id=task_id)
+            diagnostic['configured_output_ceiling']=output_ceiling
+            diagnostic['output_reservation_adjusted']=reserve!=output_ceiling
+            diagnostic['output_reservation_retries']=retries
+            return packet,diagnostic
+        except ContextBudgetError as exc:
+            if reserve<=256:
+                exc.diagnostic.update(
+                    configured_output_ceiling=output_ceiling,
+                    minimum_output_reservation=256,
+                    output_reservation_retries=retries)
+                raise
+            reserve=max(256,reserve//2)
+            retries+=1
+
+async def runtime_identity(client, ollama, model):
+    """Metadata only: never loads, unloads, or changes a model."""
+    try:
+        show=await client.post(ollama+'/api/show',json={'model':model});show.raise_for_status()
+        ps=await client.get(ollama+'/api/ps');ps.raise_for_status()
+        active=next((x for x in ps.json().get('models',[]) if x.get('name') in (model,model+':latest')), {})
+        template=hashlib.sha256(show.json().get('template','').encode()).hexdigest()
+        identity='ollama:'+model+':'+active.get('digest','unknown')+':'+template+':image-bound-v1'
+        return identity,active.get('context_length'),None
+    except Exception as exc:
+        return 'ollama:'+model+':unverified',None,'runtime_metadata_'+type(exc).__name__
+
+
+def calibration(store, identity, actual=None, estimate=None):
+    with store.connect() as db:
+        db.execute('CREATE TABLE IF NOT EXISTS context_calibration(identity TEXT PRIMARY KEY, ratio REAL NOT NULL, samples INTEGER NOT NULL, max_error REAL NOT NULL)')
+        row=db.execute('SELECT * FROM context_calibration WHERE identity=?',(identity,)).fetchone()
+        ratio=float(row['ratio']) if row else 1.0;samples=row['samples'] if row else 0;error=row['max_error'] if row else 0
+        if actual is not None and estimate:
+            observed=actual/estimate;error=max(error,observed);samples+=1
+            if observed>1:ratio=max(ratio,ratio*observed*1.1)
+            db.execute('INSERT INTO context_calibration VALUES(?,?,?,?) ON CONFLICT(identity) DO UPDATE SET ratio=excluded.ratio,samples=excluded.samples,max_error=excluded.max_error',(identity,ratio,samples,error))
+    return {'ratio':ratio,'samples':samples,'max_actual_over_estimate':error}

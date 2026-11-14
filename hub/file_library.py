@@ -1,4 +1,5 @@
 """Durable local files shared by chat uploads, browser downloads and agent tools."""
+from contextlib import contextmanager
 import hashlib
 import mimetypes
 import re
@@ -32,10 +33,13 @@ class FileLibrary:
                 status TEXT, size INTEGER DEFAULT 0, sha256 TEXT DEFAULT '',
                 created REAL, error TEXT DEFAULT '')''')
 
+    @contextmanager
     def connect(self):
         db = sqlite3.connect(self.db, timeout=10)
         db.row_factory = sqlite3.Row
-        return db
+        try:
+            with db:yield db
+        finally:db.close()
 
     def reserve(self, name, source, mime=''):
         ident = uuid.uuid4().hex

@@ -1,5 +1,6 @@
 """Native Qt client: independent of Codex, Chromium, and any external browser."""
 import html
+import os
 import json
 import sys
 import uuid
@@ -387,6 +388,9 @@ def main():
             elif payload.startswith(b'{'):
                 try:
                     data=json.loads(payload)
+                    if 'runtime_status' in data:
+                        if data.get('show'):show_window()
+                        client.write(json.dumps({'ready':True,'pid':os.getpid(),'visible':window.isVisible()}).encode()+b'\n');client.flush();client.disconnectFromServer();return
                     if 'browser_extensions' in data:
                         result=browser.extensions.execute(**data['browser_extensions'])
                         client.write(json.dumps(result).encode()+b'\n');client.flush();client.disconnectFromServer();return
@@ -471,13 +475,14 @@ def main():
     tray=QSystemTrayIcon(app.style().standardIcon(QStyle.SP_ComputerIcon),app)
     tray.setToolTip('Local Agent — פועל ברקע')
     menu=QMenu();menu.addAction('פתיחת הסוכן',show_window)
+    from .service_health_ui import install as install_service_health
+    health_panel=install_service_health(window,owner_toolbar,menu,open_owner_control)
     menu.addAction('יציאה מהדפדפן והממשק',app.quit)
     from .i18n import t
     def full_shutdown():
-        request=Request('POST','/lifecycle/shutdown',{})
-        request.signals.result.connect(lambda result: tray.showMessage('MellowCodex',t('lifecycle.stopping','he')))
-        request.signals.error.connect(lambda error: tray.showMessage('MellowCodex',error))
-        QThreadPool.globalInstance().start(request)
+        health_panel.show(); health_panel.raise_(); health_panel.activateWindow()
+        health_panel.target.setCurrentIndex(health_panel.target.findData('all'))
+        health_panel.act('Stop','all')
     menu.addAction(t('lifecycle.shutdown','he'),full_shutdown)
     tray.setContextMenu(menu)
     tray.activated.connect(lambda reason: show_window() if reason==QSystemTrayIcon.DoubleClick else None)
