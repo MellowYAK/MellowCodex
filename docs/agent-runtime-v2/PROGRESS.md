@@ -5,11 +5,11 @@ THIS IS THE SINGLE MOST IMPORTANT FILE FOR A NEW CHAT OR MODEL. Read MASTER_PLAN
 ## Current checkpoint (as last recorded)
 Project status: IN PROGRESS, not production-complete.
 Last session date: 2026-11-15.
-Current milestone: P04 additive SQLite plan/evidence/checkpoint repository VERIFIED DONE (new module only); P05 Goal Board adapter and P06/P07 verifier next.
+Current milestone: P05 Goal Board -> versioned TaskPlan adapter VERIFIED DONE (independent bridge); P06 evidence collector and P07 universal verifier NEXT.
 Last VERIFIED milestone: P01 durable master/progress VERIFIED DONE; P00/P02 audit and baseline VERIFIED PARTIAL.
 Master document creation: task d18e4d376d9b44eb8a18f54895719b85, exit 0, 10,908 bytes, SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161.
 PROGRESS document: VERIFIED CREATED and independently read back (task 56f3cbe329424a06bf104811905fdcd9, exit 0).
-Next action: P05 implement an additive adapter from existing hub/browser_goal_board.py into versioned TaskPlan with acceptance criteria, without changing dirty Goal Board/Engine/UI. Then P06 evidence collection and P07 universal verifier to close known P02 false completions.
+Next action: P06 create normalized, sanitized Evidence/FeedbackCollector from browser/desktop/tool/user observations with source, freshness, correlation, uncertainty; then P07 verifier enforcing original goal, trusted host and final form. Keep original dirty engine/Goal Board/GUI untouched.
 
 ## FINAL MEASURABLE GOAL
 An autonomous, fast and safe MellowCodex agent runtime that turns a request into a durable versioned plan, executes browser/Windows/files/code/MCP actions with appropriately routed local/DeepSeek/optional cloud models, continuously checks tool feedback, accepts mid-run corrections, recovers and replans, and only claims completion after verified evidence. It must survive switching chats/models or process restarts without losing task progress or repeating uncertain side effects.
@@ -31,7 +31,7 @@ Full exact acceptance tests and implementation P00-P14 are in MASTER_PLAN.md. Th
 | P02 | Acceptance fixtures and benchmarks | VERIFIED PARTIAL | 32 versioned synthetic scenarios deployed; live 46 passed, 1 skipped, 5 strict xfailed in 1.36s. Known wrong-host login and generic done-without-evidence gaps. Guard update 73fb7d73542c4672830052ea65a44aff ACTIVE_VERIFIED; 100-run real latency/E2E outstanding. |
 | P03 | Typed TaskPlan/Step/Evidence contracts | VERIFIED DONE | New independent hub/agent_runtime_v2 contracts: immutable Pydantic TaskPlan/PlanStep/AcceptanceCriterion/Evidence/DecisionRecord/ActionRecord, DAG and freshness validation, stable semantic action key; Guard b3c51b57570646429d732e9dea506e7a ACTIVE_VERIFIED; live tests 62 passed 5 known P02 xfailed. Not yet wired to Engine. |
 | P04 | Additive SQLite plan/event/checkpoint persistence | VERIFIED DONE | New agent_runtime_v2.persistence PlanRepository with explicit additive tables, plan history/CAS, evidence/event idempotency, crash-resumable checkpoints, legacy data preservation; Guard update 4d54969a56a14ded9161407b7f17da06 ACTIVE_VERIFIED; live 73 passed / 5 prior xfailed. NOT yet connected to Engine or production DB. |
-| P05 | Universal adapter to existing Goal Board | NOT_STARTED | Uncommitted Goal Board code needs provenance review. |
+| P05 | Universal adapter to existing Goal Board | VERIFIED DONE | New pure hub/agent_runtime_v2/goal_board_adapter.py converts existing editable BoardStore records to TaskPlan with original multilingual goal, revisions, alternatives and required final acceptance. Guard 3c792bc6a6164472990b74f68a090eb7 ACTIVE_VERIFIED; live 85 passed, five known P02 strict xfailed. Not yet connected to Engine. |
 | P06 | Tool/browser/desktop/user feedback and evidence | NOT_STARTED | Freshness, provenance, OAuth sanitization. |
 | P07 | Universal Verifier and final-completion gate | NOT_STARTED | Require verifiable acceptance evidence. |
 | P08 | Runtime state machine SHADOW implementation | NOT_STARTED | Old engine remains authoritative until verified. |
@@ -156,3 +156,11 @@ Only new hub/agent_runtime_v2/persistence.py and tests/test_agent_runtime_v2_per
 Guard update 4d54969a56a14ded9161407b7f17da06 ACTIVE_VERIFIED. Live readback/test task 1ae4cee34ca44d0badf2338e5c892a7f exit0: 73 passed, 5 xfailed in 1.42s; tests use temporary databases only, do not write live hub.sqlite3.
 New files sha256: persistence.py 84585487564CF46284A6FB08C53BC9C4701F5A4B3903453C13D0C6640D5CE383; test 3A733B1A9654F84D14A82C71B87F2DD02A84D7368C19F7F26635C7AC53D497AA.
 NEXT: P05 Goal Board -> versioned Plan adapter with tests, then P06/P07 generalized evidence and completion. Preserve all preexisting dirty Goal Board/Engine/UI files.
+
+
+### 2026-11-15 P05 editable Goal Board to TaskPlan adapter
+Status: VERIFIED DONE for pure conversion module and tests, NOT integrated into active Hub Engine.
+Candidate task 78eaa2959d11452daee2abb9c1baa7b0; isolated candidate df334eff787b4a3bb4bfad5f9b616cc7 rev1. Only NEW hub/agent_runtime_v2/goal_board_adapter.py and tests/test_agent_runtime_v2_goal_board_adapter.py. No changes to dirty hub/browser_goal_board.py, engine or UI.
+Adapter carries goal, task_mode, target_host, feedback_mode, edited steps/alternatives/notes, original language and BoardStore revision to immutable versioned TaskPlan. Final login criterion demands both actual login form and requested hostname. It NEVER treats pre-existing task_state=done as verified completion.
+Guard update 3c792bc6a6164472990b74f68a090eb7 ACTIVE_VERIFIED. Live verification task bb68021983fc48129baceb5118b2b438 exit0: 85 PASSED, 5 known P02 strict XFAILED in 1.62s. New files SHA256: adapter DEEC38690084114D8535C7D43994A4A29C3FE148377C854B1C12D5DB375B0AF5; test 7E5070710E3C69131ECFC4819410EDE3418C02776E0B107DBFDFFED2E12A4376.
+NEXT: P06 evidence and feedback collector with sanitization/freshness; P07 universal verifier to close five known false-success cases, then P08 coordinator. P02 real E2E/performance remains open.
