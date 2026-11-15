@@ -16,9 +16,22 @@ class SelfDevelop:
         self.store = store
         with store.connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS selfdevelop_sessions (chat_id TEXT PRIMARY KEY, objective TEXT NOT NULL, transport TEXT NOT NULL, created TEXT NOT NULL)')
+            db.execute("""CREATE TABLE IF NOT EXISTS selfdevelop_objective_history (
+                chat_id TEXT NOT NULL, revision INTEGER NOT NULL,
+                objective TEXT NOT NULL, transport TEXT NOT NULL,
+                at TEXT NOT NULL, event TEXT NOT NULL,
+                PRIMARY KEY(chat_id, revision)
+            )""")
             db.execute("CREATE TABLE IF NOT EXISTS selfdevelop_objective_runs (chat_id TEXT PRIMARY KEY, request_id TEXT NOT NULL, task_id TEXT NOT NULL, phase TEXT NOT NULL, plan TEXT NOT NULL, candidate_id TEXT, candidate_revision INTEGER, test_evidence TEXT, update_id TEXT, report_task_id TEXT, error TEXT NOT NULL DEFAULT '', updated TEXT NOT NULL)")
 
     def start(self, objective, conversation_key, transport):
+        """Create or safely continue a persistent session with an explicit goal.
+
+        An existing conversation_key may be retargeted ONLY when every old
+        task is terminal and no pending effects or objective-level release
+        remain. Old objectives stay in append-only history. A different key
+        creates a separate project chat, and project checkpoints remain shared.
+        """
         if not isinstance(objective, str) or not objective.strip():
             raise ValueError('An explicit human objective is required')
         if transport not in ('mcp', 'play'):
@@ -27,10 +40,70 @@ class SelfDevelop:
         project = chats.project(str(Path(__file__).resolve().parents[2]), 'MellowCodex')
         chat = chats.create(project['id'], 'SelfDevelop: ' + objective[:55], conversation_key)
         with self.store.connect() as db:
-            old = db.execute('SELECT * FROM selfdevelop_sessions WHERE chat_id=?', (chat['id'],)).fetchone()
-            if old and (old['objective'] != objective or old['transport'] != transport):
-                raise Conflict('Existing SelfDevelop session has another objective or transport')
-            db.execute('INSERT OR IGNORE INTO selfdevelop_sessions VALUES(?,?,?,?)', (chat['id'], objective, transport, now()))
+            db.execute('BEGIN IMMEDIATE')
+            old = db.execute(
+                'SELECT * FROM selfdevelop_sessions WHERE chat_id=?',
+                (chat['id'],),
+            ).fetchone()
+            if old and old['transport'] != transport:
+                raise Conflict('Existing SelfDevelop session uses another transport; create a new chat')
+            if old:
+                # Legacy sessions have no history row; preserve their original
+                # objective before allowing a CAS-protected change.
+                db.execute(
+                    'INSERT OR IGNORE INTO selfdevelop_objective_history VALUES(?,?,?,?,?,?)',
+                    (chat['id'], 1, old['objective'], old['transport'], old['created'], 'created'),
+                )
+            if old and old['objective'] != objective:
+                blocked = db.execute("""
+                    SELECT t.id,t.state FROM chat_tasks c
+                    JOIN tasks t ON t.id=c.task_id
+                    WHERE c.chat_id=? AND t.state NOT IN ('done','cancelled')
+                    LIMIT 1
+                """, (chat['id'],)).fetchone()
+                if blocked:
+                    raise Conflict('Finish, review or cancel prior task '+blocked['id']+
+                                   ' ('+blocked['state']+') before changing SelfDevelop objective')
+                pending = db.execute("""
+                    SELECT a.id FROM actions a
+                    JOIN chat_tasks c ON c.task_id=a.task_id
+                    WHERE c.chat_id=? AND a.state='pending' LIMIT 1
+                """, (chat['id'],)).fetchone()
+                if pending:
+                    raise Conflict('Reconcile uncertain/pending action before changing objective')
+                # An objective-level repair may have an outstanding Guard
+                # update; never rebind its approval to a different goal.
+                run = db.execute(
+                    'SELECT phase FROM selfdevelop_objective_runs WHERE chat_id=?',
+                    (chat['id'],),
+                ).fetchone()
+                if run:
+                    raise Conflict('Close or archive objective-level repair before changing objective')
+                db.execute(
+                    "UPDATE selfdevelop_sessions SET objective=? WHERE chat_id=? AND objective=?",
+                    (objective, chat['id'], old['objective']),
+                )
+                if db.execute('SELECT changes()').fetchone()[0] != 1:
+                    raise Conflict('SelfDevelop objective changed concurrently')
+                current = db.execute(
+                    'SELECT MAX(revision) FROM selfdevelop_objective_history WHERE chat_id=?',
+                    (chat['id'],),
+                ).fetchone()[0] or 1
+                db.execute(
+                    'INSERT INTO selfdevelop_objective_history VALUES(?,?,?,?,?,?)',
+                    (chat['id'], current+1, objective, transport, now(), 'retargeted'),
+                )
+            elif not old:
+                stamp=now()
+                db.execute(
+                    'INSERT INTO selfdevelop_sessions VALUES(?,?,?,?)',
+                    (chat['id'], objective, transport, stamp),
+                )
+                db.execute(
+                    'INSERT INTO selfdevelop_objective_history VALUES(?,?,?,?,?,?)',
+                    (chat['id'], 1, objective, transport, stamp, 'created'),
+                )
+            db.execute('COMMIT')
         return self.status(chat['id'])
 
     def _progress(self, chat_id, last):
