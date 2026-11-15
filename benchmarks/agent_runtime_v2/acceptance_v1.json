@@ -1,0 +1,400 @@
+{
+  "version": 1,
+  "description": "Synthetic, deterministic baseline fixtures for Agent Runtime V2. No external writes, credentials, or live websites. Known gaps are strict xfails until the universal verifier closes them.",
+  "source": "Existing hub/browser_goal_board.py behavior, not a production-complete runtime",
+  "cases": [
+    {
+      "id": "B01",
+      "name": "walla-empty",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B02",
+      "name": "homepage-not-final",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B03",
+      "name": "login-entry-not-final",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home",
+        "home_login_link"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B04",
+      "name": "assessment-home-not-final",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B05",
+      "name": "newsletter-not-login",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "home_newsletter",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B06",
+      "name": "click-no-ack",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B07",
+      "name": "pending-click",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "pending_click"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B08",
+      "name": "failed-click",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "failed_click"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B09",
+      "name": "login-no-assessment",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "login_password"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B10",
+      "name": "login-password-verified",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "login_password",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": true
+    },
+    {
+      "id": "B11",
+      "name": "login-email-first-verified",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "login_email",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": true
+    },
+    {
+      "id": "B12",
+      "name": "login-page-without-fields",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "login_empty",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B13",
+      "name": "login-assessment-not-verified",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "login_password",
+        "bad_assess"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B14",
+      "name": "login-assessment-failed",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "login_password",
+        "failed_assess"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B15",
+      "name": "wrong-domain-password",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "wrong_domain_password",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": false,
+      "known_gap": "final_login_host_not_checked"
+    },
+    {
+      "id": "B16",
+      "name": "lookalike-domain-password",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "lookalike_password",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": false,
+      "known_gap": "final_login_host_not_checked"
+    },
+    {
+      "id": "B17",
+      "name": "legitimate-subdomain",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_no_after",
+        "subdomain_password",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": true
+    },
+    {
+      "id": "B18",
+      "name": "wrong-home-entry",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "other_home"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B19",
+      "name": "incoherent-home",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_incoherent"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B20",
+      "name": "confirmed-click-followup",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "home_login_link",
+        "click_with_after",
+        "login_password",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": true
+    },
+    {
+      "id": "B21",
+      "name": "direct-login-form-no-action",
+      "mode": "browser",
+      "goal": "Open Walla and show login form",
+      "tokens": [
+        "login_password",
+        "good_assess"
+      ],
+      "task_state": null,
+      "expected_done": false
+    },
+    {
+      "id": "B22",
+      "name": "general-home-readonly-done",
+      "mode": "browser",
+      "goal": "Open Walla homepage",
+      "tokens": [
+        "home"
+      ],
+      "task_state": "done",
+      "expected_done": true
+    },
+    {
+      "id": "B23",
+      "name": "general-home-running",
+      "mode": "browser",
+      "goal": "Open Walla homepage",
+      "tokens": [
+        "home"
+      ],
+      "task_state": "running",
+      "expected_done": false
+    },
+    {
+      "id": "B24",
+      "name": "generic-search-unmet-readonly",
+      "mode": "browser",
+      "goal": "Find the exact result on Walla",
+      "tokens": [
+        "home"
+      ],
+      "task_state": "done",
+      "expected_done": false,
+      "known_gap": "nonlogin_readonly_completion_without_goal_check"
+    },
+    {
+      "id": "C01",
+      "name": "code-no-actions",
+      "mode": "code",
+      "goal": "Implement and test a code change",
+      "tokens": [],
+      "task_state": "done",
+      "expected_done": false
+    },
+    {
+      "id": "C02",
+      "name": "code-source-only-not-done",
+      "mode": "code",
+      "goal": "Implement and test a code change",
+      "tokens": [
+        "code_source"
+      ],
+      "task_state": "done",
+      "expected_done": false,
+      "known_gap": "generic_done_without_acceptance"
+    },
+    {
+      "id": "C03",
+      "name": "code-pending-write",
+      "mode": "code",
+      "goal": "Implement and test a code change",
+      "tokens": [
+        "code_source",
+        "code_pending"
+      ],
+      "task_state": "running",
+      "expected_done": false
+    },
+    {
+      "id": "C04",
+      "name": "code-complete-terminal",
+      "mode": "code",
+      "goal": "Implement and test a code change",
+      "tokens": [
+        "code_source",
+        "code_write",
+        "code_test"
+      ],
+      "task_state": "done",
+      "expected_done": true
+    },
+    {
+      "id": "D01",
+      "name": "desktop-readonly-not-done",
+      "mode": "desktop",
+      "goal": "Open settings and update the control",
+      "tokens": [
+        "desktop_observe"
+      ],
+      "task_state": "done",
+      "expected_done": false,
+      "known_gap": "generic_done_without_acceptance"
+    },
+    {
+      "id": "D02",
+      "name": "desktop-complete-terminal",
+      "mode": "desktop",
+      "goal": "Open settings and update the control",
+      "tokens": [
+        "desktop_observe",
+        "desktop_click",
+        "desktop_observe"
+      ],
+      "task_state": "done",
+      "expected_done": true
+    },
+    {
+      "id": "I01",
+      "name": "inspect-no-sources",
+      "mode": "inspect",
+      "goal": "Inspect the specified source",
+      "tokens": [],
+      "task_state": "done",
+      "expected_done": false
+    },
+    {
+      "id": "I02",
+      "name": "inspect-source-verified-terminal",
+      "mode": "inspect",
+      "goal": "Inspect the specified source",
+      "tokens": [
+        "inspect_source"
+      ],
+      "task_state": "done",
+      "expected_done": true
+    }
+  ]
+}

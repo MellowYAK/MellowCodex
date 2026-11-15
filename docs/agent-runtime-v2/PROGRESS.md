@@ -5,11 +5,11 @@ THIS IS THE SINGLE MOST IMPORTANT FILE FOR A NEW CHAT OR MODEL. Read MASTER_PLAN
 ## Current checkpoint (as last recorded)
 Project status: IN PROGRESS, not production-complete.
 Last session date: 2026-11-15.
-Current milestone: P00 SQLite/model/source BASELINE VERIFIED PARTIAL; P02 acceptance fixture design and tests next.
+Current milestone: P02 synthetic acceptance corpus DEPLOYED/VERIFIED PARTIAL; P03 typed contracts are NEXT. P02 known defects and live benchmark still open.
 Last VERIFIED milestone: P01 durable master/progress VERIFIED DONE; P00/P02 audit and baseline VERIFIED PARTIAL.
 Master document creation: task d18e4d376d9b44eb8a18f54895719b85, exit 0, 10,908 bytes, SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161.
 PROGRESS document: VERIFIED CREATED and independently read back (task 56f3cbe329424a06bf104811905fdcd9, exit 0).
-Next action: P02 create isolated safe acceptance fixtures for Walla homepage-versus-login and selected multi-step tasks, using existing Goal Board/verifier tests; measure acceptance failures and performance before modifying engine. Preserve all dirty source files.
+Next action: P03 create typed TaskPlan/PlanStep/AcceptanceCriterion/Evidence/DecisionRecord contracts in a NEW module with focused validation tests (existing engine/Goal Board untouched). Then add persistence P04 and universal verifier P07 to eliminate the five known P02 XFAILs. P02 latency/E2E remains open.
 
 ## FINAL MEASURABLE GOAL
 An autonomous, fast and safe MellowCodex agent runtime that turns a request into a durable versioned plan, executes browser/Windows/files/code/MCP actions with appropriately routed local/DeepSeek/optional cloud models, continuously checks tool feedback, accepts mid-run corrections, recovers and replans, and only claims completion after verified evidence. It must survive switching chats/models or process restarts without losing task progress or repeating uncertain side effects.
@@ -28,7 +28,7 @@ Full exact acceptance tests and implementation P00-P14 are in MASTER_PLAN.md. Th
 | --- | --- | --- | --- |
 | P00 | Source audit, baseline and provenance | PARTIAL | Git branch/HEAD, dirty worktree, source presence counted; database/model/current service state and full test baseline still unknown. |
 | P01 | Durable MASTER_PLAN and PROGRESS | VERIFIED DONE | Fresh readback task 56f3cbe329424a06bf104811905fdcd9 exit 0; MASTER_PLAN 10908 bytes SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161; PROGRESS initial 9003 bytes SHA256 2A1E0779C7807DD94B350461E8F9DDE2B097C6ABAEC16CA29A55E6D19AB75AB7. |
-| P02 | Acceptance fixtures and benchmarks | IN_PROGRESS | Initial existing test baseline verified: 20 passed / 1 skipped (2.74s pytest), task 556d5813fcde4f2f8647dca582792971. Full 20+ flows, timings and negative cases remain. |
+| P02 | Acceptance fixtures and benchmarks | VERIFIED PARTIAL | 32 versioned synthetic scenarios deployed; live 46 passed, 1 skipped, 5 strict xfailed in 1.36s. Known wrong-host login and generic done-without-evidence gaps. Guard update 73fb7d73542c4672830052ea65a44aff ACTIVE_VERIFIED; 100-run real latency/E2E outstanding. |
 | P03 | Typed TaskPlan/Step/Evidence contracts | NOT_STARTED | Inspect exact existing schemas and tests first. |
 | P04 | Additive SQLite plan/event/checkpoint persistence | NOT_STARTED | No destructive migrations. |
 | P05 | Universal adapter to existing Goal Board | NOT_STARTED | Uncommitted Goal Board code needs provenance review. |
@@ -124,3 +124,16 @@ First document publication task a8bdeb0fdabf49ed81a68f8adca92a1d: CRCRLF line en
 All 15 pre-existing dirty source and test paths remained untouched.
 This new journal entry is a follow-up publication: latest Git revision must be read from git log/origin/main, not inferred from the first commit ID.
 Next action: P02 isolated safe acceptance fixtures; Walla homepage alone MUST NOT satisfy a login-form goal, then test other multi-step browser and desktop objectives. P00/P02 still PARTIAL.
+
+
+### 2026-11-15 P02 acceptance fixture candidate, Guard and live verification
+Status: VERIFIED PARTIAL; do not mark P02 done until unresolved strict XFAILs and benchmarks are closed.
+Candidate task: 0b817fbffeeb4380a1baf53b378702b5; candidate 2a52ba0b21674e86a202f9ecc00f6b93 rev1; two NEW files only:
+- benchmarks/agent_runtime_v2/acceptance_v1.json (32 synthetic browser/code/desktop/inspect cases; no live credentials)
+- tests/test_agent_runtime_v2_acceptance.py (parameterized baseline + strict known-gap xfails).
+Candidate test: 46 PASSED, 1 SKIPPED, 5 XFAILED.
+Guard deployment id 73fb7d73542c4672830052ea65a44aff: ACTIVE_VERIFIED independently read after transport returned INVALID_ARGUMENT. Do NOT blindly repeat activation.
+Live read-back task c20361135b134133a2d53e93fcc54331 exit0; exact local paths present, pytest: 46 passed, 1 skipped, 5 xfailed in 1.36s, all source edits untouched.
+New file SHA256: JSON 463AA23DD891BC7464BD488CF27CF510300011A88E2D8C9A005685754943A905; test 5F6DF4AAC2328D76E35E3A1910906DBC5E5A07656A780FF6E45A13C10AC1747F.
+Known defects recorded: B15/B16 wrong-domain or lookalike password form can be accepted after assess; B24 read-only generic search marked done despite unmet goal; C02/D01 generic code/desktop task_state=done can override missing acceptance evidence.
+NEXT: P03 typed contracts additive, no edit of dirty Goal Board/engine; then P04 persistence and P07 verifier to make strict xfails genuine passes. P02 perf/E2E baseline remains pending.
