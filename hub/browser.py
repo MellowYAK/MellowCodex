@@ -34,10 +34,24 @@ CLICK_JS='''e => {
  e.click(); return {invoked:true};
 }'''
 
+FAST_OBSERVED_ANCHOR_JS='''({url,generation,href,name,token,ref}) => {
+ if(location.href!==url || !Number.isFinite(generation) || performance.timeOrigin!==generation)
+   return {valid:false,reason:'Document navigated since observation'};
+ const label=e=>(e.getAttribute('aria-label')||e.innerText||'').trim().slice(0,200);
+ const matches=[...document.querySelectorAll('a[href]')].filter(e=>e.href===href && label(e)===name);
+ if(matches.length!==1)return {valid:false,reason:'Observed link identity changed or is ambiguous'};
+ const e=matches[0];
+ if(!e.isConnected || e.getAttribute('aria-disabled')==='true')
+   return {valid:false,reason:'Observed link is detached or disabled'};
+ e.setAttribute('data-local-agent-ref',token+'-'+ref);
+ return {valid:true};
+}'''
+
 class Browser:
     def __init__(self):
         self.playwright=None;self.connection=None;self.page=None;self.observation=None;self.instance=None;self.tab_refs={}
         self.target_id=None;self.recoveries={};self.last_recovery=None
+        self.reattach_after_native_input=False
 
     async def target_for(self,page):
         session=await asyncio.wait_for(page.context.new_cdp_session(page),4)
@@ -132,6 +146,11 @@ class Browser:
             # still fail fresh_page because their observation was invalidated.
             self.target_id=None;self.tab_refs={};self.observation=None
             self.recoveries={};self.last_recovery=None
+        # Native Qt clicks can navigate while the original CDP session stays
+        # attached to the old renderer. A fresh transport avoids long hangs.
+        if self.reattach_after_native_input:
+            await self.disconnect()
+            self.reattach_after_native_input=False
         if self.connection and (not self.connection.is_connected() or self.instance!=endpoint['instance']):
             await self.disconnect()
         if not self.connection:
@@ -186,13 +205,16 @@ class Browser:
         return result
 
     async def tabs(self):
+        from .browser_evidence import display_url,display_title
         await self.connect(ready=False)
         pages=[p for c in self.connection.contexts for p in c.pages if not p.is_closed() and not p.url.startswith(UI_ORIGINS)]
         self.tab_refs={}
         for page in pages:
             target=await self.target_for(page)
             self.tab_refs[target]=page
-        return {'source':'Local Agent embedded browser only','tabs':[{'id':t['id'],'url':t['url'],'title':t['title'],'available':t['id'] in self.tab_refs,'selected_by_agent':self.tab_refs.get(t['id']) is self.page} for t in await self.targets()]}
+        # Browser callbacks can contain one-time OAuth codes and state. Only
+        # reveal safe navigation coordinates/labels, never raw query secrets.
+        return {'source':'Local Agent embedded browser only','tabs':[{'id':t['id'],'url':display_url(t['url']),'title':display_title(t['title']),'available':t['id'] in self.tab_refs,'selected_by_agent':self.tab_refs.get(t['id']) is self.page} for t in await self.targets()]}
 
     async def select_tab(self,tab_id):
         inventory=await self.tabs()
@@ -313,11 +335,34 @@ class Browser:
         path=folder/('browser-'+token+'.png')
         capture={}
         try:
-            await page.screenshot(path=str(path),timeout=2500)
-            with Image.open(path) as picture:width,height=picture.size
-            capture={'path':str(path),'width':width,'height':height}
+            # Qt native widget capture avoids Playwright's recurring font-load
+            # screenshot timeout, and provides real pixels for DOM observations.
+            import base64,sys
+            from io import BytesIO
+            target=self.target_id
+            if not target:
+                session=await page.context.new_cdp_session(page)
+                try:target=(await session.send('Target.getTargetInfo'))['targetInfo']['targetId']
+                finally:await session.detach()
+            process=await asyncio.create_subprocess_exec(sys.executable,'-m','hub.browser_ipc','--capture-target',target,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,creationflags=0x08000000)
+            out,err=await asyncio.wait_for(process.communicate(),8)
+            if process.returncode:raise ObservationError('Qt native screenshot unavailable')
+            result=json.loads(out)
+            image=result.get('image')
+            if not isinstance(image,str) or not image.startswith('data:image/'):
+                raise ObservationError('Qt native screenshot unavailable')
+            with Image.open(BytesIO(base64.b64decode(image.split(',',1)[1]))) as picture:
+                width,height=picture.size
+                if width<=0 or height<=0:raise ObservationError('Qt screenshot size invalid')
+                picture.convert('RGB').save(path,format='PNG')
+            capture={'path':str(path),'width':width,'height':height,'capture_backend':'qt-native'}
         except Exception:
-            capture={'screenshot_available':False,'observation_source':'live DOM','note':'Background renderer did not supply a screenshot. Use the observed DOM controls; do not infer visual details.'}
+            try:
+                await page.screenshot(path=str(path),timeout=2500)
+                with Image.open(path) as picture:width,height=picture.size
+                capture={'path':str(path),'width':width,'height':height,'capture_backend':'playwright-fallback'}
+            except Exception:
+                capture={'screenshot_available':False,'observation_source':'live DOM','note':'Background renderer did not supply a screenshot. Use the observed DOM controls; do not infer visual details.'}
         try:signature_after=await self.semantic_signature(page)
         except Exception:signature_after=None
         coherent=bool(signature_before and signature_before==signature_after)
@@ -325,7 +370,7 @@ class Browser:
             # Never present pixels from a different semantic page as this snapshot.
             capture.pop('path',None)
             capture.update(screenshot_available=False,note='Page changed during capture; obtain a fresh observation before input or assessment.')
-        self.observation={'semantic_signature':signature_after,'coherent':coherent,'id':token,'url':page.url,'at':time.monotonic(),'refs':{e['ref'] for e in state['elements']},'elements':state['elements'],'text':state['text'],'notices':state.get('notices',[]),'page':page}
+        self.observation={'semantic_signature':signature_after,'coherent':coherent,'document_generation':state.get('document_generation'),'id':token,'url':page.url,'at':time.monotonic(),'refs':{e['ref'] for e in state['elements']},'elements':state['elements'],'text':state['text'],'notices':state.get('notices',[]),'page':page}
         recovery=self.last_recovery;self.last_recovery=None
         from .browser_evidence import display_url
         # Keep full execution URLs in the private observation only.
@@ -340,19 +385,29 @@ class Browser:
         if self.target_id:await self.prepare_hidden_target(self.target_id)
         capture_size=None
         try:
-            pixels=await page.screenshot(type='jpeg',quality=75,timeout=1800)
-            image='data:image/jpeg;base64,'+base64.b64encode(pixels).decode()
-        except Exception:
-            session=await page.context.new_cdp_session(page)
-            try:target=(await session.send('Target.getTargetInfo'))['targetInfo']['targetId']
-            finally:await session.detach()
+            # Native Qt capture is much faster on Qt WebEngine (measured ~0.23s);
+            # Playwright's screenshot waits ~1.8s for fonts then often times out.
+            # Capture the SAME verified native target, without moving the cursor.
+            target=self.target_id
+            if not target:
+                session=await page.context.new_cdp_session(page)
+                try:target=(await session.send('Target.getTargetInfo'))['targetInfo']['targetId']
+                finally:await session.detach()
             process=await asyncio.create_subprocess_exec(sys.executable,'-m','hub.browser_ipc','--capture-target',target,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,creationflags=0x08000000)
             out,err=await asyncio.wait_for(process.communicate(),8)
-            if process.returncode:raise ObservationError('Browser renderer unavailable; open the Local Agent window and refresh')
+            if process.returncode:raise ObservationError('Native Qt capture unavailable')
             result=json.loads(out)
-            if 'image' not in result:raise ObservationError(result.get('error','Browser renderer unavailable'))
-            image=result['image']
+            native_image=result.get('image')
+            if not isinstance(native_image,str) or not native_image.startswith('data:image/'):
+                raise ObservationError('Native capture did not return image data')
+            if not isinstance(result.get('width'),int) or not isinstance(result.get('height'),int) or result['width']<=0 or result['height']<=0:
+                raise ObservationError('Native capture geometry unavailable')
+            image=native_image
             capture_size={'width':result['width'],'height':result['height']}
+        except Exception:
+            # Non-QWebEngine targets can use standard screenshot as fallback.
+            pixels=await page.screenshot(type='jpeg',quality=75,timeout=1800)
+            image='data:image/jpeg;base64,'+base64.b64encode(pixels).decode()
         size=await page.evaluate('({width:innerWidth,height:innerHeight})')
         if capture_size and capture_size!=size:
             self.remote_frame=None
@@ -391,13 +446,17 @@ class Browser:
             if not (0<=x<frame['width'] and 0<=y<frame['height']):raise ObservationError('Click is outside the displayed browser')
             button=args.get('button','left')
             if button not in ('left','right','middle'):raise ObservationError('Unknown virtual mouse button')
-            if action=='drag':
+            if action=='click':
+                # Use Qt-native widget events, not Playwright CDP mouse input.
+                # A zero-distance virtual drag sends a single press/release without
+                # moving the physical pointer or creating a new browser target.
+                end_x,end_y=x,y
+            elif action=='drag':
                 end_x,end_y=args.get('end_x',-1),args.get('end_y',-1)
                 if args.get('end_ref'):end_x,end_y=center(args['end_ref'])
                 if not (0<=end_x<frame['width'] and 0<=end_y<frame['height']):raise ObservationError('Drag endpoint is outside the displayed browser')
             self.remote_frame=None
             if action=='move':await page.mouse.move(x,y)
-            elif action=='click':await page.mouse.click(x,y,button=button)
             elif self.target_id:
                 import sys
                 payload=dict(target_id=self.target_id,expected_url=page.url,x=x,y=y,end_x=end_x,end_y=end_y,button=button)
@@ -406,7 +465,9 @@ class Browser:
                 except TimeoutError:
                     process.kill();await process.wait();raise RuntimeError('Virtual drag acknowledgement timed out; inspect current state before retrying')
                 result=json.loads(out) if out else {'error':err.decode(errors='replace') or 'No virtual drag acknowledgement'}
-                if not result.get('input_sent'):raise RuntimeError(result.get('error','Virtual drag outcome unknown'))
+                if not result.get('input_sent'):raise RuntimeError(result.get('error','Native virtual input outcome unknown'))
+            elif action=='click':
+                raise ObservationError('Native browser target required for safe virtual click; no input sent')
             else:
                 session=await asyncio.wait_for(page.context.new_cdp_session(page),3)
                 buttons={'left':1,'right':2,'middle':4}[button]
@@ -421,9 +482,29 @@ class Browser:
                     finally:await asyncio.wait_for(session.detach(),3)
         elif action=='text':await page.keyboard.insert_text(args.get('text',''))
         elif action=='key':await page.keyboard.press(args['key'])
-        elif action=='scroll':await page.mouse.wheel(0,max(-2000,min(2000,args.get('amount',0))))
+        elif action=='scroll':
+            # Qt WebEngine's CDP Input.dispatchMouseEvent/wheel path can crash
+            # Qt6WebEngineCore on complex sites. Scroll the active document
+            # directly; this never moves the physical pointer or issues a
+            # synthetic mouse wheel event to Chromium.
+            amount=max(-2000,min(2000,args.get('amount',0)))
+            self.remote_frame=None  # Never reuse a frame after uncertain effects.
+            position=await asyncio.wait_for(page.evaluate(
+                """amount => {
+                  const before=window.scrollY;
+                  window.scrollBy({top:amount,behavior:'instant'});
+                  return {before,after:window.scrollY};
+                }""",amount),4)
+            return {'sent':True,'input_sent':True,'verification_required':True,
+                    'backend':'embedded-browser-dom-scroll',
+                    'scroll_y_before':position['before'],'scroll_y_after':position['after'],
+                    'scroll_changed':position['after']!=position['before'],
+                    'physical_pointer_used':False,
+                    'note':'Scroll requested once; read the fresh frame to verify visible results.'}
         else:raise ObservationError('Unknown remote browser input')
         self.remote_frame=None
+        if action in ('click','drag'):
+            self.reattach_after_native_input=True
         return {'sent':True,'input_sent':True,'verification_required':True,'backend':'embedded-browser-virtual-input','physical_pointer_used':False,'note':'Input sent once; capture a fresh frame to verify its effect.'}
 
     async def observed_target(self,observation_id,ref):
@@ -573,13 +654,40 @@ class Browser:
             try:result['after']=await self.observe(folder)
             except Exception as exc:result['observation_error']=type(exc).__name__
             return result
-        if not obs or obs['id']!=args['observation_id'] or time.monotonic()-obs['at']>90 or page is not obs['page'] or page.url!=obs['url']:
+        if not obs or obs['id']!=args['observation_id'] or page is not obs['page'] or page.url!=obs['url']:
             return await not_dispatched('stale_observation','Browser observation expired or page changed. Use fresh evidence.')
+        age=time.monotonic()-obs['at']
         if action not in ('click','fill','press','select','check','scroll','back','forward'):
             return await not_dispatched('unsupported_action','Unsupported browser action; no input was sent.')
-        try:await self.fresh_page(obs['id'])
-        except ObservationError:
-            return await not_dispatched('semantic_stale','Page content changed; select from the new observation.')
+        # A news page may refresh unrelated headlines every second. Revalidate
+        # the exact originally observed anchor in this document, once and without
+        # a new model turn. Other controls keep strict whole-page freshness.
+        fast_link=False
+        if action=='click' and age<=180 and obs.get('refs') and obs.get('elements'):
+            try:observed_ref=resolve_ref(obs,ref)
+            except ObservationError:observed_ref=None
+            observed=next((e for e in obs.get('elements',[]) if e.get('ref')==observed_ref),{})
+            fast_link=(bool(observed_ref) and observed.get('tag')=='a' and
+                       observed.get('enabled') is True and
+                       isinstance(observed.get('href'),str) and
+                       urlsplit(observed['href']).scheme in ('http','https') and
+                       isinstance(obs.get('document_generation'),(int,float)))
+        if age>90 and not fast_link:
+            return await not_dispatched('stale_observation','Browser observation expired or page changed. Use fresh evidence.')
+        if fast_link:
+            params=dict(url=obs['url'],generation=obs['document_generation'],
+                        href=observed['href'],name=observed.get('name',''),
+                        token=obs['id'],ref=observed_ref)
+            try:identity=await asyncio.wait_for(page.evaluate(FAST_OBSERVED_ANCHOR_JS,params),4)
+            except Exception:
+                return await not_dispatched('stale_observation','Observed link could not be safely revalidated.')
+            if not identity.get('valid'):
+                return await not_dispatched('target_changed',identity.get('reason','Observed link changed'))
+            ref=observed_ref
+        else:
+            try:await self.fresh_page(obs['id'])
+            except ObservationError:
+                return await not_dispatched('semantic_stale','Page content changed; select from the new observation.')
         target=None
         if action in ('click','fill','press','select','check'):
             try:ref=resolve_ref(obs,ref)

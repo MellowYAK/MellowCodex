@@ -32,6 +32,18 @@ def display_url(url):
     except (ValueError,TypeError):
         return '[URL unavailable]'
 
+def display_title(title):
+    """Redact callback codes/state from native page titles, retaining a label."""
+    value=str(title or '')
+    if '?' in value:
+        from urllib.parse import parse_qsl
+        suffix=value.split('?',1)[1]
+        sensitive={'code','state','access_token','refresh_token','id_token','token','auth','session','key','client_secret'}
+        if any(k.casefold() in sensitive for k,v in parse_qsl(suffix,keep_blank_values=True)):
+            value=value.split('?',1)[0]
+    return value[:180]
+
+
 def compact_browser(value, limit):
     if not isinstance(value,dict):
         return None

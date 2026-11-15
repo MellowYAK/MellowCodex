@@ -9,7 +9,7 @@ GROUPS={"standard":STANDARD,"extended":EXTENDED,"all":STANDARD+EXTENDED}
 ORDER=("voice_service","text_image_service","image_video_service","video_relay","video_gateway","video_panel")
 def main(q):
  if not isinstance(q,dict) or set(q)-{"action","target"}:raise ValueError("Invalid JSON request")
- a=q.get("action","status");t=q.get("target","all")
+ a=q.get("action","status");t=q.get("target","standard")
  if a not in ("status","start","stop","restart") or t not in set(STANDARD+EXTENDED)|set(GROUPS):raise ValueError("Invalid action or target")
  names=GROUPS.get(t,(t,));steps=[]
  if a in ("stop","restart"):
@@ -25,7 +25,7 @@ def main(q):
  return {"ok":ok,"action":a,"target":t,"steps":steps,"services":{n:snap[n] for n in names}}
 if __name__=="__main__":
  try:
-  q=json.load(sys.stdin) if len(sys.argv)==1 else {"action":sys.argv[1],"target":sys.argv[2] if len(sys.argv)>2 else "all"}
+  q=json.load(sys.stdin) if len(sys.argv)==1 else {"action":sys.argv[1],"target":sys.argv[2] if len(sys.argv)>2 else "standard"}
   response=main(q)
  except Exception as exc:response={"ok":False,"error":type(exc).__name__+": "+str(exc)}
  print(json.dumps(response,ensure_ascii=True))

@@ -6,14 +6,17 @@ import sys
 import uuid
 from pathlib import Path
 
+# Pin the Qt UI runtime before importing any PySide6 module.
+from .config import ROOT,STATE,PORT,ARTIFACTS
+from .qt_runtime import activate_desktop_runtime
+activate_desktop_runtime(ROOT,STATE)
+
 import httpx
 from PySide6.QtCore import QObject,QRunnable,QThreadPool,QTimer,Qt,Signal,QSize
 from PySide6.QtGui import QFont,QFontDatabase,QPixmap,QTextCursor
 from PySide6.QtNetwork import QLocalServer,QLocalSocket
 from PySide6.QtWidgets import QSystemTrayIcon,QMenu,QStyle
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QHBoxLayout,QVBoxLayout,QLabel,QPushButton,QListWidget,QListWidgetItem,QTextEdit,QLineEdit,QComboBox,QFrame,QFileDialog,QStackedWidget,QGridLayout,QTabWidget
-from .config import ROOT,STATE,PORT,ARTIFACTS
-
 LABELS={'queued':'בתור','running':'בעבודה','verifying':'בודק תוצאה','done':'הושלם','failed':'נכשל','paused':'מושהה','cancelled':'בוטל','waiting_user':'נדרשת התערבות','waiting_review':'ממתין לסקירה','waiting_desktop':'ממתין לפתיחת שולחן העבודה'}
 STYLE='''
 QMainWindow,QWidget#root {background:#111217;color:#e5e7f0}

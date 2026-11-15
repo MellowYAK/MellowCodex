@@ -8,9 +8,9 @@ TOOL_PRIORITY={
     "code":("project_context","context_search","context_expand","context_related",
             "read_file","write_file","run_shell","terminal_run","terminal_read",
             "tools_enable","extensions_list","extension_run"),
-    "browser":("browser_navigate","browser_observe","browser_act","browser_assess",
-               "browser_tabs","browser_frame","find_login","chatgpt_ask",
-               "browser_close_tabs","extensions_list","extension_run"),
+    "browser":("agent_environment","browser_navigate","browser_observe","browser_act","browser_assess",
+               "browser_tabs","browser_frame","browser_pointer","browser_extract","find_login",
+               "browser_close_tabs","browser_save_pdf","tools_enable","extensions_list","extension_run","chatgpt_ask"),
     "desktop":("app_find","app_open","window_inspect","window_act","observe_screen",
                "capture_screenshot","run_shell","chatgpt_ask","extensions_list","extension_run")
 }

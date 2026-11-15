@@ -123,6 +123,10 @@ class Engine:
         from .model_settings import load_settings
         from .model_context import prepare_messages
         settings=load_settings()
+        if task_id and self.store is not None and self.store.get(task_id)['mode']=='browser' and settings.browser_driver=='default' and output_schema is None:
+            from .browser_fast_policy import adapt_browser_policy
+            settings,catalog,policy=adapt_browser_policy(settings,catalog)
+            self.store.event(task_id,'browser_fast_inference_policy',policy)
         if task_id and self.store is not None and self.store.get(task_id)['mode']=='code' and settings.coding_model:
             settings=settings.model_copy(update={'model':settings.coding_model})
         if response_tokens is not None:
@@ -168,6 +172,12 @@ class Engine:
             from .inference_profiles import effective_inference
             async with httpx.AsyncClient(timeout=12,trust_env=False) as profile_client:
                 settings,model_inference_options,model_profile_diagnostic=await effective_inference(profile_client,settings)
+        # The effective memory/output profile may restore a maximum 20K+ token
+        # prediction ceiling. Reapply the browser-only short-turn policy AFTER
+        # effective_inference, otherwise the advertised cap is not dispatched.
+        if task_id and self.store is not None and self.store.get(task_id)['mode']=='browser' and settings.browser_driver=='default' and output_schema is None:
+            from .browser_fast_policy import adapt_browser_policy
+            settings,catalog,_=adapt_browser_policy(settings,catalog)
         context_diag=None
         inference_response_tokens=settings.response_tokens
         if settings.context_management=='legacy' or self.store is None:
@@ -347,7 +357,11 @@ class Engine:
                 self.store.event(task_id,'conversation_sources_retrieved',{'chat_id':memory_chat,'method':retrieved.get('selection'),
                     'sources':[{'anchor_id':i['id'],'task_id':i['source_task_id'],'source_hash':i['source_hash'],'source_changed':i['source_changed']} for i in retrieved['items']],
                     'omitted_anchor_ids':retrieved.get('omitted_anchor_ids',[])})
-            if memory.has_prior_context(task_id):messages[0]['content']+='\nFor questions about earlier conversation decisions, retrieve evidence about the specific subject in the CURRENT question. Start with conversation_history query using a distinctive short phrase copied from the question in its original language, or page decision anchors. Do not translate literal search terms. Read later corrections and supersession links before identifying the current decision. A chronological page of unrelated turns is not an answer: refine the query or follow next_after until relevant sources are found. Never return a prior assistant acknowledgement as the answer to a new recall question. Explain uncertainty if the sources do not establish an answer.'
+            if memory.has_prior_context(task_id):
+                if task['mode']=='browser':
+                    messages[0]['content']+='\nFor a browser ACTION, use agent_environment for named local apps and current browser evidence before consulting chat history. Historical conversation lookup is needed only when the user explicitly asks to recall a previous fact/decision that cannot be established from the live app. Navigation, account or channel selection must use fresh observed controls and identity, not history.'
+                else:
+                    messages[0]['content']+='\nFor questions about earlier conversation decisions, retrieve evidence about the specific subject in the CURRENT question. Start with conversation_history query using a distinctive short phrase copied from the question in its original language, or page decision anchors. Do not translate literal search terms. Read later corrections and supersession links before identifying the current decision. A chronological page of unrelated turns is not an answer: refine the query or follow next_after until relevant sources are found. Never return a prior assistant acknowledgement as the answer to a new recall question. Explain uncertainty if the sources do not establish an answer.'
             coding_guidance=None
             if task['mode'] in ('code','desktop','browser'):
                 from .development.guidance import Guidance
