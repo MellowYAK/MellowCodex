@@ -5,11 +5,11 @@ THIS IS THE SINGLE MOST IMPORTANT FILE FOR A NEW CHAT OR MODEL. Read MASTER_PLAN
 ## Current checkpoint (as last recorded)
 Project status: IN PROGRESS, not production-complete.
 Last session date: 2026-11-15.
-Current milestone: P12 standalone fast executor GUARD VERIFIED, 84 passed, 5 legacy XFAIL. P13 model router next; Engine integration and real latency open.
+Current milestone: P13 standalone policy/capability/health/cost-aware model router Guard ACTIVE_VERIFIED, 99 live passed/5 legacy XFAIL; P14 real Engine integration, E2E and latency remaining.
 Last VERIFIED milestone: P01 durable master/progress VERIFIED DONE; P00/P02 audit and baseline VERIFIED PARTIAL.
 Master document creation: task d18e4d376d9b44eb8a18f54895719b85, exit 0, 10,908 bytes, SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161.
 PROGRESS document: VERIFIED CREATED and independently read back (task 56f3cbe329424a06bf104811905fdcd9, exit 0).
-Next action: P13 safe capability-aware model router with tests; then P14 active Engine feature-flag integration, close 5 legacy XFAILs, real Walla/desktop E2E and measurable p50/p95. Preserve all user state.
+Next action: P14 integrate P03-P13 into the real Engine and existing Goal Board under disabled-by-default feature flags, fix five legacy false-completion XFAILs, verify browser/desktop/coding end-to-end, fault recovery and measured p50/p95. Keep existing user data, dirty files and Guard boundaries intact.
 
 ## FINAL MEASURABLE GOAL
 An autonomous, fast and safe MellowCodex agent runtime that turns a request into a durable versioned plan, executes browser/Windows/files/code/MCP actions with appropriately routed local/DeepSeek/optional cloud models, continuously checks tool feedback, accepts mid-run corrections, recovers and replans, and only claims completion after verified evidence. It must survive switching chats/models or process restarts without losing task progress or repeating uncertain side effects.
@@ -39,7 +39,7 @@ Full exact acceptance tests and implementation P00-P14 are in MASTER_PLAN.md. Th
 | P10 | Incorporate new user messages mid-task | VERIFIED DONE (standalone) | Guard f938528f9ffe4922bc3941e2a6fb764b ACTIVE_VERIFIED; live 164 PASS and 5 legacy XFAIL. Versioned plan merge, user correction and unknown-effect protection verified. NOT yet wired to running Engine. |
 | P11 | Safe OTel-compatible tracing and task decision audit | VERIFIED DONE (standalone telemetry) | hub/agent_runtime_v2/telemetry.py + tests, Guard 9be173f2ea894f4db57999dee6d7a918 ACTIVE_VERIFIED, live regression passed, p50/p95 and redacted decision trace. Engine/UI hook integration still open. |
 | P12 | Deterministic browser fast executor | VERIFIED DONE (standalone) | Guard eb067b220804454fb429b7dd0f3aa686 ACTIVE_VERIFIED, live 84 passed, 5 legacy strict xfailed; Engine/real p50/p95 not yet verified. |
-| P13 | Reasoning router and DeepSeek/cloud adapters | NOT_STARTED | Capability/health/permission/cost gates; shadow first. |
+| P13 | Reasoning/provider registry and router | VERIFIED DONE (standalone) | New router.py policy capability context health privacy latency/cost scores, local fast/deep and consent-gated cloud; Guard e3143ca7c66a4beb9ac5cc2a0d27394e ACTIVE_VERIFIED, live 99 passed/5 legacy strict XFAILED. Real provider calls and Engine integration unverified. |
 | P14 | E2E, fault/security, rollback and release | NOT_STARTED | All target metrics measured and evidenced. |
 
 ## Git and preservation constraints: VERIFIED INITIAL AUDIT
@@ -225,3 +225,11 @@ Status: VERIFIED DONE for additive standalone module, not production Engine inte
 Candidate task 5915e415271c4791a0355646228aea0a, candidate 9a1169a7007f458bbf144d098b90463e revision1. Two NEW paths only: hub/agent_runtime_v2/fast_executor.py and tests/test_agent_runtime_v2_fast_executor.py.
 Candidate tests exit0: 84 passed, 5 legacy strict XFAIL. Guard eb067b220804454fb429b7dd0f3aa686 ACTIVE_VERIFIED. LIVE task c20ec5609a45423cb38c1a090b0e8006 exit0: 84 passed, 5 strict XFAIL. Fast executor SHA256 2E5F1D0C234AE23F41213A28751A2FCDBEE5BDA1309B11CF99FF8B1DA8CF7AE2; test SHA256 4421F458A7621A7CC94E6630488A77B9A1307F7BA37CF7A1A29F1A4010635F08.
 Next P13 model router, P14 actual Engine integration and benchmark; protect 15 preexisting dirty files, user databases, chats and Guard.
+
+
+### 2026-11-15 P13 standalone model router verified
+Status: VERIFIED DONE for isolated metadata routing and tests, NOT verified as live Engine model selection or cloud provider integration.
+Candidate task 6cfe5bd4b8c84cf1948208757ce04be9; candidate cdd89955b3b74450844e65f0f5b4038e rev1. Two new paths ONLY: hub/agent_runtime_v2/router.py and tests/test_agent_runtime_v2_router.py. Candidate 87 passed, five known legacy P02 strict XFAILED.
+Route decision is deterministic and requires required capabilities, healthy provider, sufficient context, tool support, privacy policy and BOTH policy and explicit user cloud authorization; supports zero-model deterministic path, local fast/deep, cost ceilings and circuit-open exclusion. No network calls, credentials or raw reasoning traces in this module.
+Guard update e3143ca7c66a4beb9ac5cc2a0d27394e ACTIVE_VERIFIED. Live verification task 37276c3475cc4b5e8a0fde35e23ba25d exit0: 99 PASSED, 5 known strict XFAILED in 1.74s. router SHA256 E09005CF63455E915937BF477D291850A6AF1D214455DE0290C44A017EFD401A; test SHA F9839A1886C355D31889A167FD8119378F8CF66843493F72DC052ABB6E931813.
+NEXT: P14 actual production Engine wiring (guarded feature flag), close five old XFAILs with acceptance evidence; live browser/desktop/coding E2E and crash/latency P50/P95 benchmarks. Existing dirty Engine/UI/Goal Board and user data must be preserved with a minimal-diff candidate.
