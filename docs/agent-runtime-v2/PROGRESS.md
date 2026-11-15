@@ -6,7 +6,7 @@ THIS IS THE SINGLE MOST IMPORTANT FILE FOR A NEW CHAT OR MODEL. Read MASTER_PLAN
 Project status: IN PROGRESS, not production-complete.
 Last session date: 2026-11-15.
 Current milestone: P00 SQLite/model/source BASELINE VERIFIED PARTIAL; P02 acceptance fixture design and tests next.
-Last VERIFIED milestone: P00 read-only Git/source audit PARTIAL, task 93c9bf11b889468c908e4afb62c95daa, exit 0, approved.
+Last VERIFIED milestone: P01 durable master/progress VERIFIED DONE; P00/P02 audit and baseline VERIFIED PARTIAL.
 Master document creation: task d18e4d376d9b44eb8a18f54895719b85, exit 0, 10,908 bytes, SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161.
 PROGRESS document: VERIFIED CREATED and independently read back (task 56f3cbe329424a06bf104811905fdcd9, exit 0).
 Next action: P02 create isolated safe acceptance fixtures for Walla homepage-versus-login and selected multi-step tasks, using existing Goal Board/verifier tests; measure acceptance failures and performance before modifying engine. Preserve all dirty source files.
@@ -116,3 +116,11 @@ No tables with agent_ prefix exist. No row values/user content accessed, no DB w
 Live MellowCodex model_memory_status: loaded=false, models=[] (this DOES NOT prove models absent from disk). delegation_profiles: 0 configured entries; no proven DeepSeek/cloud reasoning provider configured.
 Design implication: P03/P04 must reuse the existing tasks/actions/events and browser_goal_boards, adding only compatible versioned structures after exact source inspection, not replacing existing DB.
 Next: P02 acceptance fixtures; do not prematurely claim universal routing or success verifier completion.
+
+
+### 2026-11-15 P01 Git durability checkpoint
+Status: VERIFIED DONE.
+First document publication task a8bdeb0fdabf49ed81a68f8adca92a1d: CRCRLF line ending issue corrected before commit, only MASTER_PLAN.md and PROGRESS.md staged; git diff check passed; commit 82d116790f200d70702e4e589d2bbbaf059eb302 pushed non-force to origin/main, confirmed by git ls-remote.
+All 15 pre-existing dirty source and test paths remained untouched.
+This new journal entry is a follow-up publication: latest Git revision must be read from git log/origin/main, not inferred from the first commit ID.
+Next action: P02 isolated safe acceptance fixtures; Walla homepage alone MUST NOT satisfy a login-form goal, then test other multi-step browser and desktop objectives. P00/P02 still PARTIAL.
