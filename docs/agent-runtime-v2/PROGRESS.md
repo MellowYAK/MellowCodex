@@ -5,11 +5,11 @@ THIS IS THE SINGLE MOST IMPORTANT FILE FOR A NEW CHAT OR MODEL. Read MASTER_PLAN
 ## Current checkpoint (as last recorded)
 Project status: IN PROGRESS, not production-complete.
 Last session date: 2026-11-15.
-Current milestone: P05 Goal Board -> versioned TaskPlan adapter VERIFIED DONE (independent bridge); P06 evidence collector and P07 universal verifier NEXT.
+Current milestone: P06 typed tool/user FeedbackCollector VERIFIED DONE (standalone module); P07 universal final verifier NEXT. P02 5 known legacy false completions remain open.
 Last VERIFIED milestone: P01 durable master/progress VERIFIED DONE; P00/P02 audit and baseline VERIFIED PARTIAL.
 Master document creation: task d18e4d376d9b44eb8a18f54895719b85, exit 0, 10,908 bytes, SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161.
 PROGRESS document: VERIFIED CREATED and independently read back (task 56f3cbe329424a06bf104811905fdcd9, exit 0).
-Next action: P06 create normalized, sanitized Evidence/FeedbackCollector from browser/desktop/tool/user observations with source, freshness, correlation, uncertainty; then P07 verifier enforcing original goal, trusted host and final form. Keep original dirty engine/Goal Board/GUI untouched.
+Next action: P07 create an evidence-backed verifier over TaskPlan/Evidence, with hostname-bound login form, original-goal acceptance, freshness and task/step binding. Add negative tests proving all P02 false-completion cases fail and only verified goals pass. Then P08 state machine.
 
 ## FINAL MEASURABLE GOAL
 An autonomous, fast and safe MellowCodex agent runtime that turns a request into a durable versioned plan, executes browser/Windows/files/code/MCP actions with appropriately routed local/DeepSeek/optional cloud models, continuously checks tool feedback, accepts mid-run corrections, recovers and replans, and only claims completion after verified evidence. It must survive switching chats/models or process restarts without losing task progress or repeating uncertain side effects.
@@ -32,7 +32,7 @@ Full exact acceptance tests and implementation P00-P14 are in MASTER_PLAN.md. Th
 | P03 | Typed TaskPlan/Step/Evidence contracts | VERIFIED DONE | New independent hub/agent_runtime_v2 contracts: immutable Pydantic TaskPlan/PlanStep/AcceptanceCriterion/Evidence/DecisionRecord/ActionRecord, DAG and freshness validation, stable semantic action key; Guard b3c51b57570646429d732e9dea506e7a ACTIVE_VERIFIED; live tests 62 passed 5 known P02 xfailed. Not yet wired to Engine. |
 | P04 | Additive SQLite plan/event/checkpoint persistence | VERIFIED DONE | New agent_runtime_v2.persistence PlanRepository with explicit additive tables, plan history/CAS, evidence/event idempotency, crash-resumable checkpoints, legacy data preservation; Guard update 4d54969a56a14ded9161407b7f17da06 ACTIVE_VERIFIED; live 73 passed / 5 prior xfailed. NOT yet connected to Engine or production DB. |
 | P05 | Universal adapter to existing Goal Board | VERIFIED DONE | New pure hub/agent_runtime_v2/goal_board_adapter.py converts existing editable BoardStore records to TaskPlan with original multilingual goal, revisions, alternatives and required final acceptance. Guard 3c792bc6a6164472990b74f68a090eb7 ACTIVE_VERIFIED; live 85 passed, five known P02 strict xfailed. Not yet connected to Engine. |
-| P06 | Tool/browser/desktop/user feedback and evidence | NOT_STARTED | Freshness, provenance, OAuth sanitization. |
+| P06 | Tool/browser/desktop/user feedback and evidence | VERIFIED DONE (standalone) | New feedback.py normalizes bounded sanitized tool and user outcomes into typed Evidence/FeedbackEvent; unknown input effects UNCERTAIN; Guard 7d1a2cac7cfa4f77ad56bd51183b33fa ACTIVE_VERIFIED; live 88 passed / 5 known P02 xfailed. Not wired to Engine. |
 | P07 | Universal Verifier and final-completion gate | NOT_STARTED | Require verifiable acceptance evidence. |
 | P08 | Runtime state machine SHADOW implementation | NOT_STARTED | Old engine remains authoritative until verified. |
 | P09 | Bounded retries, recovery and replanning | NOT_STARTED | Idempotency and unknown-outcome reconciliation. |
@@ -164,3 +164,12 @@ Candidate task 78eaa2959d11452daee2abb9c1baa7b0; isolated candidate df334eff787b
 Adapter carries goal, task_mode, target_host, feedback_mode, edited steps/alternatives/notes, original language and BoardStore revision to immutable versioned TaskPlan. Final login criterion demands both actual login form and requested hostname. It NEVER treats pre-existing task_state=done as verified completion.
 Guard update 3c792bc6a6164472990b74f68a090eb7 ACTIVE_VERIFIED. Live verification task bb68021983fc48129baceb5118b2b438 exit0: 85 PASSED, 5 known P02 strict XFAILED in 1.62s. New files SHA256: adapter DEEC38690084114D8535C7D43994A4A29C3FE148377C854B1C12D5DB375B0AF5; test 7E5070710E3C69131ECFC4819410EDE3418C02776E0B107DBFDFFED2E12A4376.
 NEXT: P06 evidence and feedback collector with sanitization/freshness; P07 universal verifier to close five known false-success cases, then P08 coordinator. P02 real E2E/performance remains open.
+
+
+### 2026-11-15 P06 typed safe feedback and evidence normalization
+Status: VERIFIED DONE for independent normalizer; not yet wired to active Engine or full completion verifier.
+Candidate task 737105c5068944a5a146888d386ef536, candidate 1cd219f44c3e41649e8f95701811f8aa rev1. Only NEW hub/agent_runtime_v2/feedback.py and tests/test_agent_runtime_v2_feedback.py. No existing engine/Goal Board modified.
+Normalizer converts tool/browser/desktop/file/worker/user status to FeedbackEvent and Evidence; records source, time, identity and freshness; bounds nested untrusted content; redacts OAuth query/fragments/credential keys/bearer/private reasoning; keeps dispatched-but-unverified clicks UNCERTAIN. This is tool-level confirmation only, not actual task-goal completion.
+Guard update 7d1a2cac7cfa4f77ad56bd51183b33fa ACTIVE_VERIFIED. Live task 9a79ada1d35c4ad2a07d367ebcb1586b exit0: 88 passed and 5 existing P02 strict xfailed in 1.32s.
+SHA256: feedback.py 6414549EAF282772737CE0897EA89A1F561E3E4496ACB74B59D5C171E56D32F5; test 7FB565F0FEB88EBBF166C4178D4F27B10A77CF74E2F3A5F64401072CB0E72369.
+NEXT: P07 universal verifier and P02 known false-completion blocking suite; P08 shadow coordinator then P09 recovery.
