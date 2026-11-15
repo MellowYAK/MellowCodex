@@ -5,11 +5,11 @@ THIS IS THE SINGLE MOST IMPORTANT FILE FOR A NEW CHAT OR MODEL. Read MASTER_PLAN
 ## Current checkpoint (as last recorded)
 Project status: IN PROGRESS, not production-complete.
 Last session date: 2026-11-15.
-Current milestone: P08 standalone shadow lifecycle coordinator VERIFIED DONE (Guard ACTIVE_VERIFIED); P09 bounded recovery/idempotency NEXT. Legacy Engine integration and five XFAIL cases remain open.
+Current milestone: P09 standalone durable action recovery/idempotency VERIFIED DONE; P10 mid-task user correction NEXT. Five legacy P02 XFAILs and Engine integration remain open.
 Last VERIFIED milestone: P01 durable master/progress VERIFIED DONE; P00/P02 audit and baseline VERIFIED PARTIAL.
 Master document creation: task d18e4d376d9b44eb8a18f54895719b85, exit 0, 10,908 bytes, SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161.
 PROGRESS document: VERIFIED CREATED and independently read back (task 56f3cbe329424a06bf104811905fdcd9, exit 0).
-Next action: P09 implement safe reconciliation, bounded retries, idempotency ledger and plan revision recovery over existing P03-P08 modules using isolated new code and tests, then P10 mid-task user correction. Preserve dirty Engine/Goal Board/UI. P08 still not connected to production Engine.
+Next action: P10 implement a safe versioned user-guidance merge engine with interrupt classifications, plan revision CAS, preservation of valid completed steps and unknown-external-effect safety. Use isolated new module and tests; no edits to dirty Engine/Goal Board/UI. Then P11 telemetry and P12 fast path.
 
 ## FINAL MEASURABLE GOAL
 An autonomous, fast and safe MellowCodex agent runtime that turns a request into a durable versioned plan, executes browser/Windows/files/code/MCP actions with appropriately routed local/DeepSeek/optional cloud models, continuously checks tool feedback, accepts mid-run corrections, recovers and replans, and only claims completion after verified evidence. It must survive switching chats/models or process restarts without losing task progress or repeating uncertain side effects.
@@ -35,7 +35,7 @@ Full exact acceptance tests and implementation P00-P14 are in MASTER_PLAN.md. Th
 | P06 | Tool/browser/desktop/user feedback and evidence | VERIFIED DONE (standalone) | New feedback.py normalizes bounded sanitized tool and user outcomes into typed Evidence/FeedbackEvent; unknown input effects UNCERTAIN; Guard 7d1a2cac7cfa4f77ad56bd51183b33fa ACTIVE_VERIFIED; live 88 passed / 5 known P02 xfailed. Not wired to Engine. |
 | P07 | Universal Verifier and final result gate | VERIFIED PARTIAL | P07 standalone verifier.py and tests live and exact SHA match isolated candidate; live 109 passed, 5 legacy xfailed. Guard activate returned INVALID_ARGUMENT and is NOT VERIFIED; legacy Engine not connected, false-completion remains open. |
 | P08 | Runtime coordinator, shadow state machine | VERIFIED DONE (standalone) | New pure coordinator with lifecycle transitions, CAS revision, bounded retry, uncertain external action reconciliation, approval gates and checkpoint round-trip; Guard fb87e8e8b1b64c4cbc3f62e24e10f225 ACTIVE_VERIFIED, live 121 passed / 5 legacy strict xfailed; not wired to Engine. |
-| P09 | Bounded retries, recovery and replanning | NOT_STARTED | Idempotency and unknown-outcome reconciliation. |
+| P09 | Recovery/replan, action idempotency and safe retries | VERIFIED DONE (standalone) | New ActionLedger with SQLite intent reservation, CAS, retry caps, R2/R3 approval and unknown-effect reconciliation; Guard 842c1d4f97a74ee78f1def19e5496797 ACTIVE_VERIFIED, live 135 passed / 5 legacy strict xfailed. Not wired to Engine. |
 | P10 | Incorporate new user messages mid-task | NOT_STARTED | Versioned revision and no duplicate actions. |
 | P11 | Traces and status UI | NOT_STARTED | Model/phase timings, decision summaries, no raw chain-of-thought. |
 | P12 | Deterministic browser/desktop fast path | NOT_STARTED | Preserve native Qt screenshot optimizations. |
@@ -188,3 +188,12 @@ Candidate task 706eb53936f949f0a26d685894fb8e3d; candidate 6160868c40ac4f2483bfb
 New state reducer enforces explicit CREATED -> PLANNING -> READY -> EXECUTING_STEP -> VERIFYING -> NEXT/RETRY/REPLAN/FINAL_VERIFICATION -> COMPLETED. Requires fresh P07 verifier evidence before completing steps, tracks snapshots with CAS revision and transition budget, guards R2/R3 unknown results from unsafe retries, supports user change, waiting approval, cancel, versioned replanning and SQLite checkpoint persistence readback.
 Guard update fb87e8e8b1b64c4cbc3f62e24e10f225 ACTIVE_VERIFIED. Live readback/test task 477c2365475b4de0a39d377a35359b16 exit0: 121 PASSED, 5 existing P02 strict XFAILED in 1.75s. File SHA256 coordinator.py 0DCA2548A0AA9B5B5E5BCB5289B141D7107CBC8910B127E65C514A3EC765195F; test 2B463F1C498BDEDE58BA3EA86322DA03500F855482B70668FAEF2B93607CD28C.
 NEXT: P09 bounded retry/replan/idempotency/reconciliation module with fault injection. Then P10 live user-correction plan merge; P11 telemetry and UI; P12 deterministic path; P13 model routing; P14 E2E and production release. Do not claim user objective success until remaining integration and 5 legacy XFAILs resolved.
+
+
+### 2026-11-15 P09 durable action ledger, bounded recovery and reconciliation
+Status: VERIFIED DONE as standalone library and tests. NOT yet integrated into active Hub Engine or actual user database.
+Candidate task 64e355edb9534a618721b682b2435a77, candidate 6e64f89bfc8d4f038d1cae6fa56120e0 rev1. Two NEW paths only: hub/agent_runtime_v2/recovery.py and tests/test_agent_runtime_v2_recovery.py. No changes to dirty legacy Engine, Goal Board or UI.
+ActionLedger adds opt-in agent_action_intents SQLite table, stable semantic effect ID across plan revisions, atomic reservation and dispatch, risk-dependent R2/R3 approval, idempotent applied-effect suppression, evidence-required reconciliation of unknown outcomes, proof of non-effect before bounded retry, and no raw target/arguments/credentials saved in the ledger.
+Guard update 842c1d4f97a74ee78f1def19e5496797 ACTIVE_VERIFIED. Live verification task 9e4e819983af4076a8ca9a07085a08ed exit0: 135 PASSED, 5 prior strict legacy P02 XFAILED, 2.33 seconds pytest.
+Source SHA256 recovery.py 4EAA62F967C68452FF035E81817CBD986FDF58E9FECDE3D234CE8D33A4F4B88C; test SHA256 D088FC9D620A19B42B5D553015687D48B51568AA63BF2CF58F24887E806589D1.
+NEXT: P10 user instruction integration and plan versioning, P11 trace/visible progress, P12 deterministic executor, P13 model reasoning router, P14 E2E/security/release. P02 legacy false-completion cases and active Engine integration remain blocking.
