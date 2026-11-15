@@ -59,6 +59,15 @@ def should_enable_compatibility(url,visible,already_recovered,blank_cycles):
             and url.scheme() in ('http','https'))
 
 
+def should_restore_javascript(previous_host,url):
+    """A JS-disabled readable tab needs full JS on a different website."""
+    if url is None or url.scheme() not in ('http','https'):
+        return False
+    old=str(previous_host or '').casefold().strip('[]')
+    new=url.host().casefold().strip('[]')
+    return bool(old and new and old!=new)
+
+
 class BrowserView(QWidget):
     def __init__(self,parent=None):
         super().__init__(parent)
@@ -172,6 +181,7 @@ class BrowserView(QWidget):
         url=view.url()
         if url.scheme() not in ('http','https'):return
         view.compatibility_mode=True
+        view.compatibility_host=url.host().casefold().strip('[]')
         view.blank_cycles=0
         self.replace_page(view,javascript=False)
         view.setUrl(url)
@@ -184,6 +194,7 @@ class BrowserView(QWidget):
         if not view or not view.compatibility_mode:return
         url=view.url()
         view.compatibility_mode=False
+        view.compatibility_host=None
         view.blank_cycles=0
         self.replace_page(view,javascript=True)
         view.setUrl(url)
@@ -229,6 +240,7 @@ class BrowserView(QWidget):
     def new_tab(self):
         view=View(self)
         view.compatibility_mode=False
+        view.compatibility_host=None
         view.blank_cycles=0
         index=self.tabs.addTab(view,'דף חדש');self.tabs.setCurrentIndex(index)
         view.page().windowCloseRequested.connect(lambda v=view:self.remove_closed_tab(v))
@@ -261,6 +273,15 @@ class BrowserView(QWidget):
         self.full_site_button.setVisible(bool(self.current() and self.current().compatibility_mode))
     def url_changed(self,view,url):
         view.blank_cycles=0
+        if view.compatibility_mode and should_restore_javascript(getattr(view,'compatibility_host',None),url):
+            # Restore scripts for a DIFFERENT host without reloading the page
+            # or replaying a navigation/submission that may have side effects.
+            view.compatibility_mode=False
+            view.compatibility_host=None
+            view.page().settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled,True)
+            if view is self.current():
+                self.full_site_button.setVisible(False)
+                self.status.setText('JavaScript הופעל מחדש עבור האתר החדש')
         if view is self.current():self.address.setText(url.toString())
     def navigate(self):
         url=QUrl.fromUserInput(self.address.text().strip())
