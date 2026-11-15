@@ -1,0 +1,15 @@
+--- a/hub/engine.py
++++ b/hub/engine.py
+@@ -616,7 +616,11 @@
+                             # Only sign-in navigation requires the extra final-form
+                             # proof. Existing workflow handles other browser goals,
+                             # including read-only tasks without navigation or input.
+-                            if board and board.get('intent')=='login':
++                            import os
++                            if os.environ.get('AGENT_RUNTIME_V2_GOAL_GATE','').strip().lower() in ('1','true','yes','on'):
++                                from .agent_runtime_v2.engine_gate import browser_goal_complete
++                                verified_goal=browser_goal_complete(board,actions,strict=True)
++                            elif board and board.get('intent')=='login':
+                                 verified_goal=progress(board,actions)['done']
+                         if completion_check(actions) is False or not verified_goal:
+                             unverified_finals+=1
