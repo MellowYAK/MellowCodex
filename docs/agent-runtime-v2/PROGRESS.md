@@ -5,11 +5,11 @@ THIS IS THE SINGLE MOST IMPORTANT FILE FOR A NEW CHAT OR MODEL. Read MASTER_PLAN
 ## Current checkpoint (as last recorded)
 Project status: IN PROGRESS, not production-complete.
 Last session date: 2026-11-15.
-Current milestone: P03 typed contracts VERIFIED DONE (standalone schema); P04 additive SQLite plan/event store NEXT. P02 full benchmark and known gaps remain open.
+Current milestone: P04 additive SQLite plan/evidence/checkpoint repository VERIFIED DONE (new module only); P05 Goal Board adapter and P06/P07 verifier next.
 Last VERIFIED milestone: P01 durable master/progress VERIFIED DONE; P00/P02 audit and baseline VERIFIED PARTIAL.
 Master document creation: task d18e4d376d9b44eb8a18f54895719b85, exit 0, 10,908 bytes, SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161.
 PROGRESS document: VERIFIED CREATED and independently read back (task 56f3cbe329424a06bf104811905fdcd9, exit 0).
-Next action: P04 add durable versioned TaskPlan/Step/Evidence SQLite repository using additive migration, CAS and transaction tests. Preserve existing tasks/actions/events and dirty source. Then P05/P06/P07 integration.
+Next action: P05 implement an additive adapter from existing hub/browser_goal_board.py into versioned TaskPlan with acceptance criteria, without changing dirty Goal Board/Engine/UI. Then P06 evidence collection and P07 universal verifier to close known P02 false completions.
 
 ## FINAL MEASURABLE GOAL
 An autonomous, fast and safe MellowCodex agent runtime that turns a request into a durable versioned plan, executes browser/Windows/files/code/MCP actions with appropriately routed local/DeepSeek/optional cloud models, continuously checks tool feedback, accepts mid-run corrections, recovers and replans, and only claims completion after verified evidence. It must survive switching chats/models or process restarts without losing task progress or repeating uncertain side effects.
@@ -30,7 +30,7 @@ Full exact acceptance tests and implementation P00-P14 are in MASTER_PLAN.md. Th
 | P01 | Durable MASTER_PLAN and PROGRESS | VERIFIED DONE | Fresh readback task 56f3cbe329424a06bf104811905fdcd9 exit 0; MASTER_PLAN 10908 bytes SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161; PROGRESS initial 9003 bytes SHA256 2A1E0779C7807DD94B350461E8F9DDE2B097C6ABAEC16CA29A55E6D19AB75AB7. |
 | P02 | Acceptance fixtures and benchmarks | VERIFIED PARTIAL | 32 versioned synthetic scenarios deployed; live 46 passed, 1 skipped, 5 strict xfailed in 1.36s. Known wrong-host login and generic done-without-evidence gaps. Guard update 73fb7d73542c4672830052ea65a44aff ACTIVE_VERIFIED; 100-run real latency/E2E outstanding. |
 | P03 | Typed TaskPlan/Step/Evidence contracts | VERIFIED DONE | New independent hub/agent_runtime_v2 contracts: immutable Pydantic TaskPlan/PlanStep/AcceptanceCriterion/Evidence/DecisionRecord/ActionRecord, DAG and freshness validation, stable semantic action key; Guard b3c51b57570646429d732e9dea506e7a ACTIVE_VERIFIED; live tests 62 passed 5 known P02 xfailed. Not yet wired to Engine. |
-| P04 | Additive SQLite plan/event/checkpoint persistence | NOT_STARTED | No destructive migrations. |
+| P04 | Additive SQLite plan/event/checkpoint persistence | VERIFIED DONE | New agent_runtime_v2.persistence PlanRepository with explicit additive tables, plan history/CAS, evidence/event idempotency, crash-resumable checkpoints, legacy data preservation; Guard update 4d54969a56a14ded9161407b7f17da06 ACTIVE_VERIFIED; live 73 passed / 5 prior xfailed. NOT yet connected to Engine or production DB. |
 | P05 | Universal adapter to existing Goal Board | NOT_STARTED | Uncommitted Goal Board code needs provenance review. |
 | P06 | Tool/browser/desktop/user feedback and evidence | NOT_STARTED | Freshness, provenance, OAuth sanitization. |
 | P07 | Universal Verifier and final-completion gate | NOT_STARTED | Require verifiable acceptance evidence. |
@@ -147,3 +147,12 @@ Guard update b3c51b57570646429d732e9dea506e7a ACTIVE_VERIFIED, independently rea
 Live verification task 2f6694dcd786474eb653c8b607c55c02 exit0: 62 PASSED, 5 known P02 strict XFAILED in 1.23s; all new code/test files present.
 SHA256: __init__.py A478D8D0DCD368EC458CF7E4C8FFD4AB2BD6DD36137779A9643A25BE18F9F670; contracts.py B7496B4E120C4E3046D65DDBF5F27293D2612C3938671CDE1973667BE9DB932A; test 7DD8FB40B521E7A4C800343C05EA66F22A18620D92B7D6790599011B9FE52053.
 NEXT: P04 additive SQLite repository for versioned plans/evidence, with transaction/CAS/crash tests. Do not overwrite existing dirty source. P02 known gaps still require P07 verifier.
+
+
+### 2026-11-15 P04 additive SQLite persistence validated in live repository
+Status: VERIFIED DONE for additive repository module, NOT production engine integration or a live user-database migration.
+Candidate task 94788c4bec544fe48f96e56ad2110997, candidate 1c048a8f47fe409a99673cbf24544fe6 revision2.
+Only new hub/agent_runtime_v2/persistence.py and tests/test_agent_runtime_v2_persistence.py. Initial tests found Python sqlite3.executescript implicitly commits the transaction and breaks rollback; replaced with individual DDL statements under BEGIN IMMEDIATE. Candidate 73 PASSED and 5 existing strict P02 XFAILED.
+Guard update 4d54969a56a14ded9161407b7f17da06 ACTIVE_VERIFIED. Live readback/test task 1ae4cee34ca44d0badf2338e5c892a7f exit0: 73 passed, 5 xfailed in 1.42s; tests use temporary databases only, do not write live hub.sqlite3.
+New files sha256: persistence.py 84585487564CF46284A6FB08C53BC9C4701F5A4B3903453C13D0C6640D5CE383; test 3A733B1A9654F84D14A82C71B87F2DD02A84D7368C19F7F26635C7AC53D497AA.
+NEXT: P05 Goal Board -> versioned Plan adapter with tests, then P06/P07 generalized evidence and completion. Preserve all preexisting dirty Goal Board/Engine/UI files.
