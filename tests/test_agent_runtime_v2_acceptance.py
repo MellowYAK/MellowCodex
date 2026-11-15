@@ -71,7 +71,7 @@ def test_corpus_integrity_and_risk_free_inputs():
     ids=[c["id"] for c in CASES]
     assert len(ids)==len(set(ids))
     assert {"browser","code","desktop","inspect"}=={c["mode"] for c in CASES}
-    assert len([c for c in CASES if "known_gap" in c])>=3
+    assert not any("known_gap" in c for c in CASES)
     for c in CASES:
         assert not any(k in c["goal"].lower() for k in ("password=","token=","api_key="))
         assert len(c["tokens"])<=8
