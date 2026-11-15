@@ -5,11 +5,11 @@ THIS IS THE SINGLE MOST IMPORTANT FILE FOR A NEW CHAT OR MODEL. Read MASTER_PLAN
 ## Current checkpoint (as last recorded)
 Project status: IN PROGRESS, not production-complete.
 Last session date: 2026-11-15.
-Current milestone: P06 typed tool/user FeedbackCollector VERIFIED DONE (standalone module); P07 universal final verifier NEXT. P02 5 known legacy false completions remain open.
+Current milestone: P07 standalone deterministic evidence verifier VERIFIED ON DISK, P07 Guard activation not verified; P08 shadow coordinator NEXT. Legacy false-completion 5 XFAIL still open.
 Last VERIFIED milestone: P01 durable master/progress VERIFIED DONE; P00/P02 audit and baseline VERIFIED PARTIAL.
 Master document creation: task d18e4d376d9b44eb8a18f54895719b85, exit 0, 10,908 bytes, SHA256 AB994EC2E6D449F2390769A62A0C50BEEBF994C7F956362B04117F9BF120B161.
 PROGRESS document: VERIFIED CREATED and independently read back (task 56f3cbe329424a06bf104811905fdcd9, exit 0).
-Next action: P07 create an evidence-backed verifier over TaskPlan/Evidence, with hostname-bound login form, original-goal acceptance, freshness and task/step binding. Add negative tests proving all P02 false-completion cases fail and only verified goals pass. Then P08 state machine.
+Next action: P08 build isolated shadow-mode versioned coordinator and state transition tests using P03-P07 typed contracts, no writes to dirty engine/Goal Board/UI. Then P09 recovery, P10 user corrections. P07 still requires guarded Engine integration and original legacy XFAIL closure.
 
 ## FINAL MEASURABLE GOAL
 An autonomous, fast and safe MellowCodex agent runtime that turns a request into a durable versioned plan, executes browser/Windows/files/code/MCP actions with appropriately routed local/DeepSeek/optional cloud models, continuously checks tool feedback, accepts mid-run corrections, recovers and replans, and only claims completion after verified evidence. It must survive switching chats/models or process restarts without losing task progress or repeating uncertain side effects.
@@ -33,7 +33,7 @@ Full exact acceptance tests and implementation P00-P14 are in MASTER_PLAN.md. Th
 | P04 | Additive SQLite plan/event/checkpoint persistence | VERIFIED DONE | New agent_runtime_v2.persistence PlanRepository with explicit additive tables, plan history/CAS, evidence/event idempotency, crash-resumable checkpoints, legacy data preservation; Guard update 4d54969a56a14ded9161407b7f17da06 ACTIVE_VERIFIED; live 73 passed / 5 prior xfailed. NOT yet connected to Engine or production DB. |
 | P05 | Universal adapter to existing Goal Board | VERIFIED DONE | New pure hub/agent_runtime_v2/goal_board_adapter.py converts existing editable BoardStore records to TaskPlan with original multilingual goal, revisions, alternatives and required final acceptance. Guard 3c792bc6a6164472990b74f68a090eb7 ACTIVE_VERIFIED; live 85 passed, five known P02 strict xfailed. Not yet connected to Engine. |
 | P06 | Tool/browser/desktop/user feedback and evidence | VERIFIED DONE (standalone) | New feedback.py normalizes bounded sanitized tool and user outcomes into typed Evidence/FeedbackEvent; unknown input effects UNCERTAIN; Guard 7d1a2cac7cfa4f77ad56bd51183b33fa ACTIVE_VERIFIED; live 88 passed / 5 known P02 xfailed. Not wired to Engine. |
-| P07 | Universal Verifier and final-completion gate | NOT_STARTED | Require verifiable acceptance evidence. |
+| P07 | Universal Verifier and final result gate | VERIFIED PARTIAL | P07 standalone verifier.py and tests live and exact SHA match isolated candidate; live 109 passed, 5 legacy xfailed. Guard activate returned INVALID_ARGUMENT and is NOT VERIFIED; legacy Engine not connected, false-completion remains open. |
 | P08 | Runtime state machine SHADOW implementation | NOT_STARTED | Old engine remains authoritative until verified. |
 | P09 | Bounded retries, recovery and replanning | NOT_STARTED | Idempotency and unknown-outcome reconciliation. |
 | P10 | Incorporate new user messages mid-task | NOT_STARTED | Versioned revision and no duplicate actions. |
@@ -173,3 +173,10 @@ Normalizer converts tool/browser/desktop/file/worker/user status to FeedbackEven
 Guard update 7d1a2cac7cfa4f77ad56bd51183b33fa ACTIVE_VERIFIED. Live task 9a79ada1d35c4ad2a07d367ebcb1586b exit0: 88 passed and 5 existing P02 strict xfailed in 1.32s.
 SHA256: feedback.py 6414549EAF282772737CE0897EA89A1F561E3E4496ACB74B59D5C171E56D32F5; test 7FB565F0FEB88EBBF166C4178D4F27B10A77CF74E2F3A5F64401072CB0E72369.
 NEXT: P07 universal verifier and P02 known false-completion blocking suite; P08 shadow coordinator then P09 recovery.
+
+
+### 2026-11-15 P07 deterministic verifier live reconciliation
+Status: VERIFIED PARTIAL, not active Engine integration. No Guard ACTIVE_VERIFIED update ID exists for P07.
+Candidate task 3ebcc3a649d94520acef2a6d8f8ac559, candidate d1832228774b4c2dae3df28146bb8571 revision1. Two new paths: hub/agent_runtime_v2/verifier.py and tests/test_agent_runtime_v2_verifier.py. Candidate tests 109 passed, five legacy P02 strict XFAILED.
+Guard prepare_update returned INVALID_ARGUMENT. Instead of repeating uncertain deployment, live read-only reconciliation task f246a8793da447bc81776e5892e760e3 exit0 compared SHA256 and reran live tests: 109 passed, five XFAILED in 1.46s. Live verifier.py SHA e738f80e0ccdeab52d46071889f1e5b153e59c42a2e32010445afb2bb592a272; live test SHA c40b64049452bcea1930b14647173141fd65183997b1586dc6ceb2b79b2edff5. Both MATCH candidate exactly, present as untracked project files. No active Hub engine integration was performed. This module checks plan version, evidence freshness, observed correct-host login form and assessment; rejects wrong host, stale evidence, premature tool success and worker claims in its own new tests.
+NEXT: P08 shadow runtime coordinator implementing plan progression without modifying dirty Engine; maintain the P02 five XFAILs as blocking legacy integration work and do not claim full task correctness.
