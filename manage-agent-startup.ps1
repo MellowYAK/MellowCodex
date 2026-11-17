@@ -14,7 +14,7 @@ if($current){
  $old=($a.Count -eq 1 -and $a[0].Execute -in @('powershell.exe',"$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe") -and $a[0].Arguments -in $oldArgs -and $a[0].WorkingDirectory -eq $root)
  $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
  try{$owner=([Security.Principal.NTAccount]$current.Principal.UserId).Translate([Security.Principal.SecurityIdentifier]).Value}catch{$owner=[string]$current.Principal.UserId}
- $owned=($new -or $old) -and $owner -eq $sid -and [string]$current.Principal.RunLevel -eq 'Limited'
+ $owned=($new -or $old) -and $owner -eq $sid -and [string]$current.Principal.RunLevel -eq 'Limited' -and [string]$current.Principal.LogonType -eq 'Interactive'
 }
 if($Action -ne 'Status'){
  if(!$owned){throw 'Existing startup task has different ownership or command; no change made'}

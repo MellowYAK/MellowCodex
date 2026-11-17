@@ -1,7 +1,15 @@
 [CmdletBinding()]
-param([ValidateSet('Start','Stop','Restart','Status','Reconcile')][string]$Action='Reconcile',[ValidateSet('mcp','all','hub','gateway','guard','guard_gateway','relay','ollama')][string]$Service='mcp',[switch]$ConfirmTasks,[switch]$PowerTransition)
+param([ValidateSet('Start','Stop','Restart','Status','Reconcile')][string]$Action='Reconcile',[ValidateSet('mcp','all','hub','gateway','guard','guard_gateway','relay','ollama')][string]$Service='mcp',[switch]$ConfirmTasks,[switch]$PowerTransition,[switch]$ResumeOnNextBoot)
 $ErrorActionPreference = 'Stop'
 # Run with Windows PowerShell 5.1: the installed Guard validates Windows ACLs.
+# Only the Windows-managed protected broker is privileged. Service stop/status may
+# be performed by an owner in an administrator window; never launch from it.
+if($Action -in @('Start','Restart','Reconcile')){
+  $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+  if($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){
+    throw 'MellowCodex startup requires ordinary PowerShell. Do not run as administrator. Use MellowCodex Start.'
+  }
+}
 $mutex = New-Object Threading.Mutex($false, 'Local\MellowCodexServiceReconcile')
 $lockWaitMs = if ($Action -eq 'Reconcile') { 0 } else { 30000 }
 if (!$mutex.WaitOne($lockWaitMs)) { $mutex.Dispose(); if ($Action -eq 'Reconcile') { exit 75 }; throw 'Another service operation is active' }
@@ -16,7 +24,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Health inspection failed' }
     return
   }
-  if ($Action -eq 'Reconcile' -and ((Test-Path $pauseFile) -or (Test-Path "$root\state\agent-manual-stop"))) { return }
+  if ($ResumeOnNextBoot -and ($Action -ne 'Stop' -or $Service -ne 'all' -or $PowerTransition)) { throw 'ResumeOnNextBoot requires explicit Stop all' }
+  if ($Action -eq 'Reconcile') {
+    & "$root\tools\hub-venv\Scripts\python.exe" -m hub.power --expire-stop-until-reboot
+    if ($LASTEXITCODE -ne 0) { throw 'Could not verify previous-boot pause state; no services changed' }
+    if ((Test-Path $pauseFile) -or (Test-Path "$root\state\agent-manual-stop")) { return }
+  }
   if ($PowerTransition) {
     if ($Action -ne 'Stop' -or $Service -ne 'all') { throw 'Transient power stop only supports Stop all' }
     & "$root\tools\hub-venv\Scripts\python.exe" -m hub.power --transition-required
@@ -48,8 +61,13 @@ try {
     default { @($Service) }
   }
   if ($Action -in @('Stop','Restart')) {
-    if (!$PowerTransition -and $Service -in @('mcp','all')) { Set-Content $pauseFile 'MCP intentionally stopped by owner' }
-    if (!$PowerTransition -and $Service -eq 'all') { Set-Content "$root\state\agent-manual-stop" 'All agent services intentionally stopped' }
+    if ($ResumeOnNextBoot) {
+      & "$root\tools\hub-venv\Scripts\python.exe" -m hub.power --record-stop-until-reboot
+      if ($LASTEXITCODE -ne 0) { throw 'Could not record desktop stop; no services stopped' }
+    } else {
+      if (!$PowerTransition -and $Service -in @('mcp','all')) { Set-Content $pauseFile 'MCP intentionally stopped by owner' }
+      if (!$PowerTransition -and $Service -eq 'all') { Set-Content "$root\state\agent-manual-stop" 'All agent services intentionally stopped' }
+    }
     if (!$PowerTransition -and $Service -notin @('mcp','all')) { foreach($item in $dependents) { Set-Content "$root\state\service-manual-stop-$item" 'Service intentionally stopped by owner' } }
     $stopArgs=@("$PSScriptRoot\scripts\stop-mcp-transports.py",'--service',$Service)
     if($ConfirmTasks){$stopArgs+='--confirm-tasks'}
@@ -199,6 +217,10 @@ try {
       } finally { Pop-Location }
     }
   } catch { $failures += $_.Exception.Message }
+  if($guardPairWanted -and (Listening 8876) -and (Listening 8897)){
+    & "$root\tools\hub-venv\Scripts\python.exe" -m hub.admin_startup --ready
+    if($LASTEXITCODE -ne 0){$failures += 'Hub/Gateway token or protected OwnerBroker verification failed; not ready.'}
+  }
   $report = @{time=(Get-Date).ToUniversalTime().ToString('o');listeners=@{};errors=@($failures)}
   foreach ($port in @(11434,8876,8897,8898,8896)) {
     $report.listeners["$port"] = Listening $port

@@ -35,6 +35,8 @@ model_catalog_service=model_catalog_for(store)
 
 @asynccontextmanager
 async def lifespan(app):
+    from .admin_startup import require_standard_user
+    require_standard_user("MellowCodex Hub")
     owner=(STATE/'runner.lock').open('a+b')
     if os.name=='nt':
         import msvcrt

@@ -285,6 +285,8 @@ class Window(QMainWindow):
         self.request('POST',f'/tasks/{self.selected}/review',{'decision':decision,'expected_revision':self.task['revision'],'reason':reason},lambda _:self.refresh())
 
 def main():
+    from .admin_startup import require_standard_user
+    require_standard_user("MellowCodex Desktop")
     from .config import DESKTOP_IPC
     from .browser_view import configure_browser,BrowserView
     configure_browser()

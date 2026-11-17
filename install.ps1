@@ -13,5 +13,6 @@ if (!(Test-Path "$agentRoot\tools\hub-venv\Scripts\python.exe")) {
 }
 & "$agentRoot\tools\uv\uv.exe" pip sync --python "$agentRoot\tools\hub-venv\Scripts\python.exe" "$PSScriptRoot\requirements.lock.txt"
 if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+& "$PSScriptRoot\install-startup.ps1"
 & "$PSScriptRoot\start.ps1"
 Write-Output 'To download the model if missing: E:\AI\tools\ollama\ollama.exe pull qwen3.5:4b (set OLLAMA_MODELS=E:\AI\models).'

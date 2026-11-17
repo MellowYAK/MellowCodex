@@ -78,6 +78,28 @@ def same_boot(recorded):
  if type(recorded) not in (int,float) or not math.isfinite(recorded):return False
  return abs(recorded-h.psutil.boot_time())<.01
 
+def record_stop_until_reboot():
+ # The desktop Stop action is a pause for this Windows boot, not a change
+ # to the separate Start with Windows preference.
+ marker=dict(schema_version=1, boot_time=h.psutil.boot_time(), resume_on_next_boot=True, reason="desktop_stop")
+ for name in ("mcp-manual-stop", "agent-manual-stop"):
+  h.write(h.STATE/name,marker)
+
+def expire_stop_until_reboot():
+ # Called by the lifecycle reconciler under its existing mutex.
+ # Never clear legacy, malformed, same-boot or intentionally persistent markers.
+ if not settings()["start_with_windows"] or transition_active():
+  return
+ boot=h.psutil.boot_time()
+ for name in ("mcp-manual-stop","agent-manual-stop"):
+  path=h.STATE/name
+  marker=h.read(path)
+  recorded=marker.get("boot_time")
+  if (marker.get("schema_version")==1 and marker.get("resume_on_next_boot") is True
+      and marker.get("reason")=="desktop_stop" and type(recorded) in (int,float)
+      and math.isfinite(recorded) and 0 < recorded < boot-1):
+   path.unlink(missing_ok=True)
+
 def transition_active():
  d=h.read(TRANSITION)
  return same_boot(d.get('boot_time')) and d.get('state') in ('draining','dispatch_intent','windows_requested')
@@ -163,15 +185,21 @@ def execute(job_id):
  rec['finished_at']=time.time();record()
 
 def autostart():
+ from .admin_startup import require_standard_user, check_pair
+ require_standard_user("MellowCodex logon startup")
  if not settings()['start_with_windows'] or transition_active():return dict(state='disabled')
- if (h.STATE/'agent-manual-stop').exists():return dict(state='intentionally_stopped')
+ # Reconcile expires only explicit previous-boot desktop-stop markers.
+ # It never clears a same-boot or persistent manual stop.
  manual_session()
  for attempt in range(3):
   p=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',str(h.SOURCE/'reconcile-services.ps1'),'-Action','Reconcile','-Service','all'],cwd=h.SOURCE,timeout=240,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
   if p.returncode!=75:break
   time.sleep(2*(attempt+1))
  if p.returncode:raise RuntimeError('Startup reconciliation failed or another lifecycle operation is active; inspect service health')
- if not h.inventory().get('desktop'):
+ if (h.STATE/"agent-manual-stop").exists() or (h.STATE/"mcp-manual-stop").exists():
+  return dict(state="intentionally_stopped")
+ check_pair(require_running=True, verify_broker=True)
+ if not any(p["owned"] for p in h.inventory().get("desktop", [])):
   subprocess.Popen([str(Path(sys.executable).with_name('pythonw.exe')),'-m','hub.desktop_app','--background'],cwd=h.SOURCE,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
  return dict(state='started',services='Hub, MCP/Guard gateways, owned SSH relay, Ollama and desktop; intentional service stops remain respected')
 
@@ -201,6 +229,8 @@ if __name__=='__main__':
  command=sys.argv[1] if len(sys.argv)>1 else ''
  if command=='--recovery-allowed':raise SystemExit(0 if recovery_allowed() else 75)
  elif command=='--manual-session':manual_session()
+ elif command=='--record-stop-until-reboot':record_stop_until_reboot()
+ elif command=='--expire-stop-until-reboot':expire_stop_until_reboot()
  elif command=='--autostart':print(json.dumps(autostart()))
  elif command=='--transition-required':raise SystemExit(0 if transition_active() else 1)
  else:raise SystemExit('Unsupported power lifecycle entry')

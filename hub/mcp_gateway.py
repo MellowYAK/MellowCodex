@@ -492,6 +492,8 @@ async def get_file(file_id:str)->CallToolResult:
 
 @asynccontextmanager
 async def lifespan(app):
+    from .admin_startup import require_standard_user
+    require_standard_user("MellowCodex MCP Gateway")
     async with mcp.session_manager.run():yield
 
 app=FastAPI(lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
