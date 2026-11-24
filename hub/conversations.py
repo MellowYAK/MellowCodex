@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS selfdevelop_chat_modes(chat_id TEXT PRIMARY KEY,mode 
         if active_task_id:self.store.event(active_task_id,'project_binding_changed',{'project':project,'effective':'next_task'})
         return {'chat_id':chat_id,'project':project,'effective':'next_task','history_preserved':True}
 
-    def create(self,project_id,title='New chat',conversation_key=None):
+    def create(self,project_id,title='New chat',conversation_key=None,*,include_history=True):
         if conversation_key is not None:
             conversation_key=conversation_key.strip()
             if not 8<=len(conversation_key)<=512:raise ValueError('Use a stable external conversation key of 8–512 characters')
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS selfdevelop_chat_modes(chat_id TEXT PRIMARY KEY,mode 
                 chat_id=uuid.uuid4().hex
                 db.execute('INSERT INTO chats(id,project_id,title,created) VALUES(?,?,?,?)',(chat_id,project_id,title,now()))
                 if conversation_key:db.execute('INSERT INTO external_chat_bindings VALUES(?,?)',(conversation_key,chat_id))
-        return self.get(chat_id)
+        return self.get(chat_id) if include_history else {'id':chat_id}
     def get(self,chat_id):
         with self.store.connect() as db:
             row=db.execute('SELECT c.*,p.path workspace FROM chats c JOIN projects p ON p.id=c.project_id WHERE c.id=?',(chat_id,)).fetchone()

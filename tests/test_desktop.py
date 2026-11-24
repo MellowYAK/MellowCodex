@@ -7,10 +7,11 @@ class FakeUser:
     def GetForegroundWindow(self):
         return 123
     def GetCursorPos(self,ptr):
-        ptr._obj.x=500
-        ptr._obj.y=500
+        ptr._obj.x,ptr._obj.y=getattr(self,'cursor',(500,500))
+        return 1
     def SetCursorPos(self,x,y):
         self.cursor=(x,y)
+        return 1
 
 def test_locked_foreground_uses_window_capture_without_input(monkeypatch, tmp_path):
     desktop=Desktop();desktop.user=FakeUser();desktop.target_hwnd=123

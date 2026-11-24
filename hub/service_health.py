@@ -231,15 +231,16 @@ def _snapshot():
  guard_supervisor=guard,active_tasks=active_tasks())
 _snapshot_lock=threading.Lock()
 _snapshot_cache=None
+_snapshot_completed_at=0
 
 def snapshot():
- global _snapshot_cache
- requested_at=time.time()
+ global _snapshot_cache,_snapshot_completed_at
+ requested_at=time.time();requested_tick=time.monotonic_ns()
  # Share one bounded probe per process. Native UI also serializes requests.
- if not _snapshot_lock.acquire(timeout=45):
+ if not _snapshot_lock.acquire(timeout=25):
   raise RuntimeError('Health inspection busy; previous check still running')
  try:
-  if _snapshot_cache and _snapshot_cache['checked_at']>=requested_at:
+  if _snapshot_cache and (_snapshot_cache['checked_at']>requested_at or _snapshot_completed_at>requested_tick):
    import copy
    result=copy.deepcopy(_snapshot_cache)
    # Connector evidence may have been acknowledged or expired while the
@@ -247,8 +248,9 @@ def snapshot():
    # status fields together; never leave a stale overall badge in cached data.
    return diagnostics.refresh_connector_evidence(sys.modules[__name__],result)
   result=diagnostics.enrich(sys.modules[__name__],_snapshot())
-  _snapshot_cache=result
   write(STATE/'health-snapshot.json',result)
+  _snapshot_cache=result
+  _snapshot_completed_at=time.monotonic_ns()
   return result
  finally:_snapshot_lock.release()
 
@@ -439,7 +441,7 @@ def register_mcp(mcp,local,READ,WRITE):
    except Exception as exc:
     kind=type(exc).__name__;errors.append(kind)
     retryable=(isinstance(exc,(TimeoutError,ConnectionError,OSError)) or
-      kind in ('ReadTimeout','ConnectTimeout','ConnectError','TimeoutException') or
+      kind in ('ReadTimeout','ConnectTimeout','ConnectError','TimeoutException','LocalTransportError') or
       (isinstance(exc,ValueError) and str(exc).startswith('Local agent returned HTTP 5')))
     if attempt==0 and retryable:
      await asyncio.sleep(0.15)

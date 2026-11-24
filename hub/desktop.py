@@ -172,6 +172,20 @@ class Desktop:
         if self.user.SendInput(1,ctypes.byref(event),ctypes.sizeof(event)) != 1:
             raise OSError('Windows rejected input (possibly an elevated or secure window)')
 
+    def _verified_cursor(self):
+        point=wintypes.POINT()
+        if not self.user.GetCursorPos(ctypes.byref(point)):
+            raise ObservationError('Windows rejected cursor position query; no input sent')
+        return point.x,point.y
+
+    def _move_verified(self,x,y):
+        self._validate_target_point(x,y)
+        if not self.user.SetCursorPos(x,y):
+            raise ObservationError('Windows rejected cursor movement; no click sent')
+        if self._verified_cursor() != (x,y):
+            raise ObservationError('Cursor did not reach target; no click sent')
+        self._validate_target_point(x,y)
+
     def act(self, args):
         obs = self.guard(args['observation_id'])
         action = args['action']
@@ -179,11 +193,13 @@ class Desktop:
             x,y=int(args['x']),int(args['y'])
             if not (obs['left'] <= x < obs['left']+obs['width'] and obs['top'] <= y < obs['top']+obs['height']):
                 raise ObservationError('Coordinates outside observed desktop; no input sent')
-            self._validate_target_point(x,y)
-            self.user.SetCursorPos(x,y)
+            self._move_verified(x,y)
         if action == 'click':
             down,up=(0x0002,0x0004) if args.get('button','left') == 'left' else (0x0008,0x0010)
             for _ in range(min(2,max(1,int(args.get('clicks',1))))):
+                if self._verified_cursor()!=(x,y):
+                    raise ObservationError('Cursor changed before click; no click sent')
+                self._validate_target_point(x,y)
                 self._send(0,flags=down)
                 self._send(0,flags=up)
                 time.sleep(.07)
@@ -197,12 +213,12 @@ class Desktop:
                 for i in range(1,21):
                     if self.stopped:
                         break
-                    self.user.SetCursorPos(round(x+(end_x-x)*i/20),round(y+(end_y-y)*i/20))
+                    self._move_verified(round(x+(end_x-x)*i/20),round(y+(end_y-y)*i/20))
                     time.sleep(.025)
             finally:
                 self._send(0,flags=4)
         elif action == 'scroll':
-            point=wintypes.POINT();self.user.GetCursorPos(ctypes.byref(point));self._validate_target_point(point.x,point.y)
+            x,y=self._verified_cursor();self._validate_target_point(x,y)
             self._send(0,data=max(-10,min(10,int(args.get('amount',1))))*120,flags=0x800)
         elif action == 'type':
             raw=args.get('text','')[:4000].replace('\r\n','\n').replace('\r','\n').encode('utf-16-le')

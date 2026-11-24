@@ -536,7 +536,7 @@ from .conversations import Conversations
 def conversations():return Conversations(store)
 
 @app.get('/api/chats')
-async def chats_index():return conversations().inventory()
+async def chats_index():return await asyncio.to_thread(lambda: conversations().inventory())
 
 class ProjectInput(BaseModel):
     path:str
@@ -1156,11 +1156,13 @@ class MCPConversationMessage(BaseModel):
 @app.post('/api/mcp/conversation-message')
 async def mcp_conversation_message(body:MCPConversationMessage):
     if not body.message_id.strip() or not body.text.strip():raise ValueError('Message ID and text are required')
-    chat=conversations().create(body.project_id,title=body.text[:80],conversation_key=body.conversation_key)
-    transcript=app.state.bridge.transcript
-    transcript.configure(chat['id'],transport='mcp')
-    transcript.append(chat['id'],body.speaker,'user_to_chatgpt' if body.speaker=='user' else 'chatgpt_to_agent',body.text,key='mcp-message:'+body.message_id)
-    return {'chat_id':chat['id'],'recorded':True,'continue_in_this_chat':True}
+    def record():
+        chat=conversations().create(body.project_id,title=body.text[:80],conversation_key=body.conversation_key,include_history=False)
+        transcript=app.state.bridge.transcript
+        transcript.configure(chat['id'],transport='mcp')
+        transcript.append(chat['id'],body.speaker,'user_to_chatgpt' if body.speaker=='user' else 'chatgpt_to_agent',body.text,key='mcp-message:'+body.message_id)
+        return {'chat_id':chat['id'],'recorded':True,'continue_in_this_chat':True}
+    return await asyncio.to_thread(record)
 
 @app.post('/api/chats/{chat_id}/mcp-observation')
 async def mcp_observation(chat_id:str,body:MCPObservation):
@@ -1450,7 +1452,7 @@ async def context_memory_pin(chat_id:str,body:dict):
 async def service_health_connector_observation(body:dict):
     from . import service_health as health
     try:
-        return health.diagnostics.observe(health,body.get('connector'),body.get('outcome'),body.get('checked_at'))
+        return await asyncio.to_thread(health.diagnostics.observe,health,body.get('connector'),body.get('outcome'),body.get('checked_at'))
     except ValueError as exc:raise HTTPException(400,str(exc))
 
 @app.get('/api/power/preview/{action}')
