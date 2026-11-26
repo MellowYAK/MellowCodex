@@ -49,6 +49,8 @@ try {
   $dependents = switch ($Service) {
     'guard' { @('guard','guard_gateway','relay') }
     'guard_gateway' { @('guard_gateway','relay') }
+    'hub' { @('hub','gateway') }
+    'gateway' { @('hub','gateway') }
     default { @($Service) }
   }
   $wanted = switch ($Service) {
@@ -58,6 +60,7 @@ try {
     'guard' { @('guard','guard_gateway','relay') }
     'guard_gateway' { @('guard','guard_gateway','relay') }
     'gateway' { @('hub','gateway') }
+    'hub' { @('hub','gateway') }
     default { @($Service) }
   }
   if ($Action -in @('Stop','Restart')) {
@@ -71,6 +74,7 @@ try {
     if (!$PowerTransition -and $Service -notin @('mcp','all')) { foreach($item in $dependents) { Set-Content "$root\state\service-manual-stop-$item" 'Service intentionally stopped by owner' } }
     $stopArgs=@("$PSScriptRoot\scripts\stop-mcp-transports.py",'--service',$Service)
     if($ConfirmTasks){$stopArgs+='--confirm-tasks'}
+    if($Action -eq 'Restart' -and $Service -eq 'mcp'){$stopArgs+='--restart-pair'}
     & "$root\tools\hub-venv\Scripts\python.exe" @stopArgs
     if ($LASTEXITCODE -ne 0) { throw 'MCP stop incomplete; automatic restart remains paused. See output.' }
     if ($Action -eq 'Stop') {
@@ -122,7 +126,7 @@ try {
   # One owner after Windows logon: Guard starts Hub+Gateway as a signed pair.
   # Both scheduled recovery tasks already share the reconciliation mutex.
   # A legacy or partially running pair is preserved, never adopted or killed.
-  $guardPairWanted = ($Action -in @('Start','Reconcile')) -and
+  $guardPairWanted = ($Action -in @('Start','Restart','Reconcile')) -and
                      ('hub' -in $wanted -or 'gateway' -in $wanted)
   if ($guardPairWanted) {
     $hubListening = Listening 8876
@@ -135,7 +139,7 @@ try {
       if (Test-Path $lastAttempt) {
         try {
           $record = Get-Content $lastAttempt -Raw | ConvertFrom-Json
-          if (([DateTime]::UtcNow - [DateTime]::Parse($record.time).ToUniversalTime()).TotalSeconds -lt 90) {
+          if ($Action -eq 'Reconcile' -and ([DateTime]::UtcNow - [DateTime]::Parse($record.time).ToUniversalTime()).TotalSeconds -lt 90) {
             $allowAttempt = $false
           }
         } catch {}

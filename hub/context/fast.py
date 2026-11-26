@@ -34,7 +34,7 @@ class FastContext(ProjectContext):
         if p.name in ('pyproject.toml','package.json','requirements.txt','Cargo.toml','go.mod'):return 'dependency_manifest'
         if p.stem in ('main','app','server','gateway','router','routes','index','cli','manage','panel'):return 'possible_entrypoint'
         if p.name.startswith('test_') or 'tests' in p.parts:return 'possible_test'
-        if p.suffix in ('.py','.js','.ts','.tsx','.jsx','.php','.html','.css','.ps1','.sh','.bat','.cmd'):return 'source'
+        if p.suffix in ('.py','.js','.mjs','.cjs','.ts','.tsx','.mts','.cts','.jsx','.vue','.svelte','.php','.html','.css','.ps1','.psm1','.sh','.bat','.cmd','.go','.rs','.java','.kt','.cs','.c','.cpp','.h','.hpp','.swift'):return 'source'
         return 'supporting_file'
 
     def annotations(self, project_id, path=None):

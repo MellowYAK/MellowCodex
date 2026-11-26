@@ -351,13 +351,18 @@ def run(job_id):
    rec['external_verification']={k:v['status'] for k,v in result.get('connectors',{}).items()}
   else:
    tasks=active_tasks()
-   if service in ('hub','ollama','all') and action in ('Stop','Restart','Reconnect') and (tasks is None or tasks) and not (service=='all' and rec.get('confirm_tasks')):
+   if (service in ('hub','gateway','ollama','all') or (service=='mcp' and action=='Restart')) and action in ('Stop','Restart','Reconnect') and (tasks is None or tasks) and not (service=='all' and rec.get('confirm_tasks')):
     raise RuntimeError('Active tasks or unknown task state; use explicit whole-agent shutdown with task-impact confirmation')
    # Invalidate freshness for affected transports, retaining last successful evidence.
    affected=('mellowcodex',) if service in ('hub','gateway') else ('mellowcodex','guard') if service in ('mcp','all','relay','guard_gateway','guard') else ()
    for name in affected:write(STATE/('connector-invalidated-'+name+'.json'),dict(checked_at=time.time(),operation_id=job_id))
 
    actual={'Repair':'Reconcile','Reconnect':'Restart'}.get(action,action)
+   before={}
+   if actual=='Restart' and 'hub' in lifecycle_targets(actual,service):
+    inv=inventory()
+    before={k:sorted(p['pid'] for p in inv.get(k,[]) if p.get('owned')) for k in ('hub','gateway')}
+    rec['restart_evidence']={'before_pids':before};write(JOBS/(job_id+'.json'),rec)
    command=['powershell.exe','-NoProfile','-NonInteractive','-File',str(SOURCE/'reconcile-services.ps1'),'-Action',actual,'-Service',service]
    if rec.get('confirm_tasks') and service=='all':command.append('-ConfirmTasks')
    p=execute_controller(command,job_id)
@@ -370,6 +375,10 @@ def run(job_id):
     result=snapshot();rec.update(result=result,verification_attempt=attempt+1);write(JOBS/(job_id+'.json'),rec)
     try:
      verify_result(actual,service,result)
+     if before:
+      after={r['id']:r.get('pids',[]) for r in result['services'] if r['id'] in before}
+      rec['restart_evidence']['after_pids']=after
+      if any(set(before[k])&set(after.get(k,[])) for k in before):raise RuntimeError('Old Hub pair PID still present after restart')
      break
     except RuntimeError:
      if attempt==2:raise
@@ -495,9 +504,18 @@ def register_mcp(mcp,local,READ,WRITE):
   return await local('/api/service-health/connector-observation',dict(connector=connector,outcome=outcome,checked_at=checked_at))
 
 
+def lifecycle_targets(action,service):
+ # Guard owns Hub and Gateway as one pair. A standalone MCP Stop retains
+ # its historical Hub-preserving meaning; MCP Restart explicitly drains it.
+ if service in ('hub','gateway'):return ['hub','gateway']
+ if service=='mcp':
+  return (['hub'] if action in ('Start','Restart','Reconcile') else [])+['gateway','guard','guard_gateway','relay']
+ return {'all':['hub','gateway','guard','guard_gateway','relay','ollama'],'guard':['guard','guard_gateway','relay'],'guard_gateway':['guard_gateway','relay']}.get(service,[service])
+
+
 def verify_result(action,service,result):
  if action=='Reconcile':action='Start'
- targets={'mcp':['gateway','guard','guard_gateway','relay'],'all':['hub','gateway','guard','guard_gateway','relay','ollama'],'guard':['guard','guard_gateway','relay'],'guard_gateway':['guard_gateway','relay']}.get(service,[service])
+ targets=lifecycle_targets(action,service)
  for key in targets:
   row=next(x for x in result['services'] if x['id']==key)
   if action=='Stop':
@@ -506,15 +524,17 @@ def verify_result(action,service,result):
   elif action in ('Start','Restart'):
    okay=row.get('owned') and (row.get('mcp_api_verified') if key=='guard' else row.get('owned') and row.get('process_exists') if key=='relay' else row.get('http_status')==200)
    if not okay:raise RuntimeError('Start postcondition not verified for '+key)
+ if action=='Restart' and 'hub' in targets and not result.get('guard_supervisor',{}).get('supervisor_healthy'):
+  raise RuntimeError('Guard-owned Hub pair restart not verified')
 
 def preflight(action,service,confirm=False):
  if service=='all' and action in ('Stop','Restart') and not confirm:raise RuntimeError('Whole-agent shutdown requires explicit task-impact confirmation')
  tasks=active_tasks()
- if service in ('hub','ollama','all') and action in ('Stop','Restart') and (tasks is None or tasks) and not (service=='all' and confirm):
+ if (service in ('hub','gateway','ollama','all') or (service=='mcp' and action=='Restart')) and action in ('Stop','Restart') and (tasks is None or tasks) and not (service=='all' and confirm):
   raise RuntimeError('Active tasks or unknown task state; stop refused before changing any service')
  cfg=config();inv=inventory()
  ports={'hub':int(cfg.get('hub_port',PORT)),'gateway':int(cfg.get('gateway_port',8897)),'guard':int(cfg.get('port',8898)),'guard_gateway':int(cfg.get('gateway',{}).get('port',8896)),'ollama':int(OLLAMA.rsplit(':',1)[1])}
- targets=list(ports) if service=='all' else ['gateway','guard','guard_gateway'] if service=='mcp' else ['guard','guard_gateway'] if service in ('guard','guard_gateway') else [service]
+ targets=lifecycle_targets(action,service)
  for key in targets:
   if key not in ports:continue
   opened,listeners=port_identity(ports[key])

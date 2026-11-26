@@ -18,9 +18,9 @@ from ..i18n import CapabilityError, t
 EXCLUDED={'.git','.venv','venv','node_modules','__pycache__','.pytest_cache','models',
           'state','backups','credentials','secrets','uploads','downloads','artifacts',
           'output','dist','build','vendor','data','.tools'}
-EXTENSIONS={'.py','.js','.ts','.tsx','.jsx','.php','.html','.css','.json','.md','.toml','.yaml','.yml','.ps1','.sql','.txt'}
+EXTENSIONS={'.py','.js','.mjs','.cjs','.ts','.tsx','.mts','.cts','.jsx','.vue','.svelte','.php','.html','.css','.json','.md','.toml','.yaml','.yml','.ps1','.psm1','.psd1','.go','.rs','.java','.kt','.cs','.c','.cpp','.h','.hpp','.swift','.xml','.sql','.txt'}
 MAX_IMPORT_METADATA=1_000_000
-MAX_FILES=15000
+MAX_FILES=None  # No arbitrary eligible-file count ceiling for project indexes.
 SOURCE_CHUNK=64_000
 AST_PARSE_BYTES=4_000_000
 
@@ -125,14 +125,11 @@ CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(file_id UNINDEXED,project U
             cached={(r['hash'],r['extractor']):r for r in old.values()}
             seen=set();changed=[];skipped=0;unchanged=0
             from .inventory import walk
-            deadline=time.monotonic()+30;read_bytes=0
+            deadline=None  # Full source scans have no fixed wall-time or total-byte ceiling.
             for rel in walk(root,EXCLUDED,deadline):
                 if not self.allowed(rel):continue
-                if len(seen)>=MAX_FILES:raise CapabilityError('context.limit')
                 try:
                     path=self.safe_path(root,rel);stat=path.stat()
-                    read_bytes+=stat.st_size
-                    if read_bytes>100_000_000 or time.monotonic()>deadline:raise ValueError('Index read budget exceeded; previous index preserved')
                     prior=old.get(rel)
                     h=file_digest(path)
                     expected_parser='streamed_text_v1' if stat.st_size>AST_PARSE_BYTES else (self.python_extractor if rel.endswith('.py') else 'text_v1')

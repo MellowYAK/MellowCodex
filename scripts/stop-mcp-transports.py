@@ -9,13 +9,16 @@ import psutil
 parser=argparse.ArgumentParser()
 parser.add_argument('--service',choices=('mcp','all','hub','gateway','guard','guard_gateway','relay','ollama'),default='mcp')
 parser.add_argument('--confirm-tasks',action='store_true')
+parser.add_argument('--restart-pair',action='store_true',help='MCP restart also drains its dependent Hub')
 args=parser.parse_args()
 service=args.service
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from hub.service_health import preflight,quiesce,active_tasks
-preflight('Stop',service,args.confirm_tasks)
-if service=='all':
+if args.restart_pair and service!='mcp':raise ValueError('Restart-pair flag is only for MCP restart')
+pair=service in ('hub','gateway','all') or args.restart_pair
+preflight('Restart' if args.restart_pair else 'Stop',service,args.confirm_tasks)
+if pair:
     from hub.service_health import api,PORT
     code,_=api('http://127.0.0.1:'+str(PORT)+'/')
     if code==200:quiesce()
@@ -79,13 +82,13 @@ allowed = [
     ['-m','uvicorn','hub.mcp_gateway:app','--host','127.0.0.1','--port',str(cfg['gateway_port']),'--no-access-log'],
     ['-m','hub.mcp_gateway'],
 ]
-for proc in (psutil.process_iter(['exe','cmdline']) if service in ('mcp','all','gateway') else []):
+for proc in (psutil.process_iter(['exe','cmdline']) if service in ('mcp','all','gateway','hub') else []):
     try:
         if proc.info['exe'] and Path(proc.info['exe']).resolve() == python and proc.info['cmdline'][1:] in allowed:
             stop_tree(proc, proc.info['cmdline'])
     except psutil.NoSuchProcess:
         pass
-if service in ('hub','ollama','all'):
+if pair or service=='ollama':
     import sys
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from hub.service_health import active_tasks
@@ -94,7 +97,7 @@ if service in ('hub','ollama','all'):
     targets={'hub':[['-m','uvicorn','hub.app:app','--host','127.0.0.1','--port',str(cfg['hub_port']),'--no-access-log'],['-m','hub.app']], 'ollama':[['serve']]}
     # The existing independent update supervisor uses this exact Hub bind form.
     targets['hub'].append(['-m','uvicorn','hub.app:app','--host','0.0.0.0','--port',str(cfg['hub_port']),'--no-access-log'])
-    for key in (('hub','ollama') if service=='all' else (service,)):
+    for key in (('hub','ollama') if service=='all' else ('hub',) if pair else (service,)):
         expected=python if key=='hub' else Path(cfg['hub_root'])/'tools/ollama/ollama.exe'
         for proc in psutil.process_iter(['exe','cmdline','cwd']):
             try:

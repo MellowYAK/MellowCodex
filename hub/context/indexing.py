@@ -109,7 +109,7 @@ class Indexing:
         if not root.is_dir():raise OSError('Project root unavailable; existing index retained')
         selected=self.selected(project_id)
         records=[]
-        for rel in walk(root,EXCLUDED,time.monotonic()+30):
+        for rel in walk(root,EXCLUDED,None):
             if not selected.allowed(rel):continue
             stat=selected.safe_path(root,rel).stat();records.append((rel,stat.st_size,stat.st_mtime_ns))
         # Parser changes force reconciliation even when source metadata is unchanged.
