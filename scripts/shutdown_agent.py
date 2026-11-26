@@ -42,8 +42,7 @@ async def shutdown():
     from hub.model_settings import load_settings, save_settings
     from hub.shutdown import Shutdown
     report = {'started': time.time(), 'stopped_pids': [], 'errors': [], 'state': 'stopping'}
-    settings = load_settings()
-    save_settings(settings.model_copy(update={'inference_enabled': False}))
+    # Service teardown must preserve the persistent model preference.
     targets = owned_processes()
     # Freeze dispatchers first so they cannot respawn their children during teardown.
     for process in targets:

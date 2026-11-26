@@ -78,9 +78,8 @@ class Shutdown:
     async def run(self):
         # Let HTTP/MCP deliver the accepted response before disconnecting transports.
         await asyncio.sleep(2)
-        settings = load_settings()
-        if not self.keep_desktop:
-            save_settings(settings.model_copy(update={'inference_enabled': False}))
+        # Quiesce tasks and release managed models without changing the user's
+        # persisted inference preference. A service shutdown is not a model stop.
         for monitor in self.monitors:
             if monitor:
                 monitor.cancel()

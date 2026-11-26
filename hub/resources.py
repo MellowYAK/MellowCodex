@@ -58,7 +58,9 @@ class Resources:
     async def inference(self,model,purpose,enabled):
         from .model_memory import matches
         with self.owner(model,purpose):
-            if not enabled():raise RuntimeError('Local inference disabled by user; explicit load required')
+            if not enabled():
+                from .errors import LocalInferenceDisabled
+                raise LocalInferenceDisabled('Local inference setting is disabled; explicit local opt-in required')
             with self.db() as db:managed=[r[0] for r in db.execute('SELECT name FROM managed_models')]
             async with httpx.AsyncClient(timeout=30,trust_env=False) as client:
                 response=await client.get(OLLAMA+'/api/ps');response.raise_for_status()

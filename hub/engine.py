@@ -12,7 +12,7 @@ from agent_framework import FileCheckpointStorage, WorkflowCheckpoint
 from .config import ARTIFACTS, MODEL, OLLAMA, STATE
 from .store import Conflict
 from .tools import ToolRunner
-from .errors import ObservationError,DesktopUnavailable
+from .errors import ObservationError,DesktopUnavailable,LocalInferenceDisabled
 from .session import session_status
 
 SYSTEM = '''For desktop shortcuts use desktop_shortcut create/inspect and verify its returned target. For your own launcher use agent_environment; do not infer executable names from the product label. PowerShell run_shell executes a script already; do not wrap it in powershell -Command. Get-Process does not expose CommandLine; use a targeted Win32_Process query when needed. Empty command output is not proof of permissions, absence, or shortcut existence. Check user-provided exact paths first with -LiteralPath and -ErrorAction Stop; do not hide diagnostic errors with SilentlyContinue. After two unchanged results choose another evidence source, not the same command.
@@ -132,7 +132,7 @@ class Engine:
         if response_tokens is not None:
             settings=type(settings).model_validate({**settings.model_dump(),'response_tokens':response_tokens})
         if not settings.inference_enabled:
-            raise RuntimeError('Local model manually unloaded. Use model_memory_control load before local inference.')
+            raise LocalInferenceDisabled('Local inference setting is disabled; direct MCP execution does not require it.')
         if output_schema is not None and (not isinstance(output_schema,dict) or catalog):
             raise ValueError('Structured output requires a JSON schema and no tool catalog')
         if task_id and self.store is not None and self.store.get(task_id)['mode']=='browser':
@@ -911,6 +911,24 @@ class Engine:
                     await self.checkpoint(task_id)
                     return
                 diagnostic={'stage':'engine_run','exception_type':type(exc).__name__,'message':'Execution failed; inspect the recorded action and model stages before retrying.','recoverable':isinstance(exc,(TimeoutError,asyncio.TimeoutError))}
+                if isinstance(exc,LocalInferenceDisabled):
+                    diagnostic.update(code='LOCAL_INFERENCE_DISABLED',stage='model_preflight',
+                                      message='Local inference setting is disabled; use direct MCP execution or explicitly request local inference.',
+                                      recoverable=True,model_inference=False)
+                elif isinstance(exc,httpx.TimeoutException):
+                    diagnostic.update(code='MODEL_OR_HTTP_TIMEOUT',recoverable=True)
+                elif isinstance(exc,httpx.ConnectError):
+                    diagnostic.update(code='HTTP_CONNECTION_FAILED',recoverable=True)
+                else:
+                    diagnostic['code']='EXECUTION_EXCEPTION'
+                import traceback
+                diagnostic['frames']=[{'file':Path(f.filename).name,'line':f.lineno,'function':f.name}
+                                      for f in traceback.extract_tb(exc.__traceback__)[-8:]]
+                actions=self.store.actions(task_id)
+                diagnostic['action_counts']={'total':len(actions),'pending':sum(a['state']=='pending' for a in actions),
+                                             'returned':sum(a['state']=='complete' for a in actions)}
+                diagnostic['criteria_not_confirmed']=self.store.get(task_id)['criteria']
+                diagnostic['next_action']='Inspect recorded action effects before retry; never replay pending actions.'
                 self.store.event(task_id,'execution_failure',diagnostic)
                 self.store.update(task_id,state='failed',result=json.dumps(diagnostic),messages=messages)
                 await self.checkpoint(task_id)

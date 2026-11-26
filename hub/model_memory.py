@@ -108,8 +108,6 @@ async def _control_owned(action,model=None):
         if action in ('load','switch'):
             conflicts=[m['name'] for m in before['models'] if not matches(m['name'],target) and not (action=='switch' and matches(m['name'],settings.model))]
             if conflicts:raise ValueError('Other models are resident; explicitly unload them before loading another model: '+', '.join(conflicts))
-        if action in ('unload','unload_all'):
-            settings=settings.model_copy(update={'inference_enabled':False});save_settings(settings)
         if action=='switch' and not matches(settings.model,target) and before['loaded']:
             r=await c.post(OLLAMA+'/api/generate',json={'model':settings.model,'stream':False,'keep_alive':0});r.raise_for_status()
         targets=[m['name'] for m in before['models']] if action=='unload_all' else [target]
@@ -122,6 +120,9 @@ async def _control_owned(action,model=None):
     after=await status()
     present=lambda name:any(matches(m['name'],name) for m in after['models'])
     verified=all(present(n)==(action in ('load','switch')) for n in targets)
+    if action in ('unload','unload_all') and verified:
+        save_settings(settings.model_copy(update={'inference_enabled':False}))
+        after=await status()
     if action in ('load','switch') and verified:
         saved_update={'model':target if action=='switch' else settings.model,'inference_enabled':True}
         # Legacy flat settings hold only the selected model's active runtime

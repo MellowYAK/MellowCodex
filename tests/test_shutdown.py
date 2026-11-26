@@ -26,7 +26,7 @@ def test_ordered_shutdown_and_duplicate_request(tmp_path, monkeypatch):
         first=shutdown.start();task=shutdown.task
         assert shutdown.start() is first and shutdown.task is task
         await task
-        assert events==['disabled','stop','downloads','unload','desktop','exit']
+        assert events==['stop','downloads','unload','desktop','exit']
         assert shutdown.status['state']=='server_exit_requested'
         assert (tmp_path/'last-shutdown.json').exists()
     asyncio.run(check())

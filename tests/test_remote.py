@@ -81,11 +81,11 @@ def test_file_receipt_and_expiry(remote,tmp_path,monkeypatch):
 
 def test_submission_uses_existing_runner_and_stable_identity(monkeypatch):
     calls=[]
-    async def local(path,data=None):calls.append((path,data));return {'id':'task'}
+    async def local(path,data=None,**kwargs):calls.append((path,data));return {'id':'task'}
     monkeypatch.setattr(gateway,'local',local)
     async def wait(task_id):return {'id':task_id}
     monkeypatch.setattr(gateway,'wait_for_task',wait)
-    for _ in range(2):asyncio.run(gateway.submit_task('a'*32,'Inspect current state','stable-request-1','inspect'))
+    for _ in range(2):asyncio.run(gateway.submit_task('a'*32,'Inspect current state','stable-request-1','inspect',use_local_model=True))
     assert calls[0]==calls[1]
     assert calls[0][0]=='/api/chats/'+'a'*32+'/messages'
     assert calls[0][1]['request_id']=='stable-request-1'

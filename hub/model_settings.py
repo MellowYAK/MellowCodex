@@ -1,5 +1,9 @@
 """Validated, durable local inference preferences; never stores credentials."""
 import json
+import os
+import uuid
+import inspect
+from datetime import datetime, timezone
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
@@ -27,8 +31,27 @@ def load_settings(state=STATE):
 
 def save_settings(settings,state=STATE):
     path=Path(state)/'model-settings.json';path.parent.mkdir(parents=True,exist_ok=True)
-    temporary=path.with_suffix('.tmp')
-    temporary.write_text(settings.model_dump_json(indent=2),encoding='utf-8');temporary.replace(path)
+    previous=load_settings(state)
+    caller=inspect.currentframe().f_back
+    source={'module':Path(caller.f_code.co_filename).name,'function':caller.f_code.co_name,'pid':os.getpid()}
+    del caller
+    op=uuid.uuid4().hex
+    changed=[name for name in ModelSettings.model_fields if getattr(previous,name)!=getattr(settings,name)]
+    def audit(phase,**extra):
+        record={'operation_id':op,'at':datetime.now(timezone.utc).isoformat(),'phase':phase,'source':source,
+                'changed_fields':changed,'inference_before':previous.inference_enabled,
+                'inference_requested':settings.inference_enabled,**extra}
+        with (path.parent/'model-settings-audit.jsonl').open('a',encoding='utf-8') as stream:
+            stream.write(json.dumps(record,ensure_ascii=False)+'\n');stream.flush();os.fsync(stream.fileno())
+    audit('started')
+    temporary=path.with_name(path.name+'.'+op+'.tmp')
+    try:
+        temporary.write_text(settings.model_dump_json(indent=2),encoding='utf-8')
+        temporary.replace(path)
+    except Exception as exc:
+        audit('failed',error_type=type(exc).__name__)
+        raise
+    audit('committed',inference_after=settings.inference_enabled)
 
 PRESETS={
     'fast':{'context_tokens':16384,'response_tokens':512,'temperature':.1,'keep_alive_minutes':30},

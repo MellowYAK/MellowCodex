@@ -179,14 +179,19 @@ async def skill_fast_run(chat_id:str,name:str,arguments:dict)->dict:
     return await local('/api/skill-shops/fast-run',dict(chat_id=ident(chat_id),name=name,arguments=arguments),timeout=100)
 
 @mcp.tool(annotations=WRITE)
-async def submit_task(chat_id:str,request:str,request_id:str,mode:Literal['inspect','code','desktop','browser']='desktop',ctx:Context=None,user_message:str|None=None,attachments:list[dict]|None=None)->dict:
-    """For status/סטטוס/статус in ANY chat, perform a fresh FULL system health check and return a compact result immediately without local model inference. Add other tasks INSIDE the existing chat: keep the same chat_id for this external conversation. Do not create a chat for every task or bypass a busy/uncertain task by creating another chat. Wait up to 20 seconds; if active you MUST poll get_task until terminal before reporting completion. Reuse request_id on retries. user_message is the original human-facing request in the user language, kept separate from technical execution instructions. attachments contains existing uploaded file_id references, never invented paths."""
+async def submit_task(chat_id:str,request:str,request_id:str,mode:Literal['inspect','code','desktop','browser']='desktop',ctx:Context=None,user_message:str|None=None,attachments:list[dict]|None=None,use_local_model:bool=False)->dict:
+    """For status/סטטוס/статус in ANY chat, perform a fresh FULL system health check and return a compact result immediately without local model inference. For direct computer work use direct_command; local inference requires explicit use_local_model=true. Add other tasks INSIDE the existing chat: keep the same chat_id for this external conversation. Do not create a chat for every task or bypass a busy/uncertain task by creating another chat. Wait up to 20 seconds; if active you MUST poll get_task until terminal before reporting completion. Reuse request_id on retries. user_message is the original human-facing request in the user language, kept separate from technical execution instructions. attachments contains existing uploaded file_id references, never invented paths."""
     if not 8<=len(request_id)<=200:raise ValueError('request_id must contain 8–200 characters')
     if not request.strip() or len(request)>30000:raise ValueError('Request must contain 1–30000 characters')
     from .system_health import is_status_request
+    ident(chat_id)
+    if not use_local_model and not (not attachments and is_status_request(request)):
+        return await local('/api/chats/'+ident(chat_id)+'/direct-required',
+                           dict(text=request,request_id=request_id,mode=mode,source='mcp',user_message=user_message,
+                                attachments=attachments or [],use_local_model=False))
 
     try:
-        task=await local('/api/chats/'+ident(chat_id)+'/messages',{'text':request,'request_id':request_id,'mode':mode,'user_message':user_message,'source':'mcp','attachments':attachments or []},timeout=70 if not attachments and is_status_request(request) else 15)
+        task=await local('/api/chats/'+ident(chat_id)+'/messages',{'text':request,'request_id':request_id,'mode':mode,'user_message':user_message,'source':'mcp','attachments':attachments or [],'use_local_model':use_local_model},timeout=70 if not attachments and is_status_request(request) else 15)
     except LocalStateConflict as exc:
         return {'state':'blocked','status_code':409,'chat_id':chat_id,'error':str(exc),
                 'next_action':'Inspect the recorded pending action; reconcile after the executor has ended. No task was submitted.'}
@@ -200,6 +205,32 @@ async def submit_task(chat_id:str,request:str,request_id:str,mode:Literal['inspe
                 'source':'shared_service_health_snapshot','model_inference':False,
                 'next_action':'Report this fresh service status; separate probe failures from actual outages.'}
     return await wait_for_task(task['id'],ctx=ctx) if ctx else await wait_for_task(task['id'])
+
+@mcp.tool(annotations=WRITE)
+async def direct_command(chat_id:str,request_id:str,instruction:str,command:str,shell:Literal['powershell','cmd']='powershell',timeout:int=60)->dict:
+    """Execute one exact director-authored command in the current normal chat. No local model, no rewriting, no automatic elevation. Existing OwnerBroker and runner scope apply. Use stable request_id; poll and review actual effects before next task. Active SelfDevelop chats must use selfdevelop_command. Never replay uncertain writes."""
+    try:
+        task=await local('/api/chats/'+ident(chat_id)+'/direct-command',
+                         dict(request_id=request_id,instruction=instruction,command=command,shell=shell,timeout=timeout))
+    except LocalStateConflict as exc:
+        return {'state':'blocked','model_inference':False,'error':str(exc),'next_action':'Review or reconcile the existing task.'}
+    return await wait_for_task(task['id'])
+
+@mcp.tool(annotations=READ)
+async def direct_request_audit(chat_id:str,after:int=0)->dict:
+    """Read durable blocked direct-MCP requests and reasons, paginated by sequence. No inference."""
+    if after<0:raise ValueError('Invalid audit cursor')
+    return await local('/api/chats/'+ident(chat_id)+'/request-audit?after='+str(after))
+
+@mcp.tool(annotations=WRITE)
+async def direct_action(chat_id:str,request_id:str,instruction:str,tool:str,arguments:dict)->dict:
+    """Direct MCP hands/eyes: execute ONE exact native tool without a local model. Allowed: list_files/read_file/write_file, list_windows/session_status/window_inspect/window_act/focus_window/observe_screen/capture_screenshot/desktop_action, app_find/app_open/app_close, browser_navigate/browser_observe/browser_act/browser_tabs/browser_select_tab/browser_close_tabs, files_list/file_copy/file_share. Use explicit paths, fresh observed handles and IDs, and existing owner permissions. For shell use direct_command. No inference fallback. Poll and review returned evidence; do not replay uncertain effects."""
+    try:
+        task=await local('/api/chats/'+ident(chat_id)+'/direct-action',
+                         dict(request_id=request_id,instruction=instruction,tool=tool,arguments=arguments))
+    except LocalStateConflict as exc:
+        return {'state':'blocked','model_inference':False,'error':str(exc),'next_action':'Review or reconcile the existing task.'}
+    return await wait_for_task(task['id'])
 
 async def wait_for_task(task_id, timeout=20, ctx=None):
     deadline=time.monotonic()+timeout

@@ -15,7 +15,7 @@ import httpx
 from PySide6.QtCore import QObject,QRunnable,QThreadPool,QTimer,Qt,Signal,QSize
 from PySide6.QtGui import QFont,QFontDatabase,QPixmap,QTextCursor
 from PySide6.QtNetwork import QLocalServer,QLocalSocket
-from PySide6.QtWidgets import QSystemTrayIcon,QMenu,QStyle
+from PySide6.QtWidgets import QSystemTrayIcon,QMenu,QStyle, QCheckBox
 from PySide6.QtWidgets import QApplication,QMainWindow,QWidget,QHBoxLayout,QVBoxLayout,QLabel,QPushButton,QListWidget,QListWidgetItem,QTextEdit,QLineEdit,QComboBox,QFrame,QFileDialog,QStackedWidget,QGridLayout,QTabWidget
 LABELS={'queued':'בתור','running':'בעבודה','verifying':'בודק תוצאה','done':'הושלם','failed':'נכשל','paused':'מושהה','cancelled':'בוטל','waiting_user':'נדרשת התערבות','waiting_review':'ממתין לסקירה','waiting_desktop':'ממתין לפתיחת שולחן העבודה'}
 STYLE='''
@@ -151,6 +151,7 @@ class Window(QMainWindow):
         options=QHBoxLayout();self.mode=QComboBox()
         self.mode.addItem('קריאה בלבד','inspect');self.mode.addItem('קוד ופקודות','code');self.mode.addItem('סוכן מלא: מחשב ודפדפן','desktop');self.mode.addItem('דפדפן','browser');self.mode.setCurrentIndex(2)
         options.addWidget(self.mode)
+        self.local_inference_opt_in=QCheckBox('Optional local model');self.local_inference_opt_in.setChecked(False);options.addWidget(self.local_inference_opt_in)
         self.workspace=QLineEdit(str(ROOT/'repos'/'sandbox'));self.workspace.setLayoutDirection(Qt.LeftToRight);options.addWidget(self.workspace,1)
         options.addWidget(button('תיקייה',self.choose_workspace))
         self.submit=button('הפעל משימה ↑',self.submit_task,'primary');options.addWidget(self.submit);cl.addLayout(options)
@@ -205,6 +206,8 @@ class Window(QMainWindow):
     def submit_task(self):
         goal=self.goal.toPlainText().strip()
         if not goal:return
+        if not self.local_inference_opt_in.isChecked():
+            self.show_error('MCP default: send the task from connected ChatGPT, or explicitly select the local model.');return
         criteria=[]
         if self.check_path.text().strip():
             check={'path':self.check_path.text().strip()}
@@ -213,7 +216,7 @@ class Window(QMainWindow):
         self.submit.setEnabled(False)
         body={'goal':goal,'workspace':self.workspace.text(),'mode':self.mode.currentData(),'idempotency_key':uuid.uuid4().hex,'criteria':criteria}
         def created(task):
-            self.submit.setEnabled(True);self.goal.clear();self.select(task['id']);self.refresh()
+            self.submit.setEnabled(True);self.local_inference_opt_in.setChecked(False);self.goal.clear();self.select(task['id']);self.refresh()
         self.request('POST','/tasks',body,created)
 
     def refresh_health(self):

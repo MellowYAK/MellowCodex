@@ -736,6 +736,7 @@ class ChatMessage(BaseModel):
     attachments:list[dict]=Field(default_factory=list,max_length=5)
     user_message:str|None=Field(default=None,max_length=8000)
     source:Literal['local','mcp']='local'
+    use_local_model:bool=False
 
 from .development.guidance import SourceRequirement
 
@@ -771,6 +772,26 @@ async def selfdevelop_command(chat_id:str,body:SelfDevelopCommand):
     require_active_selfdevelop(chat_id)
     from .development.commands import dispatch
     task=dispatch(store,chat_id,**body.model_dump())
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
+
+@app.post('/api/chats/{chat_id}/direct-command')
+async def mcp_direct_command(chat_id:str,body:SelfDevelopCommand):
+    from .development.commands import dispatch
+    task=dispatch(store,chat_id,**body.model_dump(),normal_direct=True)
+    if task['state']=='queued':engine.enqueue(task['id'])
+    return public_task(task)
+
+class DirectNativeAction(BaseModel):
+    request_id:str=Field(min_length=8,max_length=100)
+    instruction:str=Field(min_length=1,max_length=8000)
+    tool:str=Field(min_length=1,max_length=80)
+    arguments:dict=Field(default_factory=dict)
+
+@app.post('/api/chats/{chat_id}/direct-action')
+async def mcp_direct_action(chat_id:str,body:DirectNativeAction):
+    from .development.commands import dispatch_native
+    task=dispatch_native(store,chat_id,**body.model_dump())
     if task['state']=='queued':engine.enqueue(task['id'])
     return public_task(task)
 
@@ -828,8 +849,27 @@ async def chat_sources(chat_id:str,body:SourceMessage):
     if task['state']=='queued':engine.enqueue(task['id'])
     return public_task(task)
 
+@app.post('/api/chats/{chat_id}/direct-required')
+async def mcp_direct_required(chat_id:str,body:ChatMessage):
+    conversations().get(chat_id)
+    store.record_request(chat_id,body.request_id,'mcp_direct','blocked',
+                         {'goal':body.user_message or body.text,'instruction':body.text,'reason':'DIRECT_ACTION_REQUIRED',
+                          'actions_executed':0,'model_inference':False,'next_action':'direct_action or direct_command'})
+    return {'state':'blocked','code':'DIRECT_ACTION_REQUIRED','model_inference':False,
+            'error':'External MCP defaults to direct execution; no task was submitted.',
+            'next_action':'Use direct_action or direct_command. Local inference requires explicit human request.'}
+
+@app.get('/api/chats/{chat_id}/request-audit')
+async def mcp_request_audit(chat_id:str,after:int=0):
+    conversations().get(chat_id)
+    return {'events':store.request_audit(chat_id,after)}
+
 @app.post('/api/chats/{chat_id}/messages')
 async def chat_message(chat_id:str,body:ChatMessage):
+    from .system_health import is_status_request
+    if body.source=='mcp' and not body.use_local_model and (body.attachments or not is_status_request(body.text)):
+        await mcp_direct_required(chat_id,body)
+        raise HTTPException(409,'DIRECT_ACTION_REQUIRED: use direct_command; local inference requires explicit opt-in')
     from .model_settings import parse_model_command
     if parse_model_command(body.text) is not None:
         from .model_preferences import perform
@@ -1124,6 +1164,8 @@ async def set_model_settings(body:ModelSettings):
         except httpx.HTTPError:raise HTTPException(503,'המנוע המקומי לא זמין; ההגדרות הקודמות נשמרו')
     if body.model not in {m['name'] for m in response.json().get('models',[])}:raise ValueError('בחר מודל שמותקן במחשב')
     if body.coding_model and body.coding_model not in {m['name'] for m in response.json().get('models',[])}:raise ValueError('מודל התכנות צריך להיות מותקן במחשב')
+    if 'inference_enabled' not in body.model_fields_set:
+        body=body.model_copy(update={'inference_enabled':load_settings(STATE).inference_enabled})
     save_settings(body,STATE)
     return {'settings':body.model_dump(),'applies':'next_request'}
 

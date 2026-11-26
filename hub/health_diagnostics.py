@@ -148,7 +148,7 @@ def enrich(h,data):
   if key=='model':
    row['inference_enabled']=settings.get('inference_enabled')
    status='intentionally_stopped' if settings.get('inference_enabled') is False else 'operational' if row['state']=='idle' else status
-   row['reason']='Inference disabled by owner; loaded='+str(row.get('loaded')) if settings.get('inference_enabled') is False else row['reason']
+   row['reason']='Inference disabled in persisted settings (actor not established); loaded='+str(row.get('loaded')) if settings.get('inference_enabled') is False else row['reason']
   if row.get('process_exists') and not row.get('port_open') and key in ('hub','gateway','guard','guard_gateway','ollama'):
    ages=[]
    for pid in row.get('pids',[]):

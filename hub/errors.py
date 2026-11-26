@@ -3,3 +3,6 @@ class ObservationError(ValueError):
 
 class DesktopUnavailable(RuntimeError):
     """No physical input was sent because the interactive session is unavailable."""
+
+class LocalInferenceDisabled(RuntimeError):
+    """Persisted local inference setting is false, not an MCP transport failure."""

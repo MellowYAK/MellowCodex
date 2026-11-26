@@ -33,7 +33,7 @@ def _blocker_error(row, reason=None):
 
 def submit_atomic_step(store, chat_id, request_id, instruction, allowed_tools,
                        required_tools=None, required_sources=None, evidence_only=False,
-                       exact_patch=None, context_read=None):
+                       exact_patch=None, context_read=None, *, direct_arguments=None, normal_direct=False, direct_tool="run_shell", direct_mode="code"):
     # No task row is created until all guidance is validated.
     if not allowed_tools:
         raise ValueError('Director must provide explicit allowed tools')
@@ -53,8 +53,14 @@ def submit_atomic_step(store, chat_id, request_id, instruction, allowed_tools,
             (chat_id,)).fetchone()
         session = db.execute('SELECT chat_id FROM selfdevelop_sessions WHERE chat_id=?',
                              (chat_id,)).fetchone()
-        if not chat or not session:
-            raise Conflict('SelfDevelop chat/session not found')
+        if not chat or (not session and not normal_direct):
+            raise Conflict('Chat/session not found')
+        if normal_direct:
+            mode = db.execute('SELECT mode FROM selfdevelop_chat_modes WHERE chat_id=?',(chat_id,)).fetchone()
+            if (mode and mode['mode']!='normal') or (not mode and session):
+                raise Conflict('Use SelfDevelop exact command in an active SelfDevelop chat')
+            if direct_arguments is None or guide['allowed_tools']!=[direct_tool] or direct_mode not in ('code','desktop'):
+                raise ValueError('Normal direct execution requires exact single-tool scope')
         old = db.execute('SELECT * FROM tasks WHERE idem=?', (idem,)).fetchone()
         if old:
             task_id = old['id']
@@ -62,7 +68,7 @@ def submit_atomic_step(store, chat_id, request_id, instruction, allowed_tools,
                                (task_id, chat_id)).fetchone()
             saved = db.execute('SELECT * FROM development_guidance WHERE task_id=? AND request_id=?',
                                (task_id, request_id)).fetchone()
-            if old['goal'] != instruction or old['mode'] != 'code' or not owner:
+            if old['goal'] != instruction or old['mode'] != direct_mode or not owner:
                 raise Conflict('Request identity belongs to a different task')
             if not saved:
                 raise _blocker_error(old, 'Existing task lacks committed initial guidance; inspect and cancel/reconcile; never replay')
@@ -75,6 +81,10 @@ def submit_atomic_step(store, chat_id, request_id, instruction, allowed_tools,
                     json.loads(saved['context_read']) == guide['context_read'])
             if not same:
                 raise Conflict('Guidance request identity reused with different content')
+            if direct_arguments is not None:
+                exact=db.execute("SELECT data FROM events WHERE task_id=? AND kind='director_exact_command' ORDER BY seq LIMIT 1",(task_id,)).fetchone()
+                if not exact or (json.loads(exact['data']).get('arguments')!=direct_arguments or json.loads(exact['data']).get('tool','run_shell')!=direct_tool):
+                    raise Conflict('Exact command identity reused or incomplete; inspect before retry')
         else:
             # CAS preflight is held under the same write lock as task/guidance commit.
             blocker = db.execute('''
@@ -119,10 +129,10 @@ def submit_atomic_step(store, chat_id, request_id, instruction, allowed_tools,
             db.execute('''
                 INSERT INTO tasks(id,idem,revision,state,created,updated,goal,workspace,mode,messages)
                 VALUES(?,?,2,'queued',?,?,?,?,?,?)''',
-                (task_id,idem,stamp,stamp,instruction,chat['workspace'],'code',
+                (task_id,idem,stamp,stamp,instruction,chat['workspace'],direct_mode,
                  json.dumps(context,ensure_ascii=False)))
             db.execute('INSERT INTO events(task_id,revision,kind,data,at) VALUES(?,1,?,?,?)',
-                       (task_id,'created',json.dumps({'goal':instruction},ensure_ascii=False),stamp))
+                       (task_id,'created',json.dumps({'goal':instruction,'workspace':chat['workspace'],'mode':direct_mode,'request_identity':idem,'route':'mcp_direct' if normal_direct else 'selfdevelop','required_tools':guide['required_tools']},ensure_ascii=False),stamp))
             db.execute('INSERT INTO events(task_id,revision,kind,data,at) VALUES(?,2,?,?,?)',
                        (task_id,'state','{}',stamp))
             pos = db.execute('SELECT COALESCE(MAX(position),-1)+1 FROM chat_tasks WHERE chat_id=?',
@@ -145,4 +155,7 @@ def submit_atomic_step(store, chat_id, request_id, instruction, allowed_tools,
             db.execute('INSERT INTO events(task_id,revision,kind,data,at) VALUES(?,2,?,?,?)',
                        (task_id,'selfdevelop_atomic_create',
                         json.dumps({'request_id':request_id,'guidance_revision':1}),stamp))
+            if direct_arguments is not None:
+                db.execute('INSERT INTO events(task_id,revision,kind,data,at) VALUES(?,2,?,?,?)',
+                           (task_id,'director_exact_command',json.dumps({'arguments':direct_arguments,'tool':direct_tool,'request_id':request_id,'route':'mcp_direct' if normal_direct else 'selfdevelop','model_inference':False}),stamp))
     return store.get(task_id)
